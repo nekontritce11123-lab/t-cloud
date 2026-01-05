@@ -54,22 +54,22 @@
   }
 }
 
-/* Desktop: ~200px карточки */
+/* Desktop: ~280px карточки */
 @media (min-width: 768px) {
   .grid {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     padding: var(--spacing-sm) var(--spacing-xl) var(--spacing-lg);
   }
 }
 
-/* Large desktop: ~250px карточки + max-width */
+/* Large desktop: ~320px карточки + max-width */
 @media (min-width: 1200px) {
   .grid {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   }
 
   .timeline {
-    max-width: 1600px;
+    max-width: 1800px;
     margin: 0 auto;
   }
 }
