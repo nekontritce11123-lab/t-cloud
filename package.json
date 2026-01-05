@@ -1,0 +1,29 @@
+{
+  "name": "t-cloud",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:all": "npm run dev & npm run dev:backend",
+    "build": "tsc -b && vite build",
+    "build:backend": "npm run build --prefix backend",
+    "build:all": "npm run build && npm run build:backend",
+    "start": "npm run start --prefix backend",
+    "install:all": "npm install && npm install --prefix backend",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.4"
+  }
+}

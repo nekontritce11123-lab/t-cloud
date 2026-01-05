@@ -1,0 +1,61 @@
+.container {
+  padding: var(--spacing-md) 0;
+  overflow: hidden;
+}
+
+.scroll {
+  display: flex;
+  gap: var(--spacing-sm);
+  padding: 0 var(--spacing-lg);
+  overflow-x: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--app-secondary-bg-color);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  transition: all var(--animation-fast) var(--easing-smooth);
+  border: 2px solid transparent;
+}
+
+.chip:active {
+  transform: scale(0.95);
+}
+
+.chip.selected {
+  background: color-mix(in srgb, var(--chip-color) 20%, transparent);
+  border-color: var(--chip-color);
+}
+
+.emoji {
+  font-size: var(--font-size-md);
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.count {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  background: var(--app-bg-color);
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  color: var(--app-hint-color);
+}
+
+.chip.selected .count {
+  background: var(--chip-color);
+  color: white;
+}
