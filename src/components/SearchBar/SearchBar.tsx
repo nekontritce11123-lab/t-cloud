@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import styles from './SearchBar.module.css';
 
 interface SearchHint {
@@ -37,10 +37,6 @@ function getFieldLabel(field: string): string {
 export function SearchBar({ value, onChange, placeholder = 'Поиск...', hint }: SearchBarProps) {
   const [isFocused, setIsFocused] = useState(false);
 
-  const handleClear = useCallback(() => {
-    onChange('');
-  }, [onChange]);
-
   return (
     <div className={styles.wrapper}>
       <div className={`${styles.container} ${isFocused ? styles.focused : ''}`}>
@@ -54,11 +50,6 @@ export function SearchBar({ value, onChange, placeholder = 'Поиск...', hint
           onBlur={() => setIsFocused(false)}
           placeholder={placeholder}
         />
-        {value && (
-          <button className={styles.clear} onClick={handleClear}>
-            ✕
-          </button>
-        )}
       </div>
       {/* Подсказка под поиском */}
       {hint && value && (
