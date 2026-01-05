@@ -80,9 +80,14 @@ export function authMiddleware(
   res: Response,
   next: NextFunction
 ): void {
+  console.log('[Auth] Request:', req.method, req.path);
+  console.log('[Auth] Origin:', req.headers.origin);
+
   const initData = req.headers['x-telegram-init-data'] as string;
+  console.log('[Auth] initData present:', !!initData, initData ? `(${initData.length} chars)` : '');
 
   if (!initData) {
+    console.log('[Auth] REJECTED: Missing initData header');
     res.status(401).json({ error: 'Missing X-Telegram-Init-Data header' });
     return;
   }
@@ -90,10 +95,12 @@ export function authMiddleware(
   const user = validateInitData(initData);
 
   if (!user) {
+    console.log('[Auth] REJECTED: Invalid initData validation');
     res.status(401).json({ error: 'Invalid or expired init data' });
     return;
   }
 
+  console.log('[Auth] SUCCESS: User', user.id, user.first_name);
   (req as AuthenticatedRequest).telegramUser = user;
   next();
 }
