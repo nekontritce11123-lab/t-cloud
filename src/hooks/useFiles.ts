@@ -98,6 +98,9 @@ export function useFiles(apiReady = true) {
   // Search
   const search = useCallback((query: string) => {
     console.log('[useFiles] search called with:', query);
+    setIsLoading(true);  // Сразу показываем загрузку
+    setFiles([]);        // Очищаем файлы чтобы показать спиннер
+    setLinks([]);        // Очищаем ссылки тоже
     setSearchQuery(query);
     if (query) {
       setSelectedType(null);
