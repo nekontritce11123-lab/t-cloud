@@ -35,6 +35,20 @@
   color: var(--app-hint-color);
 }
 
+/* Hide native clear button in all browsers */
+.input::-webkit-search-cancel-button,
+.input::-webkit-search-decoration,
+.input::-webkit-search-results-button,
+.input::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+
+.input::-ms-clear {
+  display: none;
+}
+
 .clear {
   width: 24px;
   height: 24px;
