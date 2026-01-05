@@ -24,6 +24,12 @@ function getFieldLabel(field: string): string {
     case 'caption': return 'в подписи';
     case 'file_name': return 'в имени';
     case 'forward_from_name': return 'от';
+    case 'forward_from_chat_title': return 'из чата';
+    // Поля для ссылок
+    case 'url': return 'в URL';
+    case 'title': return 'в заголовке';
+    case 'description': return 'в описании';
+    case 'site_name': return 'на сайте';
     default: return '';
   }
 }

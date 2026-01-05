@@ -74,11 +74,12 @@ export async function initDatabase(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_files_user_date ON files(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_links_user_date ON links(user_id, created_at DESC);
 
-    -- Full-text search virtual table
+    -- Full-text search virtual table for files
     CREATE VIRTUAL TABLE IF NOT EXISTS files_fts USING fts5(
       file_name,
       caption,
       forward_from_name,
+      forward_from_chat_title,
       content='files',
       content_rowid='id',
       tokenize='unicode61 remove_diacritics 2'
@@ -86,20 +87,48 @@ export async function initDatabase(): Promise<void> {
 
     -- Triggers to keep FTS in sync with files table
     CREATE TRIGGER IF NOT EXISTS files_ai AFTER INSERT ON files BEGIN
-      INSERT INTO files_fts(rowid, file_name, caption, forward_from_name)
-      VALUES (NEW.id, NEW.file_name, NEW.caption, NEW.forward_from_name);
+      INSERT INTO files_fts(rowid, file_name, caption, forward_from_name, forward_from_chat_title)
+      VALUES (NEW.id, NEW.file_name, NEW.caption, NEW.forward_from_name, NEW.forward_from_chat_title);
     END;
 
     CREATE TRIGGER IF NOT EXISTS files_ad AFTER DELETE ON files BEGIN
-      INSERT INTO files_fts(files_fts, rowid, file_name, caption, forward_from_name)
-      VALUES ('delete', OLD.id, OLD.file_name, OLD.caption, OLD.forward_from_name);
+      INSERT INTO files_fts(files_fts, rowid, file_name, caption, forward_from_name, forward_from_chat_title)
+      VALUES ('delete', OLD.id, OLD.file_name, OLD.caption, OLD.forward_from_name, OLD.forward_from_chat_title);
     END;
 
     CREATE TRIGGER IF NOT EXISTS files_au AFTER UPDATE ON files BEGIN
-      INSERT INTO files_fts(files_fts, rowid, file_name, caption, forward_from_name)
-      VALUES ('delete', OLD.id, OLD.file_name, OLD.caption, OLD.forward_from_name);
-      INSERT INTO files_fts(rowid, file_name, caption, forward_from_name)
-      VALUES (NEW.id, NEW.file_name, NEW.caption, NEW.forward_from_name);
+      INSERT INTO files_fts(files_fts, rowid, file_name, caption, forward_from_name, forward_from_chat_title)
+      VALUES ('delete', OLD.id, OLD.file_name, OLD.caption, OLD.forward_from_name, OLD.forward_from_chat_title);
+      INSERT INTO files_fts(rowid, file_name, caption, forward_from_name, forward_from_chat_title)
+      VALUES (NEW.id, NEW.file_name, NEW.caption, NEW.forward_from_name, NEW.forward_from_chat_title);
+    END;
+    -- Full-text search virtual table for links
+    CREATE VIRTUAL TABLE IF NOT EXISTS links_fts USING fts5(
+      url,
+      title,
+      description,
+      site_name,
+      content='links',
+      content_rowid='id',
+      tokenize='unicode61 remove_diacritics 2'
+    );
+
+    -- Triggers to keep FTS in sync with links table
+    CREATE TRIGGER IF NOT EXISTS links_ai AFTER INSERT ON links BEGIN
+      INSERT INTO links_fts(rowid, url, title, description, site_name)
+      VALUES (NEW.id, NEW.url, NEW.title, NEW.description, NEW.site_name);
+    END;
+
+    CREATE TRIGGER IF NOT EXISTS links_ad AFTER DELETE ON links BEGIN
+      INSERT INTO links_fts(links_fts, rowid, url, title, description, site_name)
+      VALUES ('delete', OLD.id, OLD.url, OLD.title, OLD.description, OLD.site_name);
+    END;
+
+    CREATE TRIGGER IF NOT EXISTS links_au AFTER UPDATE ON links BEGIN
+      INSERT INTO links_fts(links_fts, rowid, url, title, description, site_name)
+      VALUES ('delete', OLD.id, OLD.url, OLD.title, OLD.description, OLD.site_name);
+      INSERT INTO links_fts(rowid, url, title, description, site_name)
+      VALUES (NEW.id, NEW.url, NEW.title, NEW.description, NEW.site_name);
     END;
   `);
 
@@ -114,7 +143,7 @@ export function searchFiles(userId: number, query: string, limit = 50): schema.F
     SELECT f.*
     FROM files f
     JOIN files_fts ON f.id = files_fts.rowid
-    WHERE f.user_id = ? AND files_fts MATCH ?
+    WHERE f.user_id = ? AND f.deleted_at IS NULL AND files_fts MATCH ?
     ORDER BY rank
     LIMIT ?
   `);
@@ -126,7 +155,7 @@ export function searchFiles(userId: number, query: string, limit = 50): schema.F
  * Search result with match info
  */
 export interface SearchResult extends schema.File {
-  matchedField: 'file_name' | 'caption' | 'forward_from_name';
+  matchedField: 'file_name' | 'caption' | 'forward_from_name' | 'forward_from_chat_title';
   matchedSnippet: string;
 }
 
@@ -140,10 +169,11 @@ export function searchFilesWithSnippets(userId: number, query: string, limit = 5
       f.*,
       snippet(files_fts, 0, '**', '**', '...', 10) as snippet_file_name,
       snippet(files_fts, 1, '**', '**', '...', 10) as snippet_caption,
-      snippet(files_fts, 2, '**', '**', '...', 10) as snippet_forward
+      snippet(files_fts, 2, '**', '**', '...', 10) as snippet_forward,
+      snippet(files_fts, 3, '**', '**', '...', 10) as snippet_chat_title
     FROM files f
     JOIN files_fts ON f.id = files_fts.rowid
-    WHERE f.user_id = ? AND files_fts MATCH ?
+    WHERE f.user_id = ? AND f.deleted_at IS NULL AND files_fts MATCH ?
     ORDER BY rank
     LIMIT ?
   `);
@@ -152,7 +182,7 @@ export function searchFilesWithSnippets(userId: number, query: string, limit = 5
 
   return rows.map(row => {
     // Determine which field matched (check if snippet contains **)
-    let matchedField: 'file_name' | 'caption' | 'forward_from_name' = 'file_name';
+    let matchedField: 'file_name' | 'caption' | 'forward_from_name' | 'forward_from_chat_title' = 'file_name';
     let matchedSnippet = '';
 
     if (row.snippet_caption && row.snippet_caption.includes('**')) {
@@ -164,6 +194,9 @@ export function searchFilesWithSnippets(userId: number, query: string, limit = 5
     } else if (row.snippet_forward && row.snippet_forward.includes('**')) {
       matchedField = 'forward_from_name';
       matchedSnippet = row.snippet_forward;
+    } else if (row.snippet_chat_title && row.snippet_chat_title.includes('**')) {
+      matchedField = 'forward_from_chat_title';
+      matchedSnippet = row.snippet_chat_title;
     }
 
     // Convert snake_case to camelCase for frontend compatibility
@@ -189,6 +222,69 @@ export function searchFilesWithSnippets(userId: number, query: string, limit = 5
       matchedField,
       matchedSnippet,
     } as SearchResult;
+  });
+}
+
+
+/**
+ * Search result with match info for links
+ */
+export interface LinkSearchResult extends schema.Link {
+  matchedField: 'url' | 'title' | 'description' | 'site_name';
+  matchedSnippet: string;
+}
+
+/**
+ * Full-text search in links with snippets
+ */
+export function searchLinksWithSnippets(userId: number, query: string, limit = 50): LinkSearchResult[] {
+  const stmt = sqlite.prepare(`
+    SELECT
+      l.*,
+      snippet(links_fts, 0, '**', '**', '...', 10) as snippet_url,
+      snippet(links_fts, 1, '**', '**', '...', 10) as snippet_title,
+      snippet(links_fts, 2, '**', '**', '...', 10) as snippet_description,
+      snippet(links_fts, 3, '**', '**', '...', 10) as snippet_site_name
+    FROM links l
+    JOIN links_fts ON l.id = links_fts.rowid
+    WHERE l.user_id = ? AND l.deleted_at IS NULL AND links_fts MATCH ?
+    ORDER BY rank
+    LIMIT ?
+  `);
+
+  const rows = stmt.all(userId, query, limit) as any[];
+
+  return rows.map(row => {
+    let matchedField: 'url' | 'title' | 'description' | 'site_name' = 'url';
+    let matchedSnippet = '';
+
+    if (row.snippet_title && row.snippet_title.includes('**')) {
+      matchedField = 'title';
+      matchedSnippet = row.snippet_title;
+    } else if (row.snippet_description && row.snippet_description.includes('**')) {
+      matchedField = 'description';
+      matchedSnippet = row.snippet_description;
+    } else if (row.snippet_url && row.snippet_url.includes('**')) {
+      matchedField = 'url';
+      matchedSnippet = row.snippet_url;
+    } else if (row.snippet_site_name && row.snippet_site_name.includes('**')) {
+      matchedField = 'site_name';
+      matchedSnippet = row.snippet_site_name;
+    }
+
+    return {
+      id: row.id,
+      userId: row.user_id,
+      url: row.url,
+      title: row.title,
+      description: row.description,
+      imageUrl: row.image_url,
+      siteName: row.site_name,
+      createdAt: row.created_at,
+      deletedAt: row.deleted_at,
+      matchedField,
+      matchedSnippet,
+    } as LinkSearchResult;
   });
 }
 

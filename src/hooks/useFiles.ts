@@ -23,10 +23,14 @@ export function useFiles(apiReady = true) {
 
     try {
       if (searchQuery) {
-        const result = await apiClient.searchFiles(searchQuery);
-        console.log('[useFiles] Search result:', result);
-        setFiles(result.items || []);
-        setLinks([]);
+        // Search both files and links in parallel
+        const [filesResult, linksResult] = await Promise.all([
+          apiClient.searchFiles(searchQuery),
+          apiClient.searchLinks(searchQuery),
+        ]);
+        console.log('[useFiles] Search result - files:', filesResult, 'links:', linksResult);
+        setFiles(filesResult.items || []);
+        setLinks(linksResult.items || []);
         setHasMore(false);
       } else if (selectedType === 'trash') {
         // Load trash - handled separately by TrashView component

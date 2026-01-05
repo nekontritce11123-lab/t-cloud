@@ -28,7 +28,7 @@ export interface FileRecord {
   createdAt: string;
   deletedAt?: string | null;
   // Search result fields (only present in search results)
-  matchedField?: 'file_name' | 'caption' | 'forward_from_name';
+  matchedField?: 'file_name' | 'caption' | 'forward_from_name' | 'forward_from_chat_title';
   matchedSnippet?: string;
 }
 
@@ -42,6 +42,9 @@ export interface LinkRecord {
   siteName?: string | null;
   createdAt: string;
   deletedAt?: string | null;
+  // Search result fields (only present in search results)
+  matchedField?: 'url' | 'title' | 'description' | 'site_name';
+  matchedSnippet?: string;
 }
 
 export interface PaginatedResponse<T> {
@@ -134,6 +137,22 @@ class ApiClient {
 
     if (!response.ok) {
       throw new Error('Failed to search files');
+    }
+
+    return response.json();
+  }
+
+  
+
+  async searchLinks(query: string, limit = 50): Promise<{ items: LinkRecord[]; total: number }> {
+    const params = new URLSearchParams({ q: query, limit: String(limit) });
+
+    const response = await fetch(`${API_URL}/api/links/search?${params}`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to search links');
     }
 
     return response.json();

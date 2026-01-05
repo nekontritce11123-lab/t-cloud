@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth.js';
 import { LinksRepository } from '../../db/repositories/links.repository.js';
+import { searchLinksWithSnippets } from '../../db/index.js';
 
 const router = Router();
 const linksRepo = new LinksRepository();
@@ -66,6 +67,30 @@ router.get('/trash/count', async (req, res: Response) => {
     res.json({ count });
   } catch (error) {
     console.error('[API] Error fetching trash count:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+/**
+ * GET /api/links/search
+ * Full-text search in links
+ */
+router.get('/search', async (req, res: Response) => {
+  const { telegramUser } = req as AuthenticatedRequest;
+  const { q, limit = '50' } = req.query;
+
+  if (!q || typeof q !== 'string') {
+    res.status(400).json({ error: 'Query parameter "q" is required' });
+    return;
+  }
+
+  try {
+    const limitNum = Math.min(parseInt(limit as string, 10), 100);
+    const links = searchLinksWithSnippets(telegramUser.id, q, limitNum);
+    res.json({ items: links, total: links.length });
+  } catch (error) {
+    console.error('[API] Error searching links:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
