@@ -35,7 +35,8 @@ export class ThumbnailService {
 
   /**
    * Get thumbnail URL for a file
-   * Uses thumbnail if available, otherwise main file for photos
+   * For photos: always use main file (better quality, Telegram compresses anyway)
+   * For videos/docs: use thumbnail if available
    */
   async getThumbnailUrl(
     thumbnailFileId: string | null | undefined,
@@ -47,15 +48,16 @@ export class ThumbnailService {
       return null;
     }
 
-    // Try thumbnail first
+    // For photos: always use main file for better quality
+    // Telegram's thumbnails are only ~90px which looks bad in grid
+    if (mediaType === 'photo') {
+      return this.getFileUrl(mainFileId);
+    }
+
+    // For other media: try thumbnail first
     if (thumbnailFileId) {
       const thumbUrl = await this.getFileUrl(thumbnailFileId);
       if (thumbUrl) return thumbUrl;
-    }
-
-    // Fallback to main file for photos (they're usually small enough)
-    if (mediaType === 'photo') {
-      return this.getFileUrl(mainFileId);
     }
 
     return null;

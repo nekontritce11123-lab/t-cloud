@@ -39,13 +39,23 @@ export class IngestionService {
 
   /**
    * Photo - array of PhotoSize, take the highest quality
+   * Telegram sends photos in increasing sizes: ~90px, ~320px, ~800px, original
    */
   private extractPhoto(msg: Message): ExtractedMedia {
     const photos = msg.photo!;
-    // Last element is the highest quality
+    // Last element is the highest quality (for sending)
     const bestPhoto = photos[photos.length - 1];
-    // First element is usually the thumbnail
-    const thumbPhoto = photos.length > 1 ? photos[0] : undefined;
+
+    // For thumbnail: use medium size (~320px) if available, better quality for preview
+    // photos[0] = ~90px (too small), photos[1] = ~320px (good for preview)
+    let thumbPhoto = photos[0]; // fallback to smallest
+    if (photos.length >= 3) {
+      // Use second element (~320px) for better quality thumbnails
+      thumbPhoto = photos[1];
+    } else if (photos.length === 2) {
+      // If only 2 sizes, use smaller one for thumb
+      thumbPhoto = photos[0];
+    }
 
     return {
       fileId: bestPhoto.file_id,
