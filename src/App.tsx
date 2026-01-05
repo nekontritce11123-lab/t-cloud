@@ -158,6 +158,11 @@ function App() {
     }
   }, [hasMore, isLoading, loadMore]);
 
+  // Подсказка для поиска (из первого результата)
+  const searchHint = searchInput && files.length > 0 && files[0].matchedField && files[0].matchedSnippet
+    ? { field: files[0].matchedField, snippet: files[0].matchedSnippet }
+    : null;
+
   // Loading state
   if (!isReady) {
     return (
@@ -183,6 +188,7 @@ function App() {
               value={searchInput}
               onChange={setSearchInput}
               placeholder="Искать по имени, подписи..."
+              hint={searchHint}
             />
           </>
         )}
@@ -209,7 +215,12 @@ function App() {
           </div>
         )}
 
-        {selectedType === 'link' ? (
+        {/* Показываем спиннер при загрузке если нет файлов */}
+        {isLoading && files.length === 0 ? (
+          <div className={styles.loadingMore}>
+            <div className="spinner" />
+          </div>
+        ) : selectedType === 'link' ? (
           <LinkList links={links} onLinkClick={handleLinkClick} />
         ) : searchInput ? (
           /* При поиске показываем обычную сетку с результатами */
@@ -232,8 +243,8 @@ function App() {
           />
         )}
 
-        {/* Loading indicator */}
-        {isLoading && (
+        {/* Loading indicator for pagination */}
+        {isLoading && files.length > 0 && (
           <div className={styles.loadingMore}>
             <div className="spinner" />
           </div>

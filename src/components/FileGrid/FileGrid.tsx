@@ -150,22 +150,6 @@ function FileCard({ file, onFileClick, onFileLongPress, isSelected, isSelectionM
   );
 }
 
-// Форматирование snippet с подсветкой
-function formatSnippet(snippet: string): string {
-  return snippet
-    .replace(/\*\*([^*]+)\*\*/g, '<mark>$1</mark>');
-}
-
-// Получить описание где найдено
-function getMatchDescription(field: string): string {
-  switch (field) {
-    case 'caption': return 'в подписи';
-    case 'file_name': return 'в имени файла';
-    case 'forward_from_name': return 'в отправителе';
-    default: return '';
-  }
-}
-
 export function FileGrid({ files, onFileClick, onFileLongPress, selectedFiles, isSelectionMode, searchQuery }: FileGridProps) {
   if (files.length === 0) {
     return (
@@ -182,9 +166,28 @@ export function FileGrid({ files, onFileClick, onFileLongPress, selectedFiles, i
     );
   }
 
-  // Группируем результаты поиска по месту совпадения
+  // Проверяем есть ли это результаты поиска
   const isSearchResult = searchQuery && files.some(f => f.matchedField);
 
+  // Обычный режим без поиска - просто сетка
+  if (!searchQuery) {
+    return (
+      <div className={styles.grid}>
+        {files.map(file => (
+          <FileCard
+            key={file.id}
+            file={file}
+            onFileClick={onFileClick}
+            onFileLongPress={onFileLongPress}
+            isSelected={selectedFiles?.has(file.id)}
+            isSelectionMode={isSelectionMode}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  // Режим поиска с результатами
   return (
     <div className={styles.searchResults}>
       {/* Заголовок результатов поиска */}
@@ -198,25 +201,14 @@ export function FileGrid({ files, onFileClick, onFileLongPress, selectedFiles, i
 
       <div className={styles.grid}>
         {files.map(file => (
-          <div key={file.id} className={styles.searchItem}>
-            <FileCard
-              file={file}
-              onFileClick={onFileClick}
-              onFileLongPress={onFileLongPress}
-              isSelected={selectedFiles?.has(file.id)}
-              isSelectionMode={isSelectionMode}
-            />
-            {/* Подпись под карточкой - где найдено */}
-            {file.matchedField && file.matchedSnippet && (
-              <div className={styles.matchBadge}>
-                <span className={styles.matchWhere}>{getMatchDescription(file.matchedField)}:</span>
-                <span
-                  className={styles.matchText}
-                  dangerouslySetInnerHTML={{ __html: formatSnippet(file.matchedSnippet) }}
-                />
-              </div>
-            )}
-          </div>
+          <FileCard
+            key={file.id}
+            file={file}
+            onFileClick={onFileClick}
+            onFileLongPress={onFileLongPress}
+            isSelected={selectedFiles?.has(file.id)}
+            isSelectionMode={isSelectionMode}
+          />
         ))}
       </div>
     </div>

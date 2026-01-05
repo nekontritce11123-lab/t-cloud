@@ -77,6 +77,8 @@ export function useFiles(apiReady = true) {
 
   // Search
   const search = useCallback((query: string) => {
+    setIsLoading(true); // Сразу показываем загрузку
+    setFiles([]); // Очищаем файлы чтобы показать спиннер
     setSearchQuery(query);
     setSelectedType(null);
   }, []);

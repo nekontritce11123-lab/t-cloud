@@ -1,3 +1,9 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
 .container {
   display: flex;
   align-items: center;
@@ -45,4 +51,36 @@
 .clear:hover {
   background: var(--app-hint-color);
   color: var(--app-bg-color);
+}
+
+/* Подсказка под поиском */
+.hint {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin: 0 var(--spacing-lg);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: rgba(51, 144, 236, 0.1);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.hintLabel {
+  font-size: var(--font-size-xs);
+  color: var(--tg-theme-button-color, #3390ec);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.hintText {
+  font-size: var(--font-size-xs);
+  color: var(--app-hint-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hintText b {
+  color: var(--app-text-color);
+  font-weight: var(--font-weight-bold);
 }
