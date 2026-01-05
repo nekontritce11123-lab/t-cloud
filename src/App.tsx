@@ -23,6 +23,7 @@ function App() {
     isLoading,
     error,
     selectedType,
+    searchQuery,
     hasMore,
     filterByType,
     search,
@@ -257,8 +258,10 @@ function App() {
   }, [hasMore, isLoading, loadMore]);
 
   // Подсказка для поиска (из первого результата)
-  const searchHint = searchInput && files.length > 0 && files[0].matchedField && files[0].matchedSnippet
+  const searchHint = searchQuery && files.length > 0 && files[0].matchedField && files[0].matchedSnippet
     ? { field: files[0].matchedField, snippet: files[0].matchedSnippet }
+    : searchQuery && links.length > 0 && links[0].matchedField && links[0].matchedSnippet
+    ? { field: links[0].matchedField, snippet: links[0].matchedSnippet }
     : null;
 
   // Loading state
@@ -318,7 +321,7 @@ function App() {
         )}
 
         {/* Показываем спиннер при загрузке если нет файлов */}
-        {isLoading && files.length === 0 && selectedType !== 'trash' ? (
+        {isLoading && files.length === 0 && links.length === 0 && selectedType !== 'trash' ? (
           <div className={styles.loadingMore}>
             <div className="spinner" />
           </div>
@@ -335,16 +338,36 @@ function App() {
             selectedLinks={selectedLinks}
             isSelectionMode={isSelectionMode && selectionType === 'links'}
           />
-        ) : searchInput ? (
-          /* При поиске показываем обычную сетку с результатами */
-          <FileGrid
-            files={files}
-            onFileClick={handleFileClick}
-            onFileLongPress={handleFileLongPress}
-            selectedFiles={selectedFiles}
-            isSelectionMode={isSelectionMode}
-            searchQuery={searchInput}
-          />
+        ) : searchQuery ? (
+          /* При поиске показываем файлы и ссылки */
+          <>
+            {files.length > 0 && (
+              <FileGrid
+                files={files}
+                onFileClick={handleFileClick}
+                onFileLongPress={handleFileLongPress}
+                selectedFiles={selectedFiles}
+                isSelectionMode={isSelectionMode}
+                searchQuery={searchQuery}
+              />
+            )}
+            {links.length > 0 && (
+              <LinkList
+                links={links}
+                onLinkClick={handleLinkClick}
+                onLinkLongPress={handleLinkLongPress}
+                selectedLinks={selectedLinks}
+                isSelectionMode={isSelectionMode && selectionType === 'links'}
+              />
+            )}
+            {files.length === 0 && links.length === 0 && !isLoading && (
+              <div className={styles.empty}>
+                <span className={styles.emptyIcon}>🔍</span>
+                <p>Ничего не найдено</p>
+                <p className={styles.emptyHint}>По запросу "{searchQuery}" ничего не найдено</p>
+              </div>
+            )}
+          </>
         ) : (
           /* По умолчанию - Timeline с группировкой по датам */
           <Timeline

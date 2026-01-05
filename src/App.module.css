@@ -94,3 +94,24 @@
   justify-content: center;
   font-size: 18px;
 }
+
+/* Empty state for search */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xxl);
+  text-align: center;
+  color: var(--app-hint-color);
+}
+
+.emptyIcon {
+  font-size: 48px;
+  margin-bottom: var(--spacing-md);
+}
+
+.emptyHint {
+  font-size: var(--font-size-sm);
+  margin-top: var(--spacing-sm);
+}

@@ -17,12 +17,12 @@ export function useFiles(apiReady = true) {
   const loadData = useCallback(async () => {
     if (!apiReady) return;
 
-    console.log('[useFiles] loadData called, apiReady:', apiReady);
+    console.log('[useFiles] loadData called, searchQuery:', searchQuery, 'selectedType:', selectedType);
     setIsLoading(true);
     setError(null);
 
     try {
-      if (searchQuery) {
+      if (searchQuery && searchQuery.trim()) {
         // Search both files and links in parallel
         const [filesResult, linksResult] = await Promise.all([
           apiClient.searchFiles(searchQuery),
