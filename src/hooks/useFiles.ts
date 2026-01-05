@@ -99,8 +99,12 @@ export function useFiles(apiReady = true) {
   const search = useCallback((query: string) => {
     setIsLoading(true); // Сразу показываем загрузку
     setFiles([]); // Очищаем файлы чтобы показать спиннер
+    setLinks([]); // Очищаем ссылки тоже
     setSearchQuery(query);
-    setSelectedType(null);
+    if (query) {
+      setSelectedType(null);
+    }
+    // Если query пустой - selectedType останется null, loadData загрузит все файлы
   }, []);
 
   // Refresh
