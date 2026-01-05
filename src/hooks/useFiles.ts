@@ -125,39 +125,49 @@ export function useFiles(apiReady = true) {
     loadDataForQuery('', type);
   }, [loadDataForQuery]);
 
+  // Флаг: были ли мы в режиме поиска
+  const wasSearchingRef = useRef(false);
+
   // Search - принимает query и сразу загружает
   const search = useCallback((query: string) => {
-    console.log('[useFiles] search called with:', query);
-
-    // Сначала обновляем searchQuery
-    setSearchQuery(query);
+    console.log('[useFiles] search called with:', query, 'wasSearching:', wasSearchingRef.current);
 
     if (query) {
-      // Перед поиском сохраняем текущие данные (если это не результаты поиска)
-      if (!searchQuery && files.length > 0) {
+      // Начинаем поиск
+      // Сохраняем данные ТОЛЬКО если ещё не были в режиме поиска
+      if (!wasSearchingRef.current && (files.length > 0 || links.length > 0)) {
         savedFilesRef.current = files;
         savedLinksRef.current = links;
-        console.log('[useFiles] Saved data before search:', savedFilesRef.current.length, 'files');
+        console.log('[useFiles] Saved data before search:', savedFilesRef.current.length, 'files,', savedLinksRef.current.length, 'links');
       }
-      // Новый поиск - показываем загрузку и очищаем старые результаты
+      wasSearchingRef.current = true;
+
+      setSearchQuery(query);
       setIsLoading(true);
       setFiles([]);
       setLinks([]);
       loadDataForQuery(query, null);
     } else {
-      // Очистка поиска - восстанавливаем сохранённые данные мгновенно
-      console.log('[useFiles] Restoring saved data:', savedFilesRef.current.length, 'files');
-      if (savedFilesRef.current.length > 0 || savedLinksRef.current.length > 0) {
-        // Восстанавливаем данные без загрузки
-        setFiles(savedFilesRef.current);
-        setLinks(savedLinksRef.current);
-        setIsLoading(false);
-      } else {
-        // Если нет сохранённых данных - загружаем
-        loadDataForQuery('', selectedType);
+      // Очистка поиска
+      setSearchQuery('');
+
+      if (wasSearchingRef.current) {
+        // Были в режиме поиска - восстанавливаем сохранённые данные
+        console.log('[useFiles] Restoring saved data:', savedFilesRef.current.length, 'files,', savedLinksRef.current.length, 'links');
+        wasSearchingRef.current = false;
+
+        if (savedFilesRef.current.length > 0 || savedLinksRef.current.length > 0) {
+          setFiles(savedFilesRef.current);
+          setLinks(savedLinksRef.current);
+          setIsLoading(false);
+        } else {
+          // Нет сохранённых данных - загружаем
+          loadDataForQuery('', selectedType);
+        }
       }
+      // Если не были в режиме поиска - ничего не делаем
     }
-  }, [loadDataForQuery, selectedType, searchQuery, files, links]);
+  }, [loadDataForQuery, selectedType, files, links]);
 
   // Refresh - перезагрузка текущего состояния
   const refresh = useCallback(() => {
