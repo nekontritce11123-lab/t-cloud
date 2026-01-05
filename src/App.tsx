@@ -341,6 +341,12 @@ function App() {
         ) : searchQuery ? (
           /* При поиске показываем файлы и ссылки */
           <>
+            {/* Спиннер при загрузке поиска */}
+            {isLoading && files.length === 0 && links.length === 0 && (
+              <div className={styles.loadingMore}>
+                <div className="spinner" />
+              </div>
+            )}
             {files.length > 0 && (
               <FileGrid
                 files={files}
