@@ -97,14 +97,12 @@ export function useFiles(apiReady = true) {
 
   // Search
   const search = useCallback((query: string) => {
-    setIsLoading(true); // Сразу показываем загрузку
-    setFiles([]); // Очищаем файлы чтобы показать спиннер
-    setLinks([]); // Очищаем ссылки тоже
+    console.log('[useFiles] search called with:', query);
     setSearchQuery(query);
     if (query) {
       setSelectedType(null);
     }
-    // Если query пустой - selectedType останется null, loadData загрузит все файлы
+    // loadData будет вызван автоматически через useEffect когда searchQuery изменится
   }, []);
 
   // Refresh

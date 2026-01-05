@@ -53,6 +53,12 @@ function App() {
 
   // Debounced search
   useEffect(() => {
+    // Если searchInput пустой - сбрасываем поиск сразу без debounce
+    if (!searchInput) {
+      search('');
+      return;
+    }
+
     const timer = setTimeout(() => {
       search(searchInput);
     }, 300);
