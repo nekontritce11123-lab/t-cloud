@@ -8,6 +8,7 @@ interface TimelineProps {
   onFileLongPress?: (file: FileRecord) => void;
   selectedFiles?: Set<number>;
   isSelectionMode?: boolean;
+  isOnCooldown?: (fileId: number) => boolean;
 }
 
 const TYPE_EMOJI: Record<MediaType, string> = {
@@ -87,9 +88,10 @@ interface FileCardProps {
   onFileLongPress?: (file: FileRecord) => void;
   isSelected?: boolean;
   isSelectionMode?: boolean;
+  isOnCooldown?: boolean;
 }
 
-function FileCard({ file, onFileClick, onFileLongPress, isSelected, isSelectionMode }: FileCardProps) {
+function FileCard({ file, onFileClick, onFileLongPress, isSelected, isSelectionMode, isOnCooldown }: FileCardProps) {
   let longPressTimer: ReturnType<typeof setTimeout> | null = null;
   let isLongPress = false;
 
@@ -117,7 +119,7 @@ function FileCard({ file, onFileClick, onFileLongPress, isSelected, isSelectionM
 
   return (
     <button
-      className={`${styles.card} ${isSelected ? styles.selected : ''}`}
+      className={`${styles.card} ${isSelected ? styles.selected : ''} ${isOnCooldown ? styles.cooldown : ''}`}
       onClick={handleClick}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
@@ -126,7 +128,10 @@ function FileCard({ file, onFileClick, onFileLongPress, isSelected, isSelectionM
       onMouseUp={handleTouchEnd}
       onMouseLeave={handleTouchEnd}
     >
-      {isSelectionMode && (
+      {isOnCooldown && (
+        <div className={styles.cooldownBadge}>✓</div>
+      )}
+      {isSelectionMode && !isOnCooldown && (
         <div className={styles.checkbox}>
           {isSelected ? '✓' : ''}
         </div>
@@ -183,7 +188,7 @@ function FileCard({ file, onFileClick, onFileLongPress, isSelected, isSelectionM
   );
 }
 
-export function Timeline({ files, onFileClick, onFileLongPress, selectedFiles, isSelectionMode }: TimelineProps) {
+export function Timeline({ files, onFileClick, onFileLongPress, selectedFiles, isSelectionMode, isOnCooldown }: TimelineProps) {
   const groupedFiles = useMemo(() => groupFilesByDate(files), [files]);
 
   if (files.length === 0) {
@@ -218,6 +223,7 @@ export function Timeline({ files, onFileClick, onFileLongPress, selectedFiles, i
                 onFileLongPress={onFileLongPress}
                 isSelected={selectedFiles?.has(file.id)}
                 isSelectionMode={isSelectionMode}
+                isOnCooldown={isOnCooldown?.(file.id)}
               />
             ))}
           </div>

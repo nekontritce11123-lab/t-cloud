@@ -9,6 +9,19 @@ import { config } from '../../config.js';
 const router = Router();
 const filesRepo = new FilesRepository();
 
+// Telegram caption limit: 1024 for photos, 4096 for other media
+const PHOTO_CAPTION_LIMIT = 1024;
+const DEFAULT_CAPTION_LIMIT = 4096;
+
+// Truncate caption to fit Telegram limits
+function truncateCaption(caption: string | null | undefined, mediaType: string): string | undefined {
+  if (!caption) return undefined;
+  const limit = mediaType === 'photo' ? PHOTO_CAPTION_LIMIT : DEFAULT_CAPTION_LIMIT;
+  if (caption.length <= limit) return caption;
+  // Truncate with ellipsis
+  return caption.substring(0, limit - 3) + '...';
+}
+
 // Lazy init thumbnail service (bot needs to be initialized first)
 let thumbnailService: ThumbnailService | null = null;
 function getThumbnailService(): ThumbnailService {
@@ -307,7 +320,7 @@ router.post('/send', async (req, res: Response) => {
       }
 
       const mediaType = file.mediaType as MediaType;
-      const caption = file.caption || undefined;
+      const caption = truncateCaption(file.caption, mediaType);
 
       try {
         switch (mediaType) {
@@ -384,7 +397,7 @@ router.post('/:id/send', async (req, res: Response) => {
     }
 
     const mediaType = file.mediaType as MediaType;
-    const caption = file.caption || undefined;
+    const caption = truncateCaption(file.caption, mediaType);
 
     // Actually send the file via bot
     switch (mediaType) {

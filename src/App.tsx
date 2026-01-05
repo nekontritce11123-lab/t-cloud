@@ -12,7 +12,7 @@ import './styles/global.css';
 import styles from './App.module.css';
 
 function App() {
-  const { isReady, getInitData, hapticFeedback, mainButton, close } = useTelegram();
+  const { isReady, getInitData, hapticFeedback, mainButton } = useTelegram();
   const [isSending, setIsSending] = useState(false);
   const [apiReady, setApiReady] = useState(false);
   const {
@@ -40,9 +40,51 @@ function App() {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectionType, setSelectionType] = useState<'files' | 'links'>('files');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [sentFiles, setSentFiles] = useState<Record<number, number>>({});
+  const [sendingFileId, setSendingFileId] = useState<number | null>(null); // Защита от двойного клика
 
   // Лимит на выбор
   const MAX_SELECTED_ITEMS = 20;
+  const COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 часа
+
+  // Загрузка cooldown из localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('t-cloud-sent-files');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        // Очищаем старые записи (> 24 часов)
+        const now = Date.now();
+        const cleaned: Record<number, number> = {};
+        for (const [id, timestamp] of Object.entries(parsed)) {
+          if (now - (timestamp as number) < COOLDOWN_MS) {
+            cleaned[parseInt(id)] = timestamp as number;
+          }
+        }
+        setSentFiles(cleaned);
+      }
+    } catch (e) {
+      console.error('Error loading sent files:', e);
+    }
+  }, []);
+
+  // Проверка cooldown
+  const isOnCooldown = useCallback((fileId: number): boolean => {
+    const sentAt = sentFiles[fileId];
+    if (!sentAt) return false;
+    return Date.now() - sentAt < COOLDOWN_MS;
+  }, [sentFiles]);
+
+  // Маркировка файла как отправленного
+  const markAsSent = useCallback((fileId: number) => {
+    const newSentFiles = { ...sentFiles, [fileId]: Date.now() };
+    setSentFiles(newSentFiles);
+    try {
+      localStorage.setItem('t-cloud-sent-files', JSON.stringify(newSentFiles));
+    } catch (e) {
+      console.error('Error saving sent files:', e);
+    }
+  }, [sentFiles]);
 
   // Initialize API with Telegram initData BEFORE loading files
   useEffect(() => {
@@ -109,21 +151,31 @@ function App() {
   const handleSendSelected = useCallback(async () => {
     if (selectedFiles.size === 0 || isSending) return;
 
+    // Фильтруем файлы на cooldown
+    const fileIds = Array.from(selectedFiles).filter(id => !isOnCooldown(id));
+
+    if (fileIds.length === 0) {
+      hapticFeedback.warning();
+      return;
+    }
+
     setIsSending(true);
     hapticFeedback.success();
 
     try {
-      const fileIds = Array.from(selectedFiles);
       const result = await apiClient.sendFiles(fileIds);
 
       if (result.success) {
+        // Маркируем как отправленные
+        for (const id of result.sent || fileIds) {
+          markAsSent(id);
+        }
+
         // Выход из режима выбора
         setIsSelectionMode(false);
         setSelectedFiles(new Set());
         mainButton.hide();
-
-        // Закрыть Mini App после отправки
-        close();
+        // НЕ закрываем приложение
       }
     } catch (error) {
       console.error('Error sending files:', error);
@@ -131,7 +183,7 @@ function App() {
     } finally {
       setIsSending(false);
     }
-  }, [selectedFiles, isSending, hapticFeedback, mainButton, close]);
+  }, [selectedFiles, isSending, hapticFeedback, mainButton, isOnCooldown, markAsSent]);
 
   // Удалить выбранные элементы
   const handleDeleteSelected = useCallback(async () => {
@@ -198,16 +250,31 @@ function App() {
       });
     } else {
       // Обычный режим - отправляем один файл через API
+      if (isOnCooldown(file.id)) {
+        hapticFeedback.warning();
+        return;
+      }
+
+      // Защита от двойного клика
+      if (sendingFileId !== null) {
+        return;
+      }
+
+      setSendingFileId(file.id);
+
       try {
         await apiClient.sendFile(file.id);
+        markAsSent(file.id);
         hapticFeedback.success();
-        close();
+        // НЕ закрываем приложение
       } catch (error) {
         console.error('Error sending file:', error);
         hapticFeedback.error();
+      } finally {
+        setSendingFileId(null);
       }
     }
-  }, [hapticFeedback, isSelectionMode, selectionType, close]);
+  }, [hapticFeedback, isSelectionMode, selectionType, isOnCooldown, markAsSent, sendingFileId]);
 
   // Handle long press - включает режим выбора файлов
   const handleFileLongPress = useCallback((file: FileRecord) => {
@@ -369,6 +436,7 @@ function App() {
                 selectedFiles={selectedFiles}
                 isSelectionMode={isSelectionMode}
                 searchQuery={searchQuery}
+                isOnCooldown={isOnCooldown}
               />
             )}
             {links.length > 0 && (
@@ -396,6 +464,7 @@ function App() {
             onFileLongPress={handleFileLongPress}
             selectedFiles={selectedFiles}
             isSelectionMode={isSelectionMode}
+            isOnCooldown={isOnCooldown}
           />
         )}
 

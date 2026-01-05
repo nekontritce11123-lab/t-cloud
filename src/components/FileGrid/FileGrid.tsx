@@ -9,6 +9,7 @@ interface FileGridProps {
   selectedFiles?: Set<number>;
   isSelectionMode?: boolean;
   searchQuery?: string; // Если передан - показываем результаты поиска
+  isOnCooldown?: (fileId: number) => boolean;
 }
 
 const TYPE_EMOJI: Record<MediaType, string> = {
@@ -43,9 +44,10 @@ interface FileCardProps {
   onFileLongPress?: (file: FileRecord) => void;
   isSelected?: boolean;
   isSelectionMode?: boolean;
+  isOnCooldown?: boolean;
 }
 
-function FileCard({ file, onFileClick, onFileLongPress, isSelected, isSelectionMode }: FileCardProps) {
+function FileCard({ file, onFileClick, onFileLongPress, isSelected, isSelectionMode, isOnCooldown }: FileCardProps) {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLongPress = useRef(false);
 
@@ -73,7 +75,7 @@ function FileCard({ file, onFileClick, onFileLongPress, isSelected, isSelectionM
 
   return (
     <button
-      className={`${styles.card} ${isSelected ? styles.selected : ''}`}
+      className={`${styles.card} ${isSelected ? styles.selected : ''} ${isOnCooldown ? styles.cooldown : ''}`}
       onClick={handleClick}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
@@ -82,8 +84,12 @@ function FileCard({ file, onFileClick, onFileLongPress, isSelected, isSelectionM
       onMouseUp={handleTouchEnd}
       onMouseLeave={handleTouchEnd}
     >
+      {/* Cooldown badge */}
+      {isOnCooldown && (
+        <div className={styles.cooldownBadge}>✓</div>
+      )}
       {/* Selection checkbox */}
-      {isSelectionMode && (
+      {isSelectionMode && !isOnCooldown && (
         <div className={styles.checkbox}>
           {isSelected ? '✓' : ''}
         </div>
@@ -150,7 +156,7 @@ function FileCard({ file, onFileClick, onFileLongPress, isSelected, isSelectionM
   );
 }
 
-export function FileGrid({ files, onFileClick, onFileLongPress, selectedFiles, isSelectionMode, searchQuery }: FileGridProps) {
+export function FileGrid({ files, onFileClick, onFileLongPress, selectedFiles, isSelectionMode, searchQuery, isOnCooldown }: FileGridProps) {
   if (files.length === 0) {
     return (
       <div className={styles.empty}>
@@ -181,6 +187,7 @@ export function FileGrid({ files, onFileClick, onFileLongPress, selectedFiles, i
             onFileLongPress={onFileLongPress}
             isSelected={selectedFiles?.has(file.id)}
             isSelectionMode={isSelectionMode}
+            isOnCooldown={isOnCooldown?.(file.id)}
           />
         ))}
       </div>
@@ -208,6 +215,7 @@ export function FileGrid({ files, onFileClick, onFileLongPress, selectedFiles, i
             onFileLongPress={onFileLongPress}
             isSelected={selectedFiles?.has(file.id)}
             isSelectionMode={isSelectionMode}
+            isOnCooldown={isOnCooldown?.(file.id)}
           />
         ))}
       </div>
