@@ -112,7 +112,7 @@ export function useFiles(apiReady = true) {
     loadDataForQuery('', type);
   }, [loadDataForQuery]);
 
-  // Search - ПРОСТОЙ ПОДХОД: всегда перезагружаем данные
+  // Search - для debounced ввода
   const search = useCallback((query: string) => {
     console.log('[useFiles] search called with:', query);
     setSearchQuery(query);
@@ -120,6 +120,45 @@ export function useFiles(apiReady = true) {
     // При непустом query - ищем по всем типам
     loadDataForQuery(query, query ? null : selectedType);
   }, [loadDataForQuery, selectedType]);
+
+  // Мгновенная очистка поиска (для кнопки X)
+  // ВАЖНО: Сначала загружаем данные, потом очищаем query
+  const clearSearch = useCallback(async () => {
+    console.log('[useFiles] clearSearch called');
+
+    // Отменяем любые pending запросы
+    const requestId = ++currentRequestId.current;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Загружаем данные ДО очистки searchQuery
+      const typeForApi = selectedType === 'trash' ? undefined : selectedType;
+      const result = await apiClient.getFiles({
+        type: typeForApi || undefined,
+        page: 1,
+        limit: 50,
+      });
+
+      // Проверяем актуальность
+      if (requestId !== currentRequestId.current) return;
+
+      // Данные пришли - теперь безопасно очищать query и обновлять files
+      setFiles(result.items || []);
+      setLinks([]);
+      setSearchQuery(''); // Очищаем ПОСЛЕ того как данные готовы
+      setHasMore(false);
+    } catch (err) {
+      if (requestId !== currentRequestId.current) return;
+      console.error('[useFiles] clearSearch error:', err);
+      setError('Не удалось загрузить файлы');
+    } finally {
+      if (requestId === currentRequestId.current) {
+        setIsLoading(false);
+      }
+    }
+  }, [selectedType]);
 
   // Refresh - перезагрузка текущего состояния
   const refresh = useCallback(() => {
@@ -152,6 +191,7 @@ export function useFiles(apiReady = true) {
     hasMore,
     filterByType,
     search,
+    clearSearch,
     loadMore: () => {},
     refresh,
     deleteFile,

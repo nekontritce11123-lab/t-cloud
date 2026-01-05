@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useTelegram } from './hooks/useTelegram';
 import { useFiles } from './hooks/useFiles';
 import { apiClient, FileRecord, LinkRecord } from './api/client';
@@ -27,11 +27,14 @@ function App() {
     hasMore,
     filterByType,
     search,
+    clearSearch,
     loadMore,
     refresh,
   } = useFiles(apiReady);
 
+  // Локальное состояние для инпута (для отзывчивости при вводе)
   const [searchInput, setSearchInput] = useState('');
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<Set<number>>(new Set());
   const [selectedLinks, setSelectedLinks] = useState<Set<number>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -52,18 +55,30 @@ function App() {
     }
   }, [isReady, getInitData]);
 
-  // Debounced search
-  useEffect(() => {
-    // Debounce для всех изменений, включая очистку
-    // Для очистки используем меньшую задержку (100ms) для отзывчивости
-    const delay = searchInput ? 300 : 100;
+  // Обработчик ввода с debounce
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchInput(value);
 
-    const timer = setTimeout(() => {
-      search(searchInput);
-    }, delay);
+    // Очищаем предыдущий таймер
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
 
-    return () => clearTimeout(timer);
-  }, [searchInput, search]);
+    // Debounce для поиска
+    debounceTimerRef.current = setTimeout(() => {
+      search(value);
+    }, 300);
+  }, [search]);
+
+  // Мгновенная очистка поиска
+  const handleClearSearch = useCallback(() => {
+    // Очищаем таймер debounce
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    setSearchInput('');
+    clearSearch();
+  }, [clearSearch]);
 
   // Управление главной кнопкой
   useEffect(() => {
@@ -288,7 +303,8 @@ function App() {
             <h1 className={styles.title}>T-Cloud</h1>
             <SearchBar
               value={searchInput}
-              onChange={setSearchInput}
+              onChange={handleSearchChange}
+              onClear={handleClearSearch}
               placeholder="Искать по имени, подписи..."
               hint={searchHint}
             />

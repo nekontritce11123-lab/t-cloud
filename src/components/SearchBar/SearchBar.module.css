@@ -57,9 +57,9 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgba(255, 0, 0, 0.3);
+  background: var(--app-secondary-bg-color);
   font-size: 12px;
-  color: #ff3b30;
+  color: var(--app-hint-color);
   transition: all var(--animation-fast) var(--easing-smooth);
   cursor: pointer;
   border: none;

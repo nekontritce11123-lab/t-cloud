@@ -9,6 +9,7 @@ interface SearchHint {
 interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
+  onClear?: () => void;
   placeholder?: string;
   hint?: SearchHint | null;
 }
@@ -33,12 +34,16 @@ function getFieldLabel(field: string): string {
   }
 }
 
-export function SearchBar({ value, onChange, placeholder = 'Поиск...', hint }: SearchBarProps) {
+export function SearchBar({ value, onChange, onClear, placeholder = 'Поиск...', hint }: SearchBarProps) {
   const [isFocused, setIsFocused] = useState(false);
 
   const handleClear = useCallback(() => {
-    onChange('');
-  }, [onChange]);
+    if (onClear) {
+      onClear();
+    } else {
+      onChange('');
+    }
+  }, [onChange, onClear]);
 
   return (
     <div className={styles.wrapper}>
@@ -57,7 +62,6 @@ export function SearchBar({ value, onChange, placeholder = 'Поиск...', hint
           <button
             type="button"
             className={styles.clear}
-            style={{ background: '#00FF00', color: '#000000', border: '3px solid #FF00FF', width: '32px', height: '32px', fontSize: '18px' }}
             onClick={handleClear}
             onMouseDown={(e) => e.preventDefault()}
           >
