@@ -57,7 +57,7 @@ export function SearchBar({ value, onChange, placeholder = 'Поиск...', hint
           <button
             type="button"
             className={styles.clear}
-            style={{ background: 'red', color: 'white' }}
+            style={{ background: '#FF0000', color: '#FFFFFF', border: '2px solid yellow' }}
             onClick={handleClear}
             onMouseDown={(e) => e.preventDefault()}
           >
