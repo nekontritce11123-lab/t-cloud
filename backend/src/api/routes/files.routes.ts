@@ -152,6 +152,83 @@ router.get('/stats', async (req, res: Response) => {
 });
 
 /**
+ * GET /api/files/trash
+ * Get deleted files (trash) for the authenticated user
+ */
+router.get('/trash', async (req, res: Response) => {
+  const { telegramUser } = req as AuthenticatedRequest;
+
+  console.log('[Files] GET /trash for user:', telegramUser.id);
+
+  try {
+    const files = await filesRepo.findDeleted(telegramUser.id);
+
+    console.log('[Files] Found', files.length, 'files in trash');
+
+    // Add thumbnail URLs
+    const service = getThumbnailService();
+    const itemsWithThumbnails = await Promise.all(
+      files.map(async (file) => ({
+        ...file,
+        thumbnailUrl: await service.getThumbnailUrl(
+          file.thumbnailFileId,
+          file.fileId,
+          file.mediaType as MediaType
+        ),
+      }))
+    );
+
+    res.json({ items: itemsWithThumbnails, total: itemsWithThumbnails.length });
+  } catch (error) {
+    console.error('[API] Error fetching trash:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/files/trash/count
+ * Get count of files in trash
+ */
+router.get('/trash/count', async (req, res: Response) => {
+  const { telegramUser } = req as AuthenticatedRequest;
+
+  try {
+    const count = await filesRepo.getTrashCount(telegramUser.id);
+    res.json({ count });
+  } catch (error) {
+    console.error('[API] Error fetching trash count:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/files/delete-many
+ * Soft delete multiple files (move to trash)
+ */
+router.post('/delete-many', async (req, res: Response) => {
+  const { telegramUser } = req as unknown as AuthenticatedRequest;
+  const { fileIds } = req.body as { fileIds: number[] };
+
+  if (!Array.isArray(fileIds) || fileIds.length === 0) {
+    res.status(400).json({ error: 'fileIds array is required' });
+    return;
+  }
+
+  if (fileIds.length > 100) {
+    res.status(400).json({ error: 'Maximum 100 files per request' });
+    return;
+  }
+
+  try {
+    const deletedCount = await filesRepo.softDeleteMany(fileIds, telegramUser.id);
+    res.json({ success: true, deleted: deletedCount });
+  } catch (error) {
+    console.error('[API] Error deleting files:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * GET /api/files/:id
  * Get a single file by ID
  */
@@ -349,52 +426,6 @@ router.post('/:id/send', async (req, res: Response) => {
 });
 
 /**
- * GET /api/files/trash
- * Get deleted files (trash) for the authenticated user
- */
-router.get('/trash', async (req, res: Response) => {
-  const { telegramUser } = req as AuthenticatedRequest;
-
-  try {
-    const files = await filesRepo.findDeleted(telegramUser.id);
-
-    // Add thumbnail URLs
-    const service = getThumbnailService();
-    const itemsWithThumbnails = await Promise.all(
-      files.map(async (file) => ({
-        ...file,
-        thumbnailUrl: await service.getThumbnailUrl(
-          file.thumbnailFileId,
-          file.fileId,
-          file.mediaType as MediaType
-        ),
-      }))
-    );
-
-    res.json({ items: itemsWithThumbnails, total: itemsWithThumbnails.length });
-  } catch (error) {
-    console.error('[API] Error fetching trash:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-/**
- * GET /api/files/trash/count
- * Get count of files in trash
- */
-router.get('/trash/count', async (req, res: Response) => {
-  const { telegramUser } = req as AuthenticatedRequest;
-
-  try {
-    const count = await filesRepo.getTrashCount(telegramUser.id);
-    res.json({ count });
-  } catch (error) {
-    console.error('[API] Error fetching trash count:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-/**
  * DELETE /api/files/:id
  * Soft delete a file (move to trash)
  */
@@ -418,33 +449,6 @@ router.delete('/:id', async (req, res: Response) => {
     res.json({ success: true });
   } catch (error) {
     console.error('[API] Error deleting file:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-/**
- * POST /api/files/delete-many
- * Soft delete multiple files (move to trash)
- */
-router.post('/delete-many', async (req, res: Response) => {
-  const { telegramUser } = req as unknown as AuthenticatedRequest;
-  const { fileIds } = req.body as { fileIds: number[] };
-
-  if (!Array.isArray(fileIds) || fileIds.length === 0) {
-    res.status(400).json({ error: 'fileIds array is required' });
-    return;
-  }
-
-  if (fileIds.length > 100) {
-    res.status(400).json({ error: 'Maximum 100 files per request' });
-    return;
-  }
-
-  try {
-    const deletedCount = await filesRepo.softDeleteMany(fileIds, telegramUser.id);
-    res.json({ success: true, deleted: deletedCount });
-  } catch (error) {
-    console.error('[API] Error deleting files:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

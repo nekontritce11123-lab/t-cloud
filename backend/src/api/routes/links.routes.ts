@@ -36,6 +36,68 @@ router.get('/', async (req, res: Response) => {
 });
 
 /**
+ * GET /api/links/trash
+ * Get deleted links (trash) for the authenticated user
+ */
+router.get('/trash', async (req, res: Response) => {
+  const { telegramUser } = req as AuthenticatedRequest;
+
+  console.log('[Links] GET /trash for user:', telegramUser.id);
+
+  try {
+    const links = await linksRepo.findDeleted(telegramUser.id);
+    console.log('[Links] Found', links.length, 'links in trash');
+    res.json({ items: links, total: links.length });
+  } catch (error) {
+    console.error('[API] Error fetching trash:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/links/trash/count
+ * Get count of links in trash
+ */
+router.get('/trash/count', async (req, res: Response) => {
+  const { telegramUser } = req as AuthenticatedRequest;
+
+  try {
+    const count = await linksRepo.getTrashCount(telegramUser.id);
+    res.json({ count });
+  } catch (error) {
+    console.error('[API] Error fetching trash count:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/links/delete-many
+ * Soft delete multiple links (move to trash)
+ */
+router.post('/delete-many', async (req, res: Response) => {
+  const { telegramUser } = req as unknown as AuthenticatedRequest;
+  const { linkIds } = req.body as { linkIds: number[] };
+
+  if (!Array.isArray(linkIds) || linkIds.length === 0) {
+    res.status(400).json({ error: 'linkIds array is required' });
+    return;
+  }
+
+  if (linkIds.length > 100) {
+    res.status(400).json({ error: 'Maximum 100 links per request' });
+    return;
+  }
+
+  try {
+    const deletedCount = await linksRepo.softDeleteMany(linkIds, telegramUser.id);
+    res.json({ success: true, deleted: deletedCount });
+  } catch (error) {
+    console.error('[API] Error deleting links:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * GET /api/links/:id
  * Get a single link by ID
  */
@@ -64,38 +126,6 @@ router.get('/:id', async (req, res: Response) => {
 });
 
 /**
- * GET /api/links/trash
- * Get deleted links (trash) for the authenticated user
- */
-router.get('/trash', async (req, res: Response) => {
-  const { telegramUser } = req as AuthenticatedRequest;
-
-  try {
-    const links = await linksRepo.findDeleted(telegramUser.id);
-    res.json({ items: links, total: links.length });
-  } catch (error) {
-    console.error('[API] Error fetching trash:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-/**
- * GET /api/links/trash/count
- * Get count of links in trash
- */
-router.get('/trash/count', async (req, res: Response) => {
-  const { telegramUser } = req as AuthenticatedRequest;
-
-  try {
-    const count = await linksRepo.getTrashCount(telegramUser.id);
-    res.json({ count });
-  } catch (error) {
-    console.error('[API] Error fetching trash count:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-/**
  * DELETE /api/links/:id
  * Soft delete a link (move to trash)
  */
@@ -119,33 +149,6 @@ router.delete('/:id', async (req, res: Response) => {
     res.json({ success: true });
   } catch (error) {
     console.error('[API] Error deleting link:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-/**
- * POST /api/links/delete-many
- * Soft delete multiple links (move to trash)
- */
-router.post('/delete-many', async (req, res: Response) => {
-  const { telegramUser } = req as unknown as AuthenticatedRequest;
-  const { linkIds } = req.body as { linkIds: number[] };
-
-  if (!Array.isArray(linkIds) || linkIds.length === 0) {
-    res.status(400).json({ error: 'linkIds array is required' });
-    return;
-  }
-
-  if (linkIds.length > 100) {
-    res.status(400).json({ error: 'Maximum 100 links per request' });
-    return;
-  }
-
-  try {
-    const deletedCount = await linksRepo.softDeleteMany(linkIds, telegramUser.id);
-    res.json({ success: true, deleted: deletedCount });
-  } catch (error) {
-    console.error('[API] Error deleting links:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
