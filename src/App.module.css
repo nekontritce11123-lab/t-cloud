@@ -61,3 +61,24 @@
   color: var(--app-hint-color);
   font-size: var(--font-size-sm);
 }
+
+/* Selection mode header */
+.selectionHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-medium);
+}
+
+.cancelBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--app-secondary-bg-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: var(--app-text-color);
+}

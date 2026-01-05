@@ -10,7 +10,7 @@ import './styles/global.css';
 import styles from './App.module.css';
 
 function App() {
-  const { isReady, getInitData, hapticFeedback } = useTelegram();
+  const { isReady, getInitData, hapticFeedback, sendData, mainButton } = useTelegram();
   const [apiReady, setApiReady] = useState(false);
   const {
     files,
@@ -24,9 +24,11 @@ function App() {
     search,
     loadMore,
     refresh,
-  } = useFiles(apiReady); // Pass apiReady flag
+  } = useFiles(apiReady);
 
   const [searchInput, setSearchInput] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<Set<number>>(new Set());
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
 
   // Initialize API with Telegram initData BEFORE loading files
   useEffect(() => {
@@ -48,18 +50,80 @@ function App() {
     return () => clearTimeout(timer);
   }, [searchInput, search]);
 
-  // Handle file click
+  // Управление главной кнопкой
+  useEffect(() => {
+    if (selectedFiles.size > 0) {
+      const count = selectedFiles.size;
+      mainButton.show(
+        `Отправить (${count})`,
+        handleSendSelected
+      );
+    } else {
+      mainButton.hide();
+    }
+  }, [selectedFiles.size]);
+
+  // Отправить выбранные файлы
+  const handleSendSelected = useCallback(() => {
+    if (selectedFiles.size === 0) return;
+
+    hapticFeedback.success();
+
+    // Собираем fileId выбранных файлов
+    const selectedFileIds = files
+      .filter(f => selectedFiles.has(f.id))
+      .map(f => ({ id: f.id, fileId: f.fileId, mediaType: f.mediaType }));
+
+    // Отправляем данные боту
+    sendData(JSON.stringify({
+      action: 'send_files',
+      files: selectedFileIds
+    }));
+
+    // Mini App закроется автоматически после sendData
+  }, [selectedFiles, files, hapticFeedback, sendData]);
+
+  // Handle file click - обычное нажатие отправляет один файл
   const handleFileClick = useCallback((file: FileRecord) => {
     hapticFeedback.light();
-    // For now, just log. In full implementation, open detail view or send to chat
-    console.log('File clicked:', file);
-    // TODO: Implement file detail view or send to chat
+
+    if (isSelectionMode) {
+      // В режиме выбора - toggle выбор
+      setSelectedFiles(prev => {
+        const next = new Set(prev);
+        if (next.has(file.id)) {
+          next.delete(file.id);
+        } else {
+          next.add(file.id);
+        }
+        return next;
+      });
+    } else {
+      // Обычный режим - отправляем один файл
+      sendData(JSON.stringify({
+        action: 'send_files',
+        files: [{ id: file.id, fileId: file.fileId, mediaType: file.mediaType }]
+      }));
+    }
+  }, [hapticFeedback, isSelectionMode, sendData]);
+
+  // Handle long press - включает режим выбора
+  const handleFileLongPress = useCallback((file: FileRecord) => {
+    hapticFeedback.medium();
+    setIsSelectionMode(true);
+    setSelectedFiles(new Set([file.id]));
   }, [hapticFeedback]);
+
+  // Выход из режима выбора
+  const exitSelectionMode = useCallback(() => {
+    setIsSelectionMode(false);
+    setSelectedFiles(new Set());
+    mainButton.hide();
+  }, [mainButton]);
 
   // Handle link click
   const handleLinkClick = useCallback((link: LinkRecord) => {
     hapticFeedback.light();
-    // Open link in browser
     window.open(link.url, '_blank');
   }, [hapticFeedback]);
 
@@ -85,23 +149,34 @@ function App() {
     <div className={styles.app}>
       {/* Header */}
       <header className={styles.header}>
-        <h1 className={styles.title}>T-Cloud</h1>
-        <SearchBar
-          value={searchInput}
-          onChange={setSearchInput}
-          placeholder="Поиск по файлам..."
-        />
+        {isSelectionMode ? (
+          <div className={styles.selectionHeader}>
+            <button onClick={exitSelectionMode} className={styles.cancelBtn}>✕</button>
+            <span>Выбрано: {selectedFiles.size}</span>
+          </div>
+        ) : (
+          <>
+            <h1 className={styles.title}>T-Cloud</h1>
+            <SearchBar
+              value={searchInput}
+              onChange={setSearchInput}
+              placeholder="Поиск по файлам..."
+            />
+          </>
+        )}
       </header>
 
       {/* Category chips */}
-      <CategoryChips
-        stats={stats}
-        selectedType={selectedType}
-        onSelect={(type) => {
-          hapticFeedback.selection();
-          filterByType(type);
-        }}
-      />
+      {!isSelectionMode && (
+        <CategoryChips
+          stats={stats}
+          selectedType={selectedType}
+          onSelect={(type) => {
+            hapticFeedback.selection();
+            filterByType(type);
+          }}
+        />
+      )}
 
       {/* Content */}
       <main className={styles.content} onScroll={handleScroll}>
@@ -115,7 +190,13 @@ function App() {
         {selectedType === 'link' ? (
           <LinkList links={links} onLinkClick={handleLinkClick} />
         ) : (
-          <FileGrid files={files} onFileClick={handleFileClick} />
+          <FileGrid
+            files={files}
+            onFileClick={handleFileClick}
+            onFileLongPress={handleFileLongPress}
+            selectedFiles={selectedFiles}
+            isSelectionMode={isSelectionMode}
+          />
         )}
 
         {/* Loading indicator */}

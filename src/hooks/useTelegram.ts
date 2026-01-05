@@ -22,6 +22,8 @@ interface TelegramWebApp {
       language_code?: string;
     };
     start_param?: string;
+    chat_instance?: string;
+    chat_type?: string;
   };
   themeParams: {
     bg_color?: string;
@@ -44,6 +46,7 @@ interface TelegramWebApp {
     textColor: string;
     isVisible: boolean;
     isActive: boolean;
+    isProgressVisible: boolean;
     show: () => void;
     hide: () => void;
     onClick: (callback: () => void) => void;
@@ -51,6 +54,8 @@ interface TelegramWebApp {
     setText: (text: string) => void;
     enable: () => void;
     disable: () => void;
+    showProgress: (leaveActive?: boolean) => void;
+    hideProgress: () => void;
   };
   BackButton: {
     isVisible: boolean;
@@ -62,6 +67,8 @@ interface TelegramWebApp {
   isExpanded: boolean;
   viewportHeight: number;
   viewportStableHeight: number;
+  sendData: (data: string) => void;
+  switchInlineQuery: (query: string, chatTypes?: string[]) => void;
 }
 
 export function useTelegram() {
@@ -95,6 +102,29 @@ export function useTelegram() {
     return window.Telegram?.WebApp?.initData || '';
   };
 
+  // Отправить данные боту и закрыть Mini App
+  const sendData = (data: string) => {
+    webApp?.sendData(data);
+  };
+
+  // Показать/скрыть главную кнопку
+  const mainButton = {
+    show: (text: string, onClick: () => void) => {
+      if (webApp) {
+        webApp.MainButton.setText(text);
+        webApp.MainButton.onClick(onClick);
+        webApp.MainButton.show();
+      }
+    },
+    hide: () => webApp?.MainButton.hide(),
+    setText: (text: string) => webApp?.MainButton.setText(text),
+    showProgress: () => webApp?.MainButton.showProgress(true),
+    hideProgress: () => webApp?.MainButton.hideProgress(),
+  };
+
+  // Закрыть Mini App
+  const close = () => webApp?.close();
+
   return {
     webApp,
     isReady,
@@ -103,5 +133,8 @@ export function useTelegram() {
     themeParams: webApp?.themeParams,
     hapticFeedback,
     getInitData,
+    sendData,
+    mainButton,
+    close,
   };
 }

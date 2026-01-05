@@ -6,6 +6,7 @@
 }
 
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
   background: var(--app-secondary-bg-color);
@@ -16,6 +17,29 @@
 
 .card:active {
   transform: scale(0.95);
+}
+
+.card.selected {
+  outline: 3px solid var(--tg-theme-button-color, #3390ec);
+  outline-offset: -3px;
+}
+
+.checkbox {
+  position: absolute;
+  top: var(--spacing-xs);
+  left: var(--spacing-xs);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--tg-theme-button-color, #3390ec);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  color: white;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .preview {

@@ -3,6 +3,8 @@ import { config } from '../config.js';
 import { setupMediaHandlers } from './handlers/media.handler.js';
 import { setupTextHandlers } from './handlers/text.handler.js';
 import { setupRetrievalHandlers } from './handlers/retrieval.handler.js';
+import { FilesRepository } from '../db/repositories/files.repository.js';
+import { MediaType } from '../types/index.js';
 
 // Create bot instance
 export const bot = new Bot(config.botToken);
@@ -62,6 +64,70 @@ export function setupBot(): void {
         '🔗 Ссылки: 0\n' +
         '🎵 Аудио: 0'
     );
+  });
+
+  // Handle web_app_data from Mini App
+  bot.on('message:web_app_data', async (ctx) => {
+    const userId = ctx.from?.id;
+    if (!userId) return;
+
+    try {
+      const data = JSON.parse(ctx.message.web_app_data.data);
+      console.log('[Bot] Received web_app_data:', data);
+
+      if (data.action === 'send_files' && Array.isArray(data.files)) {
+        const filesRepo = new FilesRepository();
+
+        for (const fileInfo of data.files) {
+          const file = await filesRepo.findById(fileInfo.id);
+
+          if (!file || file.userId !== userId) {
+            console.log('[Bot] File not found or not owned:', fileInfo.id);
+            continue;
+          }
+
+          // Send the file based on media type
+          const mediaType = file.mediaType as MediaType;
+          const caption = file.caption || undefined;
+
+          try {
+            switch (mediaType) {
+              case 'photo':
+                await ctx.replyWithPhoto(file.fileId, { caption });
+                break;
+              case 'video':
+                await ctx.replyWithVideo(file.fileId, { caption });
+                break;
+              case 'document':
+                await ctx.replyWithDocument(file.fileId, { caption });
+                break;
+              case 'audio':
+                await ctx.replyWithAudio(file.fileId, { caption });
+                break;
+              case 'voice':
+                await ctx.replyWithVoice(file.fileId, { caption });
+                break;
+              case 'video_note':
+                await ctx.replyWithVideoNote(file.fileId);
+                break;
+              case 'animation':
+                await ctx.replyWithAnimation(file.fileId, { caption });
+                break;
+              case 'sticker':
+                await ctx.replyWithSticker(file.fileId);
+                break;
+              default:
+                await ctx.replyWithDocument(file.fileId, { caption });
+            }
+            console.log('[Bot] Sent file:', file.id, file.fileName);
+          } catch (sendError) {
+            console.error('[Bot] Error sending file:', sendError);
+          }
+        }
+      }
+    } catch (parseError) {
+      console.error('[Bot] Error parsing web_app_data:', parseError);
+    }
   });
 
   // Setup handlers
