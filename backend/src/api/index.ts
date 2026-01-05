@@ -23,6 +23,7 @@ app.use(
         origin.includes('127.0.0.1') ||
         origin.endsWith('.lhr.life') ||
         origin.includes('ngrok') ||
+        origin.includes('factchain-traker.online') ||
         origin === config.miniAppUrl
       ) {
         callback(null, true);
