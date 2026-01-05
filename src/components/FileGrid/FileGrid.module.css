@@ -1,9 +1,34 @@
 .grid {
   display: grid;
-  /* Фиксированный размер ~100px, автоматическое количество колонок */
+  /* Mobile: ~100px карточки */
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   gap: var(--spacing-sm);
   padding: var(--spacing-lg);
+}
+
+/* Tablet: ~120px карточки */
+@media (min-width: 480px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: var(--spacing-md);
+  }
+}
+
+/* Desktop: ~150px карточки */
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    padding: var(--spacing-lg) var(--spacing-xl);
+  }
+}
+
+/* Large desktop: ~180px карточки + max-width */
+@media (min-width: 1200px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    max-width: 1400px;
+    margin: 0 auto;
+  }
 }
 
 .card {
@@ -54,7 +79,7 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #34c759;
+  background: var(--color-success);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -88,7 +113,7 @@
   bottom: var(--spacing-xs);
   right: var(--spacing-xs);
   padding: 2px 6px;
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--overlay-dark);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
@@ -100,7 +125,7 @@
   left: 0;
   right: 0;
   padding: 6px;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+  background: linear-gradient(transparent, var(--overlay-darker));
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -158,7 +183,7 @@
   left: 0;
   right: 0;
   padding: 4px 6px;
-  background: linear-gradient(rgba(0, 0, 0, 0.7), transparent);
+  background: linear-gradient(var(--overlay-dark), transparent);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -256,4 +281,46 @@
   padding: 1px 3px;
   border-radius: 2px;
   font-weight: var(--font-weight-semibold);
+}
+
+/* Адаптивные размеры текста для больших карточек */
+@media (min-width: 768px) {
+  .name,
+  .caption {
+    font-size: 12px;
+  }
+
+  .fileName,
+  .forwardName {
+    font-size: 10px;
+  }
+
+  .info {
+    padding: 8px;
+  }
+
+  .icon {
+    font-size: 40px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .name,
+  .caption {
+    font-size: 13px;
+  }
+
+  .fileName,
+  .forwardName {
+    font-size: 11px;
+  }
+
+  .info {
+    padding: 10px;
+    gap: 4px;
+  }
+
+  .icon {
+    font-size: 48px;
+  }
 }

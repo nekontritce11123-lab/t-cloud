@@ -37,8 +37,17 @@
   border-color: var(--chip-color);
 }
 
-.emoji {
-  font-size: var(--font-size-md);
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+
+.icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 .label {

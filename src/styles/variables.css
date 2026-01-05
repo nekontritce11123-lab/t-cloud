@@ -68,4 +68,12 @@
 
   /* Touch targets */
   --touch-target-min: 44px;
+
+  /* UI Colors */
+  --color-success: #34c759;
+  --color-icon-secondary: rgba(255, 255, 255, 0.5);
+
+  /* Overlays */
+  --overlay-dark: rgba(0, 0, 0, 0.7);
+  --overlay-darker: rgba(0, 0, 0, 0.8);
 }

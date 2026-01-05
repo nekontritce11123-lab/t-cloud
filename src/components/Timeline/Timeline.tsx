@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useCallback } from 'react';
 import { FileRecord, MediaType } from '../../api/client';
 import styles from './Timeline.module.css';
 
@@ -92,30 +92,30 @@ interface FileCardProps {
 }
 
 function FileCard({ file, onFileClick, onFileLongPress, isSelected, isSelectionMode, isOnCooldown }: FileCardProps) {
-  let longPressTimer: ReturnType<typeof setTimeout> | null = null;
-  let isLongPress = false;
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isLongPress = useRef(false);
 
-  const handleTouchStart = () => {
-    isLongPress = false;
-    longPressTimer = setTimeout(() => {
-      isLongPress = true;
+  const handleTouchStart = useCallback(() => {
+    isLongPress.current = false;
+    longPressTimer.current = setTimeout(() => {
+      isLongPress.current = true;
       onFileLongPress?.(file);
     }, 500);
-  };
+  }, [file, onFileLongPress]);
 
-  const handleTouchEnd = () => {
-    if (longPressTimer) {
-      clearTimeout(longPressTimer);
-      longPressTimer = null;
+  const handleTouchEnd = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
     }
-  };
+  }, []);
 
-  const handleClick = () => {
-    if (!isLongPress) {
+  const handleClick = useCallback(() => {
+    if (!isLongPress.current) {
       onFileClick(file);
     }
-    isLongPress = false;
-  };
+    isLongPress.current = false;
+  }, [file, onFileClick]);
 
   return (
     <button
