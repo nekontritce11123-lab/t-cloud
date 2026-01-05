@@ -11,6 +11,7 @@ import styles from './App.module.css';
 
 function App() {
   const { isReady, getInitData, hapticFeedback } = useTelegram();
+  const [apiReady, setApiReady] = useState(false);
   const {
     files,
     links,
@@ -23,17 +24,20 @@ function App() {
     search,
     loadMore,
     refresh,
-  } = useFiles();
+  } = useFiles(apiReady); // Pass apiReady flag
 
   const [searchInput, setSearchInput] = useState('');
 
-  // Initialize API with Telegram initData
+  // Initialize API with Telegram initData BEFORE loading files
   useEffect(() => {
-    const initData = getInitData();
-    if (initData) {
-      apiClient.setInitData(initData);
+    if (isReady) {
+      const initData = getInitData();
+      if (initData) {
+        apiClient.setInitData(initData);
+      }
+      setApiReady(true);
     }
-  }, [getInitData]);
+  }, [isReady, getInitData]);
 
   // Debounced search
   useEffect(() => {

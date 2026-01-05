@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiClient, FileRecord, LinkRecord, CategoryStats, MediaType } from '../api/client';
 
-export function useFiles() {
+export function useFiles(apiReady = true) {
   const [files, setFiles] = useState<FileRecord[]>([]);
   const [links, setLinks] = useState<LinkRecord[]>([]);
   const [stats, setStats] = useState<CategoryStats[]>([]);
@@ -9,128 +9,95 @@ export function useFiles() {
   const [error, setError] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<MediaType | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+  const [hasMore, setHasMore] = useState(false);
 
-  // Load files
-  const loadFiles = useCallback(async (reset = false) => {
+  // Simple load function
+  const loadData = useCallback(async () => {
+    if (!apiReady) return;
+
+    console.log('[useFiles] loadData called, apiReady:', apiReady);
+    setIsLoading(true);
+    setError(null);
+
     try {
-      setIsLoading(true);
-      setError(null);
-
-      const currentPage = reset ? 1 : page;
-
       if (searchQuery) {
-        // Search mode
         const result = await apiClient.searchFiles(searchQuery);
-        setFiles(result.items);
+        console.log('[useFiles] Search result:', result);
+        setFiles(result.items || []);
         setHasMore(false);
       } else if (selectedType === 'link') {
-        // Links
-        const result = await apiClient.getLinks({ page: currentPage, limit: 20 });
-        if (reset) {
-          setLinks(result.items);
-        } else {
-          setLinks(prev => [...prev, ...result.items]);
-        }
-        setHasMore(currentPage < result.totalPages);
+        const result = await apiClient.getLinks({ page: 1, limit: 50 });
+        console.log('[useFiles] Links result:', result);
+        setLinks(result.items || []);
+        setHasMore(false);
       } else {
-        // Files (with optional type filter)
         const result = await apiClient.getFiles({
           type: selectedType || undefined,
-          page: currentPage,
-          limit: 20,
+          page: 1,
+          limit: 50,
         });
-        if (reset) {
-          setFiles(result.items);
-        } else {
-          setFiles(prev => [...prev, ...result.items]);
-        }
-        setHasMore(currentPage < result.totalPages);
-      }
-
-      if (reset) {
-        setPage(1);
+        console.log('[useFiles] Files result:', result);
+        setFiles(result.items || []);
+        setHasMore(false);
       }
     } catch (err) {
-      console.error('Failed to load files:', err);
+      console.error('[useFiles] Error:', err);
       setError('Не удалось загрузить файлы');
     } finally {
       setIsLoading(false);
     }
-  }, [page, selectedType, searchQuery]);
+  }, [apiReady, selectedType, searchQuery]);
 
   // Load stats
   const loadStats = useCallback(async () => {
+    if (!apiReady) return;
     try {
       const result = await apiClient.getFileStats();
-      setStats(result);
+      console.log('[useFiles] Stats:', result);
+      setStats(result || []);
     } catch (err) {
-      console.error('Failed to load stats:', err);
+      console.error('[useFiles] Stats error:', err);
     }
-  }, []);
+  }, [apiReady]);
 
-  // Initial load
+  // Load on mount and when dependencies change
   useEffect(() => {
-    loadFiles(true);
-    loadStats();
-  }, [selectedType, searchQuery]);
-
-  // Load more (pagination)
-  const loadMore = useCallback(() => {
-    if (!isLoading && hasMore) {
-      setPage(prev => prev + 1);
+    console.log('[useFiles] useEffect triggered, apiReady:', apiReady);
+    if (apiReady) {
+      loadData();
+      loadStats();
     }
-  }, [isLoading, hasMore]);
-
-  // Effect for pagination
-  useEffect(() => {
-    if (page > 1) {
-      loadFiles(false);
-    }
-  }, [page]);
+  }, [apiReady, selectedType, searchQuery, loadData, loadStats]);
 
   // Filter by type
   const filterByType = useCallback((type: MediaType | null) => {
     setSelectedType(type);
     setSearchQuery('');
-    setPage(1);
   }, []);
 
   // Search
   const search = useCallback((query: string) => {
     setSearchQuery(query);
     setSelectedType(null);
-    setPage(1);
   }, []);
 
   // Refresh
   const refresh = useCallback(() => {
-    loadFiles(true);
+    loadData();
     loadStats();
-  }, [loadFiles, loadStats]);
+  }, [loadData, loadStats]);
 
   // Delete file
   const deleteFile = useCallback(async (id: number) => {
-    try {
-      await apiClient.deleteFile(id);
-      setFiles(prev => prev.filter(f => f.id !== id));
-      loadStats();
-    } catch (err) {
-      console.error('Failed to delete file:', err);
-      throw err;
-    }
+    await apiClient.deleteFile(id);
+    setFiles(prev => prev.filter(f => f.id !== id));
+    loadStats();
   }, [loadStats]);
 
   // Delete link
   const deleteLink = useCallback(async (id: number) => {
-    try {
-      await apiClient.deleteLink(id);
-      setLinks(prev => prev.filter(l => l.id !== id));
-    } catch (err) {
-      console.error('Failed to delete link:', err);
-      throw err;
-    }
+    await apiClient.deleteLink(id);
+    setLinks(prev => prev.filter(l => l.id !== id));
   }, []);
 
   return {
@@ -144,7 +111,7 @@ export function useFiles() {
     hasMore,
     filterByType,
     search,
-    loadMore,
+    loadMore: () => {},
     refresh,
     deleteFile,
     deleteLink,
