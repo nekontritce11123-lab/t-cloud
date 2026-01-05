@@ -75,16 +75,24 @@ function App() {
     return Date.now() - sentAt < COOLDOWN_MS;
   }, [sentFiles]);
 
-  // Маркировка файла как отправленного
-  const markAsSent = useCallback((fileId: number) => {
-    const newSentFiles = { ...sentFiles, [fileId]: Date.now() };
-    setSentFiles(newSentFiles);
-    try {
-      localStorage.setItem('t-cloud-sent-files', JSON.stringify(newSentFiles));
-    } catch (e) {
-      console.error('Error saving sent files:', e);
-    }
-  }, [sentFiles]);
+  // Маркировка файла(ов) как отправленного
+  const markAsSent = useCallback((fileIds: number | number[]) => {
+    const ids = Array.isArray(fileIds) ? fileIds : [fileIds];
+    const now = Date.now();
+
+    setSentFiles(prev => {
+      const newSentFiles = { ...prev };
+      for (const id of ids) {
+        newSentFiles[id] = now;
+      }
+      try {
+        localStorage.setItem('t-cloud-sent-files', JSON.stringify(newSentFiles));
+      } catch (e) {
+        console.error('Error saving sent files:', e);
+      }
+      return newSentFiles;
+    });
+  }, []);
 
   // Очистка cooldown (для отладки)
   const clearCooldown = useCallback(() => {
@@ -172,10 +180,8 @@ function App() {
       const result = await apiClient.sendFiles(fileIds);
 
       if (result.success) {
-        // Маркируем как отправленные
-        for (const id of result.sent || fileIds) {
-          markAsSent(id);
-        }
+        // Маркируем все как отправленные одним вызовом
+        markAsSent(result.sent || fileIds);
 
         // Выход из режима выбора
         setIsSelectionMode(false);
