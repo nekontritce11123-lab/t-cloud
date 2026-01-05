@@ -54,15 +54,13 @@ function App() {
 
   // Debounced search
   useEffect(() => {
-    // Если searchInput пустой - сбрасываем поиск сразу без debounce
-    if (!searchInput) {
-      search('');
-      return;
-    }
+    // Debounce для всех изменений, включая очистку
+    // Для очистки используем меньшую задержку (100ms) для отзывчивости
+    const delay = searchInput ? 300 : 100;
 
     const timer = setTimeout(() => {
       search(searchInput);
-    }, 300);
+    }, delay);
 
     return () => clearTimeout(timer);
   }, [searchInput, search]);

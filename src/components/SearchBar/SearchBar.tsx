@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import styles from './SearchBar.module.css';
 
 interface SearchHint {
@@ -10,7 +10,7 @@ interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  hint?: SearchHint | null; // Подсказка где найдено
+  hint?: SearchHint | null;
 }
 
 // Форматирование snippet
@@ -25,7 +25,6 @@ function getFieldLabel(field: string): string {
     case 'file_name': return 'в имени';
     case 'forward_from_name': return 'от';
     case 'forward_from_chat_title': return 'из чата';
-    // Поля для ссылок
     case 'url': return 'в URL';
     case 'title': return 'в заголовке';
     case 'description': return 'в описании';
@@ -36,6 +35,10 @@ function getFieldLabel(field: string): string {
 
 export function SearchBar({ value, onChange, placeholder = 'Поиск...', hint }: SearchBarProps) {
   const [isFocused, setIsFocused] = useState(false);
+
+  const handleClear = useCallback(() => {
+    onChange('');
+  }, [onChange]);
 
   return (
     <div className={styles.wrapper}>
@@ -50,8 +53,17 @@ export function SearchBar({ value, onChange, placeholder = 'Поиск...', hint
           onBlur={() => setIsFocused(false)}
           placeholder={placeholder}
         />
+        {value && (
+          <button
+            type="button"
+            className={styles.clear}
+            onClick={handleClear}
+            onMouseDown={(e) => e.preventDefault()}
+          >
+            ✕
+          </button>
+        )}
       </div>
-      {/* Подсказка под поиском */}
       {hint && value && (
         <div className={styles.hint}>
           <span className={styles.hintLabel}>{getFieldLabel(hint.field)}:</span>

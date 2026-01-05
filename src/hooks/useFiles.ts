@@ -116,15 +116,21 @@ export function useFiles(apiReady = true) {
   // Search - принимает query и сразу загружает
   const search = useCallback((query: string) => {
     console.log('[useFiles] search called with:', query);
+
+    // Сначала обновляем searchQuery
     setSearchQuery(query);
-    setIsLoading(true);
+
     if (query) {
-      // При новом поиске - очищаем данные сразу
+      // Новый поиск - показываем загрузку и очищаем старые результаты
+      setIsLoading(true);
       setFiles([]);
       setLinks([]);
+      loadDataForQuery(query, null);
+    } else {
+      // Очистка поиска - НЕ показываем загрузку, данные загрузятся в фоне
+      // UI плавно перейдёт от результатов поиска к Timeline
+      loadDataForQuery('', selectedType);
     }
-    // Сразу запускаем загрузку с новым query
-    loadDataForQuery(query, query ? null : selectedType);
   }, [loadDataForQuery, selectedType]);
 
   // Refresh - перезагрузка текущего состояния

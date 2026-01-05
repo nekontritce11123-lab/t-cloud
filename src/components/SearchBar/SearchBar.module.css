@@ -38,19 +38,28 @@
 .clear {
   width: 24px;
   height: 24px;
+  min-width: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--app-bg-color);
-  font-size: var(--font-size-xs);
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 12px;
   color: var(--app-hint-color);
   transition: all var(--animation-fast) var(--easing-smooth);
+  cursor: pointer;
+  border: none;
+  padding: 0;
+  margin-left: var(--spacing-xs);
 }
 
 .clear:hover {
-  background: var(--app-hint-color);
-  color: var(--app-bg-color);
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--app-text-color);
+}
+
+.clear:active {
+  transform: scale(0.9);
 }
 
 /* Подсказка под поиском */
