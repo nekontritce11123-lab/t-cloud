@@ -98,15 +98,15 @@ export function useFiles(apiReady = true) {
   // Search
   const search = useCallback((query: string) => {
     console.log('[useFiles] search called with:', query);
+    // Всегда показываем спиннер при изменении поиска
+    setIsLoading(true);
     setSearchQuery(query);
     if (query) {
-      // При новом поиске - очищаем и показываем спиннер
-      setIsLoading(true);
+      // При новом поиске - очищаем данные
       setFiles([]);
       setLinks([]);
     }
     // При очистке поиска НЕ очищаем files - loadData сам загрузит новые
-    // и заменит их, так не будет мигания пустого экрана
     // loadData будет вызван автоматически через useEffect когда searchQuery изменится
   }, []);
 
