@@ -1,4 +1,4 @@
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc, sql, isNull, isNotNull, lt } from 'drizzle-orm';
 import { db, searchFiles as ftsSearch, searchFilesWithSnippets, SearchResult } from '../index.js';
 import { files, NewFile, File } from '../schema.js';
 import { MediaType, CategoryStats } from '../../types/index.js';
@@ -45,7 +45,7 @@ export class FilesRepository {
   }
 
   /**
-   * Get files for a user with optional filtering
+   * Get files for a user with optional filtering (excludes deleted)
    */
   async findByUser(
     userId: number,
@@ -57,26 +57,27 @@ export class FilesRepository {
   ): Promise<{ items: File[]; total: number }> {
     const { mediaType, limit = 20, offset = 0 } = options;
 
-    let query = db.select().from(files).where(eq(files.userId, userId));
+    // Base condition: user's files that are NOT deleted
+    const baseCondition = and(eq(files.userId, userId), isNull(files.deletedAt));
 
+    let whereCondition = baseCondition;
     if (mediaType) {
-      query = db
-        .select()
-        .from(files)
-        .where(and(eq(files.userId, userId), eq(files.mediaType, mediaType)));
+      whereCondition = and(baseCondition, eq(files.mediaType, mediaType));
     }
 
-    const items = await query.orderBy(desc(files.createdAt)).limit(limit).offset(offset);
+    const items = await db
+      .select()
+      .from(files)
+      .where(whereCondition)
+      .orderBy(desc(files.createdAt))
+      .limit(limit)
+      .offset(offset);
 
     // Get total count
     const countResult = await db
       .select({ count: sql<number>`count(*)` })
       .from(files)
-      .where(
-        mediaType
-          ? and(eq(files.userId, userId), eq(files.mediaType, mediaType))
-          : eq(files.userId, userId)
-      );
+      .where(whereCondition);
 
     return {
       items,
@@ -85,13 +86,13 @@ export class FilesRepository {
   }
 
   /**
-   * Get files grouped by date (for Timeline)
+   * Get files grouped by date (for Timeline) - excludes deleted
    */
   async findByDate(
     userId: number,
     options: { year?: number; month?: number } = {}
   ): Promise<File[]> {
-    let whereClause = eq(files.userId, userId);
+    const whereClause = and(eq(files.userId, userId), isNull(files.deletedAt));
 
     // TODO: Add date filtering if year/month provided
 
@@ -113,7 +114,7 @@ export class FilesRepository {
   }
 
   /**
-   * Get category statistics for a user
+   * Get category statistics for a user (excludes deleted)
    */
   async getCategoryStats(userId: number): Promise<CategoryStats[]> {
     const result = await db
@@ -122,7 +123,7 @@ export class FilesRepository {
         count: sql<number>`count(*)`,
       })
       .from(files)
-      .where(eq(files.userId, userId))
+      .where(and(eq(files.userId, userId), isNull(files.deletedAt)))
       .groupBy(files.mediaType);
 
     return result.map(r => ({
@@ -132,13 +133,91 @@ export class FilesRepository {
   }
 
   /**
-   * Delete a file
+   * Soft delete a file (move to trash)
    */
-  async delete(id: number, userId: number): Promise<boolean> {
+  async softDelete(id: number, userId: number): Promise<boolean> {
+    const result = await db
+      .update(files)
+      .set({ deletedAt: new Date() })
+      .where(and(eq(files.id, id), eq(files.userId, userId), isNull(files.deletedAt)));
+
+    return result.changes > 0;
+  }
+
+  /**
+   * Soft delete multiple files (move to trash)
+   */
+  async softDeleteMany(ids: number[], userId: number): Promise<number> {
+    let deleted = 0;
+    for (const id of ids) {
+      const success = await this.softDelete(id, userId);
+      if (success) deleted++;
+    }
+    return deleted;
+  }
+
+  /**
+   * Get deleted files (trash) for a user
+   */
+  async findDeleted(userId: number): Promise<File[]> {
+    return db
+      .select()
+      .from(files)
+      .where(and(eq(files.userId, userId), isNotNull(files.deletedAt)))
+      .orderBy(desc(files.deletedAt));
+  }
+
+  /**
+   * Get trash count for a user
+   */
+  async getTrashCount(userId: number): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(files)
+      .where(and(eq(files.userId, userId), isNotNull(files.deletedAt)));
+
+    return result[0]?.count || 0;
+  }
+
+  /**
+   * Restore a file from trash
+   */
+  async restore(id: number, userId: number): Promise<boolean> {
+    const result = await db
+      .update(files)
+      .set({ deletedAt: null })
+      .where(and(eq(files.id, id), eq(files.userId, userId), isNotNull(files.deletedAt)));
+
+    return result.changes > 0;
+  }
+
+  /**
+   * Permanently delete a file (hard delete)
+   */
+  async hardDelete(id: number, userId: number): Promise<boolean> {
     const result = await db
       .delete(files)
       .where(and(eq(files.id, id), eq(files.userId, userId)));
 
     return result.changes > 0;
+  }
+
+  /**
+   * Delete all files in trash older than specified date
+   */
+  async cleanupOldDeleted(olderThan: Date): Promise<number> {
+    const result = await db
+      .delete(files)
+      .where(and(isNotNull(files.deletedAt), lt(files.deletedAt, olderThan)));
+
+    return result.changes;
+  }
+
+  /**
+   * Legacy delete method - now uses soft delete
+   * @deprecated Use softDelete instead
+   */
+  async delete(id: number, userId: number): Promise<boolean> {
+    return this.softDelete(id, userId);
   }
 }

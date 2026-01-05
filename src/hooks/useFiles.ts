@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
-import { apiClient, FileRecord, LinkRecord, CategoryStats, MediaType } from '../api/client';
+import { apiClient, FileRecord, LinkRecord, CategoryStats } from '../api/client';
+import { CategoryType } from '../components/CategoryChips/CategoryChips';
 
 export function useFiles(apiReady = true) {
   const [files, setFiles] = useState<FileRecord[]>([]);
   const [links, setLinks] = useState<LinkRecord[]>([]);
   const [stats, setStats] = useState<CategoryStats[]>([]);
+  const [trashCount, setTrashCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedType, setSelectedType] = useState<MediaType | null>(null);
+  const [selectedType, setSelectedType] = useState<CategoryType>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [hasMore, setHasMore] = useState(false);
 
@@ -24,11 +26,19 @@ export function useFiles(apiReady = true) {
         const result = await apiClient.searchFiles(searchQuery);
         console.log('[useFiles] Search result:', result);
         setFiles(result.items || []);
+        setLinks([]);
+        setHasMore(false);
+      } else if (selectedType === 'trash') {
+        // Load trash - handled separately by TrashView component
+        // Just clear main lists
+        setFiles([]);
+        setLinks([]);
         setHasMore(false);
       } else if (selectedType === 'link') {
         const result = await apiClient.getLinks({ page: 1, limit: 50 });
         console.log('[useFiles] Links result:', result);
         setLinks(result.items || []);
+        setFiles([]);
         setHasMore(false);
       } else {
         const result = await apiClient.getFiles({
@@ -38,6 +48,7 @@ export function useFiles(apiReady = true) {
         });
         console.log('[useFiles] Files result:', result);
         setFiles(result.items || []);
+        setLinks([]);
         setHasMore(false);
       }
     } catch (err) {
@@ -52,9 +63,14 @@ export function useFiles(apiReady = true) {
   const loadStats = useCallback(async () => {
     if (!apiReady) return;
     try {
-      const result = await apiClient.getFileStats();
-      console.log('[useFiles] Stats:', result);
-      setStats(result || []);
+      const [statsResult, trashFilesCount, trashLinksCount] = await Promise.all([
+        apiClient.getFileStats(),
+        apiClient.getTrashFilesCount(),
+        apiClient.getTrashLinksCount(),
+      ]);
+      console.log('[useFiles] Stats:', statsResult);
+      setStats(statsResult || []);
+      setTrashCount(trashFilesCount.count + trashLinksCount.count);
     } catch (err) {
       console.error('[useFiles] Stats error:', err);
     }
@@ -70,7 +86,7 @@ export function useFiles(apiReady = true) {
   }, [apiReady, selectedType, searchQuery, loadData, loadStats]);
 
   // Filter by type
-  const filterByType = useCallback((type: MediaType | null) => {
+  const filterByType = useCallback((type: CategoryType) => {
     setSelectedType(type);
     setSearchQuery('');
   }, []);
@@ -106,6 +122,7 @@ export function useFiles(apiReady = true) {
     files,
     links,
     stats,
+    trashCount,
     isLoading,
     error,
     selectedType,

@@ -52,6 +52,9 @@ export const files = sqliteTable('files', {
   createdAt: integer('created_at', { mode: 'timestamp' })
     .default(sql`(unixepoch())`)
     .notNull(),
+
+  // Soft delete
+  deletedAt: integer('deleted_at', { mode: 'timestamp' }),
 }, (table) => ({
   // Unique constraint for deduplication
   userFileUniqueIdx: uniqueIndex('idx_files_user_unique').on(table.userId, table.fileUniqueId),
@@ -77,6 +80,9 @@ export const links = sqliteTable('links', {
   createdAt: integer('created_at', { mode: 'timestamp' })
     .default(sql`(unixepoch())`)
     .notNull(),
+
+  // Soft delete
+  deletedAt: integer('deleted_at', { mode: 'timestamp' }),
 }, (table) => ({
   userDateIdx: index('idx_links_user_date').on(table.userId, table.createdAt),
 }));

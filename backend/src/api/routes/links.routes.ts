@@ -64,8 +64,40 @@ router.get('/:id', async (req, res: Response) => {
 });
 
 /**
+ * GET /api/links/trash
+ * Get deleted links (trash) for the authenticated user
+ */
+router.get('/trash', async (req, res: Response) => {
+  const { telegramUser } = req as AuthenticatedRequest;
+
+  try {
+    const links = await linksRepo.findDeleted(telegramUser.id);
+    res.json({ items: links, total: links.length });
+  } catch (error) {
+    console.error('[API] Error fetching trash:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/links/trash/count
+ * Get count of links in trash
+ */
+router.get('/trash/count', async (req, res: Response) => {
+  const { telegramUser } = req as AuthenticatedRequest;
+
+  try {
+    const count = await linksRepo.getTrashCount(telegramUser.id);
+    res.json({ count });
+  } catch (error) {
+    console.error('[API] Error fetching trash count:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * DELETE /api/links/:id
- * Delete a link
+ * Soft delete a link (move to trash)
  */
 router.delete('/:id', async (req, res: Response) => {
   const { telegramUser } = req as unknown as AuthenticatedRequest;
@@ -77,7 +109,7 @@ router.delete('/:id', async (req, res: Response) => {
   }
 
   try {
-    const deleted = await linksRepo.delete(linkId, telegramUser.id);
+    const deleted = await linksRepo.softDelete(linkId, telegramUser.id);
 
     if (!deleted) {
       res.status(404).json({ error: 'Link not found' });
@@ -87,6 +119,89 @@ router.delete('/:id', async (req, res: Response) => {
     res.json({ success: true });
   } catch (error) {
     console.error('[API] Error deleting link:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/links/delete-many
+ * Soft delete multiple links (move to trash)
+ */
+router.post('/delete-many', async (req, res: Response) => {
+  const { telegramUser } = req as unknown as AuthenticatedRequest;
+  const { linkIds } = req.body as { linkIds: number[] };
+
+  if (!Array.isArray(linkIds) || linkIds.length === 0) {
+    res.status(400).json({ error: 'linkIds array is required' });
+    return;
+  }
+
+  if (linkIds.length > 100) {
+    res.status(400).json({ error: 'Maximum 100 links per request' });
+    return;
+  }
+
+  try {
+    const deletedCount = await linksRepo.softDeleteMany(linkIds, telegramUser.id);
+    res.json({ success: true, deleted: deletedCount });
+  } catch (error) {
+    console.error('[API] Error deleting links:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/links/:id/restore
+ * Restore a link from trash
+ */
+router.post('/:id/restore', async (req, res: Response) => {
+  const { telegramUser } = req as unknown as AuthenticatedRequest;
+  const linkId = parseInt(req.params.id, 10);
+
+  if (isNaN(linkId)) {
+    res.status(400).json({ error: 'Invalid link ID' });
+    return;
+  }
+
+  try {
+    const restored = await linksRepo.restore(linkId, telegramUser.id);
+
+    if (!restored) {
+      res.status(404).json({ error: 'Link not found in trash' });
+      return;
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[API] Error restoring link:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * DELETE /api/links/:id/permanent
+ * Permanently delete a link (hard delete)
+ */
+router.delete('/:id/permanent', async (req, res: Response) => {
+  const { telegramUser } = req as unknown as AuthenticatedRequest;
+  const linkId = parseInt(req.params.id, 10);
+
+  if (isNaN(linkId)) {
+    res.status(400).json({ error: 'Invalid link ID' });
+    return;
+  }
+
+  try {
+    const deleted = await linksRepo.hardDelete(linkId, telegramUser.id);
+
+    if (!deleted) {
+      res.status(404).json({ error: 'Link not found' });
+      return;
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[API] Error permanently deleting link:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

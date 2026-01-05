@@ -349,8 +349,54 @@ router.post('/:id/send', async (req, res: Response) => {
 });
 
 /**
+ * GET /api/files/trash
+ * Get deleted files (trash) for the authenticated user
+ */
+router.get('/trash', async (req, res: Response) => {
+  const { telegramUser } = req as AuthenticatedRequest;
+
+  try {
+    const files = await filesRepo.findDeleted(telegramUser.id);
+
+    // Add thumbnail URLs
+    const service = getThumbnailService();
+    const itemsWithThumbnails = await Promise.all(
+      files.map(async (file) => ({
+        ...file,
+        thumbnailUrl: await service.getThumbnailUrl(
+          file.thumbnailFileId,
+          file.fileId,
+          file.mediaType as MediaType
+        ),
+      }))
+    );
+
+    res.json({ items: itemsWithThumbnails, total: itemsWithThumbnails.length });
+  } catch (error) {
+    console.error('[API] Error fetching trash:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/files/trash/count
+ * Get count of files in trash
+ */
+router.get('/trash/count', async (req, res: Response) => {
+  const { telegramUser } = req as AuthenticatedRequest;
+
+  try {
+    const count = await filesRepo.getTrashCount(telegramUser.id);
+    res.json({ count });
+  } catch (error) {
+    console.error('[API] Error fetching trash count:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * DELETE /api/files/:id
- * Delete a file
+ * Soft delete a file (move to trash)
  */
 router.delete('/:id', async (req, res: Response) => {
   const { telegramUser } = req as unknown as AuthenticatedRequest;
@@ -362,7 +408,7 @@ router.delete('/:id', async (req, res: Response) => {
   }
 
   try {
-    const deleted = await filesRepo.delete(fileId, telegramUser.id);
+    const deleted = await filesRepo.softDelete(fileId, telegramUser.id);
 
     if (!deleted) {
       res.status(404).json({ error: 'File not found' });
@@ -372,6 +418,89 @@ router.delete('/:id', async (req, res: Response) => {
     res.json({ success: true });
   } catch (error) {
     console.error('[API] Error deleting file:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/files/delete-many
+ * Soft delete multiple files (move to trash)
+ */
+router.post('/delete-many', async (req, res: Response) => {
+  const { telegramUser } = req as unknown as AuthenticatedRequest;
+  const { fileIds } = req.body as { fileIds: number[] };
+
+  if (!Array.isArray(fileIds) || fileIds.length === 0) {
+    res.status(400).json({ error: 'fileIds array is required' });
+    return;
+  }
+
+  if (fileIds.length > 100) {
+    res.status(400).json({ error: 'Maximum 100 files per request' });
+    return;
+  }
+
+  try {
+    const deletedCount = await filesRepo.softDeleteMany(fileIds, telegramUser.id);
+    res.json({ success: true, deleted: deletedCount });
+  } catch (error) {
+    console.error('[API] Error deleting files:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/files/:id/restore
+ * Restore a file from trash
+ */
+router.post('/:id/restore', async (req, res: Response) => {
+  const { telegramUser } = req as unknown as AuthenticatedRequest;
+  const fileId = parseInt(req.params.id, 10);
+
+  if (isNaN(fileId)) {
+    res.status(400).json({ error: 'Invalid file ID' });
+    return;
+  }
+
+  try {
+    const restored = await filesRepo.restore(fileId, telegramUser.id);
+
+    if (!restored) {
+      res.status(404).json({ error: 'File not found in trash' });
+      return;
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[API] Error restoring file:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * DELETE /api/files/:id/permanent
+ * Permanently delete a file (hard delete)
+ */
+router.delete('/:id/permanent', async (req, res: Response) => {
+  const { telegramUser } = req as unknown as AuthenticatedRequest;
+  const fileId = parseInt(req.params.id, 10);
+
+  if (isNaN(fileId)) {
+    res.status(400).json({ error: 'Invalid file ID' });
+    return;
+  }
+
+  try {
+    const deleted = await filesRepo.hardDelete(fileId, telegramUser.id);
+
+    if (!deleted) {
+      res.status(404).json({ error: 'File not found' });
+      return;
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[API] Error permanently deleting file:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

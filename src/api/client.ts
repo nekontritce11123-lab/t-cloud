@@ -26,6 +26,7 @@ export interface FileRecord {
   forwardFromName?: string | null;
   forwardFromChatTitle?: string | null;
   createdAt: string;
+  deletedAt?: string | null;
   // Search result fields (only present in search results)
   matchedField?: 'file_name' | 'caption' | 'forward_from_name';
   matchedSnippet?: string;
@@ -40,6 +41,7 @@ export interface LinkRecord {
   imageUrl?: string | null;
   siteName?: string | null;
   createdAt: string;
+  deletedAt?: string | null;
 }
 
 export interface PaginatedResponse<T> {
@@ -228,6 +230,130 @@ class ApiClient {
 
     if (!response.ok) {
       throw new Error('Failed to delete link');
+    }
+  }
+
+  // Trash API - Files
+
+  async getTrashFiles(): Promise<{ items: FileRecord[]; total: number }> {
+    const response = await fetch(`${API_URL}/api/files/trash`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch trash files');
+    }
+
+    return response.json();
+  }
+
+  async getTrashFilesCount(): Promise<{ count: number }> {
+    const response = await fetch(`${API_URL}/api/files/trash/count`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch trash count');
+    }
+
+    return response.json();
+  }
+
+  async deleteFiles(fileIds: number[]): Promise<{ success: boolean; deleted: number }> {
+    const response = await fetch(`${API_URL}/api/files/delete-many`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ fileIds }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete files');
+    }
+
+    return response.json();
+  }
+
+  async restoreFile(id: number): Promise<void> {
+    const response = await fetch(`${API_URL}/api/files/${id}/restore`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to restore file');
+    }
+  }
+
+  async permanentDeleteFile(id: number): Promise<void> {
+    const response = await fetch(`${API_URL}/api/files/${id}/permanent`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to permanently delete file');
+    }
+  }
+
+  // Trash API - Links
+
+  async getTrashLinks(): Promise<{ items: LinkRecord[]; total: number }> {
+    const response = await fetch(`${API_URL}/api/links/trash`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch trash links');
+    }
+
+    return response.json();
+  }
+
+  async getTrashLinksCount(): Promise<{ count: number }> {
+    const response = await fetch(`${API_URL}/api/links/trash/count`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch trash links count');
+    }
+
+    return response.json();
+  }
+
+  async deleteLinks(linkIds: number[]): Promise<{ success: boolean; deleted: number }> {
+    const response = await fetch(`${API_URL}/api/links/delete-many`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ linkIds }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete links');
+    }
+
+    return response.json();
+  }
+
+  async restoreLink(id: number): Promise<void> {
+    const response = await fetch(`${API_URL}/api/links/${id}/restore`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to restore link');
+    }
+  }
+
+  async permanentDeleteLink(id: number): Promise<void> {
+    const response = await fetch(`${API_URL}/api/links/${id}/permanent`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to permanently delete link');
     }
   }
 }

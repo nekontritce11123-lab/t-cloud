@@ -1,14 +1,18 @@
 import { MediaType, CategoryStats } from '../../api/client';
 import styles from './CategoryChips.module.css';
 
+// Extended type to include 'trash' as a special category
+export type CategoryType = MediaType | 'trash' | null;
+
 interface CategoryChipsProps {
   stats: CategoryStats[];
-  selectedType: MediaType | null;
-  onSelect: (type: MediaType | null) => void;
+  selectedType: CategoryType;
+  onSelect: (type: CategoryType) => void;
+  trashCount?: number;
 }
 
 interface Category {
-  type: MediaType | null;
+  type: CategoryType;
   label: string;
   emoji: string;
   color: string;
@@ -24,12 +28,16 @@ const CATEGORIES: Category[] = [
   { type: 'voice', label: 'Голос', emoji: '🎤', color: 'var(--color-voice)' },
   { type: 'animation', label: 'GIF', emoji: '🎞', color: 'var(--color-animation)' },
   { type: 'sticker', label: 'Стикеры', emoji: '🎨', color: 'var(--color-sticker)' },
+  { type: 'trash', label: 'Корзина', emoji: '🗑️', color: 'var(--app-destructive-text-color, #ff3b30)' },
 ];
 
-export function CategoryChips({ stats, selectedType, onSelect }: CategoryChipsProps) {
-  const getCount = (type: MediaType | null): number => {
+export function CategoryChips({ stats, selectedType, onSelect, trashCount = 0 }: CategoryChipsProps) {
+  const getCount = (type: CategoryType): number => {
     if (type === null) {
       return stats.reduce((sum, s) => sum + s.count, 0);
+    }
+    if (type === 'trash') {
+      return trashCount;
     }
     return stats.find(s => s.mediaType === type)?.count || 0;
   };

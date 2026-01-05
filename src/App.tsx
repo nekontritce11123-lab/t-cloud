@@ -7,6 +7,7 @@ import { SearchBar } from './components/SearchBar/SearchBar';
 import { FileGrid } from './components/FileGrid/FileGrid';
 import { Timeline } from './components/Timeline/Timeline';
 import { LinkList } from './components/LinkCard/LinkCard';
+import { TrashView } from './components/TrashView/TrashView';
 import './styles/global.css';
 import styles from './App.module.css';
 
@@ -18,6 +19,7 @@ function App() {
     files,
     links,
     stats,
+    trashCount,
     isLoading,
     error,
     selectedType,
@@ -30,10 +32,13 @@ function App() {
 
   const [searchInput, setSearchInput] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<Set<number>>(new Set());
+  const [selectedLinks, setSelectedLinks] = useState<Set<number>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectionType, setSelectionType] = useState<'files' | 'links'>('files');
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // Лимит на выбор файлов
-  const MAX_SELECTED_FILES = 20;
+  // Лимит на выбор
+  const MAX_SELECTED_ITEMS = 20;
 
   // Initialize API with Telegram initData BEFORE loading files
   useEffect(() => {
@@ -57,16 +62,28 @@ function App() {
 
   // Управление главной кнопкой
   useEffect(() => {
-    if (selectedFiles.size > 0) {
-      const count = selectedFiles.size;
-      mainButton.show(
-        `Отправить (${count})`,
-        handleSendSelected
-      );
+    const filesCount = selectedFiles.size;
+    const linksCount = selectedLinks.size;
+    const totalCount = filesCount + linksCount;
+
+    if (totalCount > 0) {
+      if (selectionType === 'files' && filesCount > 0) {
+        // Для файлов показываем кнопку "Отправить"
+        mainButton.show(
+          `Отправить (${filesCount})`,
+          handleSendSelected
+        );
+      } else if (selectionType === 'links' && linksCount > 0) {
+        // Для ссылок показываем кнопку "Удалить"
+        mainButton.show(
+          `Удалить (${linksCount})`,
+          handleDeleteSelected
+        );
+      }
     } else {
       mainButton.hide();
     }
-  }, [selectedFiles.size]);
+  }, [selectedFiles.size, selectedLinks.size, selectionType]);
 
   // Отправить выбранные файлы
   const handleSendSelected = useCallback(async () => {
@@ -96,11 +113,54 @@ function App() {
     }
   }, [selectedFiles, isSending, hapticFeedback, mainButton, close]);
 
+  // Удалить выбранные элементы
+  const handleDeleteSelected = useCallback(async () => {
+    if (isDeleting) return;
+
+    const filesCount = selectedFiles.size;
+    const linksCount = selectedLinks.size;
+
+    if (filesCount === 0 && linksCount === 0) return;
+
+    setIsDeleting(true);
+    hapticFeedback.medium();
+
+    try {
+      // Удаляем файлы
+      if (filesCount > 0) {
+        const fileIds = Array.from(selectedFiles);
+        await apiClient.deleteFiles(fileIds);
+      }
+
+      // Удаляем ссылки
+      if (linksCount > 0) {
+        const linkIds = Array.from(selectedLinks);
+        await apiClient.deleteLinks(linkIds);
+      }
+
+      hapticFeedback.success();
+
+      // Выход из режима выбора
+      setIsSelectionMode(false);
+      setSelectedFiles(new Set());
+      setSelectedLinks(new Set());
+      mainButton.hide();
+
+      // Обновляем данные
+      refresh();
+    } catch (error) {
+      console.error('Error deleting items:', error);
+      hapticFeedback.error();
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [selectedFiles, selectedLinks, isDeleting, hapticFeedback, mainButton, refresh]);
+
   // Handle file click - обычное нажатие отправляет один файл
   const handleFileClick = useCallback(async (file: FileRecord) => {
     hapticFeedback.light();
 
-    if (isSelectionMode) {
+    if (isSelectionMode && selectionType === 'files') {
       // В режиме выбора - toggle выбор
       setSelectedFiles(prev => {
         const next = new Set(prev);
@@ -108,7 +168,7 @@ function App() {
           next.delete(file.id);
         } else {
           // Проверяем лимит
-          if (next.size >= MAX_SELECTED_FILES) {
+          if (next.size >= MAX_SELECTED_ITEMS) {
             hapticFeedback.warning();
             return prev;
           }
@@ -127,27 +187,59 @@ function App() {
         hapticFeedback.error();
       }
     }
-  }, [hapticFeedback, isSelectionMode, close]);
+  }, [hapticFeedback, isSelectionMode, selectionType, close]);
 
-  // Handle long press - включает режим выбора
+  // Handle long press - включает режим выбора файлов
   const handleFileLongPress = useCallback((file: FileRecord) => {
     hapticFeedback.medium();
     setIsSelectionMode(true);
+    setSelectionType('files');
     setSelectedFiles(new Set([file.id]));
+    setSelectedLinks(new Set());
+  }, [hapticFeedback]);
+
+  // Handle link click
+  const handleLinkClick = useCallback((link: LinkRecord) => {
+    hapticFeedback.light();
+
+    if (isSelectionMode && selectionType === 'links') {
+      // В режиме выбора - toggle выбор
+      setSelectedLinks(prev => {
+        const next = new Set(prev);
+        if (next.has(link.id)) {
+          next.delete(link.id);
+        } else {
+          // Проверяем лимит
+          if (next.size >= MAX_SELECTED_ITEMS) {
+            hapticFeedback.warning();
+            return prev;
+          }
+          next.add(link.id);
+        }
+        return next;
+      });
+    } else {
+      // Обычный режим - открываем ссылку
+      window.open(link.url, '_blank');
+    }
+  }, [hapticFeedback, isSelectionMode, selectionType]);
+
+  // Handle long press on link - включает режим выбора ссылок
+  const handleLinkLongPress = useCallback((link: LinkRecord) => {
+    hapticFeedback.medium();
+    setIsSelectionMode(true);
+    setSelectionType('links');
+    setSelectedLinks(new Set([link.id]));
+    setSelectedFiles(new Set());
   }, [hapticFeedback]);
 
   // Выход из режима выбора
   const exitSelectionMode = useCallback(() => {
     setIsSelectionMode(false);
     setSelectedFiles(new Set());
+    setSelectedLinks(new Set());
     mainButton.hide();
   }, [mainButton]);
-
-  // Handle link click
-  const handleLinkClick = useCallback((link: LinkRecord) => {
-    hapticFeedback.light();
-    window.open(link.url, '_blank');
-  }, [hapticFeedback]);
 
   // Handle scroll for infinite loading
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
@@ -179,7 +271,10 @@ function App() {
         {isSelectionMode ? (
           <div className={styles.selectionHeader}>
             <button onClick={exitSelectionMode} className={styles.cancelBtn}>✕</button>
-            <span>Выбрано: {selectedFiles.size}</span>
+            <span>Выбрано: {selectionType === 'files' ? selectedFiles.size : selectedLinks.size}</span>
+            {selectionType === 'files' && selectedFiles.size > 0 && (
+              <button onClick={handleDeleteSelected} className={styles.deleteBtn}>🗑️</button>
+            )}
           </div>
         ) : (
           <>
@@ -203,6 +298,7 @@ function App() {
             hapticFeedback.selection();
             filterByType(type);
           }}
+          trashCount={trashCount}
         />
       )}
 
@@ -216,12 +312,23 @@ function App() {
         )}
 
         {/* Показываем спиннер при загрузке если нет файлов */}
-        {isLoading && files.length === 0 ? (
+        {isLoading && files.length === 0 && selectedType !== 'trash' ? (
           <div className={styles.loadingMore}>
             <div className="spinner" />
           </div>
+        ) : selectedType === 'trash' ? (
+          <TrashView
+            onRestore={refresh}
+            hapticFeedback={hapticFeedback}
+          />
         ) : selectedType === 'link' ? (
-          <LinkList links={links} onLinkClick={handleLinkClick} />
+          <LinkList
+            links={links}
+            onLinkClick={handleLinkClick}
+            onLinkLongPress={handleLinkLongPress}
+            selectedLinks={selectedLinks}
+            isSelectionMode={isSelectionMode && selectionType === 'links'}
+          />
         ) : searchInput ? (
           /* При поиске показываем обычную сетку с результатами */
           <FileGrid
@@ -251,7 +358,7 @@ function App() {
         )}
 
         {/* End of list */}
-        {!isLoading && !hasMore && (files.length > 0 || links.length > 0) && (
+        {!isLoading && !hasMore && selectedType !== 'trash' && (files.length > 0 || links.length > 0) && (
           <div className={styles.endOfList}>
             Это все файлы
           </div>
