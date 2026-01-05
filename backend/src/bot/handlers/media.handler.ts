@@ -1,7 +1,22 @@
 import { Bot, Context } from 'grammy';
-import { IngestionService, getMediaEmoji, formatFileSize } from '../../services/ingestion.service.js';
+import { IngestionService, getMediaEmoji } from '../../services/ingestion.service.js';
 import { FilesRepository } from '../../db/repositories/files.repository.js';
 import { UsersRepository } from '../../db/repositories/users.repository.js';
+import { MediaType } from '../../types/index.js';
+
+// Реакции по типу медиа (только поддерживаемые Telegram)
+type TelegramReaction = '👍' | '❤' | '🔥' | '🎉' | '👏' | '😁' | '🤩' | '👀' | '🙏' | '💯';
+const MEDIA_REACTIONS: Record<MediaType, TelegramReaction> = {
+  photo: '❤',
+  video: '🔥',
+  document: '👍',
+  audio: '🎉',
+  voice: '👏',
+  video_note: '👀',
+  animation: '😁',
+  sticker: '🤩',
+  link: '💯',
+};
 
 /**
  * Setup handlers for all media types
@@ -66,29 +81,25 @@ export function setupMediaHandlers(bot: Bot<Context>): void {
       });
 
       if (!savedFile) {
-        // Duplicate file
-        await ctx.reply('📁 Этот файл уже сохранён');
+        // Duplicate file - ставим реакцию "уже есть"
+        try {
+          await ctx.react('👀');
+        } catch {
+          // Если реакции не поддерживаются - отвечаем текстом
+          await ctx.reply('📁 Уже сохранён');
+        }
         return;
       }
 
-      // Build response message
-      const emoji = getMediaEmoji(media.mediaType);
-      const lines: string[] = [`${emoji} Сохранено!`];
-
-      if (media.fileName) {
-        lines.push(`📝 ${media.fileName}`);
+      // Успешно сохранено - ставим тематическую реакцию
+      const reaction = MEDIA_REACTIONS[media.mediaType as MediaType] || '✅';
+      try {
+        await ctx.react(reaction);
+      } catch {
+        // Если реакции не поддерживаются - отвечаем текстом
+        const emoji = getMediaEmoji(media.mediaType);
+        await ctx.reply(`${emoji} Сохранено!`);
       }
-      if (media.fileSize) {
-        lines.push(`📦 ${formatFileSize(media.fileSize)}`);
-      }
-      if (media.forwardFromName) {
-        lines.push(`👤 От: ${media.forwardFromName}`);
-      }
-      if (media.forwardFromChatTitle) {
-        lines.push(`📢 Из: ${media.forwardFromChatTitle}`);
-      }
-
-      await ctx.reply(lines.join('\n'));
     }
   );
 }
