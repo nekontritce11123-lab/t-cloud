@@ -1,14 +1,14 @@
 .grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* Фиксированный размер ~100px, автоматическое количество колонок */
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   gap: var(--spacing-sm);
   padding: var(--spacing-lg);
 }
 
 .card {
   position: relative;
-  display: flex;
-  flex-direction: column;
+  aspect-ratio: 1;
   background: var(--app-secondary-bg-color);
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -65,8 +65,8 @@
 }
 
 .preview {
-  position: relative;
-  aspect-ratio: 1;
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -95,48 +95,55 @@
 }
 
 .info {
-  padding: var(--spacing-sm);
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 6px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
   display: flex;
   flex-direction: column;
   gap: 2px;
-  min-height: 44px;
+  z-index: 5;
 }
 
 .name {
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   font-weight: var(--font-weight-medium);
-  line-height: 1.3;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.95);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: left;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 /* Smart Card: caption как основной текст */
 .caption {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-bold);
-  line-height: 1.3;
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.2;
+  color: #fff;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: left;
-  color: var(--app-text-color);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 /* Filename мелко под caption */
 .fileName {
-  font-size: 10px;
-  color: var(--app-hint-color);
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.7);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: left;
-  opacity: 0.7;
 }
 
 .size {
@@ -146,12 +153,16 @@
 }
 
 .forward {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 4px 6px;
+  background: linear-gradient(rgba(0, 0, 0, 0.7), transparent);
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  background: var(--app-bg-color);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  gap: 4px;
+  z-index: 5;
 }
 
 .forwardIcon {
@@ -159,8 +170,8 @@
 }
 
 .forwardName {
-  font-size: var(--font-size-xs);
-  color: var(--app-hint-color);
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.9);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
