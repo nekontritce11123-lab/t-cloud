@@ -1,10 +1,51 @@
+.timeline {
+  display: flex;
+  flex-direction: column;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sticky date header */
+.dateHeader {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: var(--app-bg-color);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dateText {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--app-text-color);
+}
+
+.dateCount {
+  font-size: var(--font-size-xs);
+  color: var(--app-hint-color);
+  background: var(--app-secondary-bg-color);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* Grid inside each group */
 .grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--spacing-sm);
-  padding: var(--spacing-lg);
+  padding: var(--spacing-sm) var(--spacing-lg) var(--spacing-lg);
 }
 
+/* Card styles (copy from FileGrid) */
 .card {
   position: relative;
   display: flex;
@@ -92,7 +133,6 @@
   text-align: left;
 }
 
-/* Smart Card: caption как основной текст */
 .caption {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
@@ -106,7 +146,6 @@
   color: var(--app-text-color);
 }
 
-/* Filename мелко под caption */
 .fileName {
   font-size: 10px;
   color: var(--app-hint-color);
@@ -164,38 +203,4 @@
   font-size: var(--font-size-sm);
   color: var(--app-hint-color);
   max-width: 250px;
-}
-
-/* Search match info */
-.matchInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--spacing-xs) var(--spacing-sm);
-  background: rgba(51, 144, 236, 0.1);
-  border-top: 1px solid rgba(51, 144, 236, 0.2);
-}
-
-.matchLabel {
-  font-size: 9px;
-  color: var(--tg-theme-button-color, #3390ec);
-  font-weight: var(--font-weight-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.matchSnippet {
-  font-size: var(--font-size-xs);
-  color: var(--app-hint-color);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-align: left;
-}
-
-.matchSnippet :global(mark) {
-  background: rgba(51, 144, 236, 0.3);
-  color: var(--app-text-color);
-  padding: 0 2px;
-  border-radius: 2px;
 }

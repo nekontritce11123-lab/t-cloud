@@ -5,6 +5,7 @@ import { apiClient, FileRecord, LinkRecord } from './api/client';
 import { CategoryChips } from './components/CategoryChips/CategoryChips';
 import { SearchBar } from './components/SearchBar/SearchBar';
 import { FileGrid } from './components/FileGrid/FileGrid';
+import { Timeline } from './components/Timeline/Timeline';
 import { LinkList } from './components/LinkCard/LinkCard';
 import './styles/global.css';
 import styles from './App.module.css';
@@ -181,7 +182,7 @@ function App() {
             <SearchBar
               value={searchInput}
               onChange={setSearchInput}
-              placeholder="Поиск по файлам..."
+              placeholder="Искать по имени, подписи..."
             />
           </>
         )}
@@ -210,8 +211,18 @@ function App() {
 
         {selectedType === 'link' ? (
           <LinkList links={links} onLinkClick={handleLinkClick} />
-        ) : (
+        ) : searchInput ? (
+          /* При поиске показываем обычную сетку без группировки */
           <FileGrid
+            files={files}
+            onFileClick={handleFileClick}
+            onFileLongPress={handleFileLongPress}
+            selectedFiles={selectedFiles}
+            isSelectionMode={isSelectionMode}
+          />
+        ) : (
+          /* По умолчанию - Timeline с группировкой по датам */
+          <Timeline
             files={files}
             onFileClick={handleFileClick}
             onFileLongPress={handleFileLongPress}

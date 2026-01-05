@@ -1,5 +1,5 @@
 import { eq, and, desc, sql } from 'drizzle-orm';
-import { db, searchFiles as ftsSearch } from '../index.js';
+import { db, searchFiles as ftsSearch, searchFilesWithSnippets, SearchResult } from '../index.js';
 import { files, NewFile, File } from '../schema.js';
 import { MediaType, CategoryStats } from '../../types/index.js';
 
@@ -99,10 +99,17 @@ export class FilesRepository {
   }
 
   /**
-   * Full-text search in files
+   * Full-text search in files (basic)
    */
   search(userId: number, query: string, limit = 50): File[] {
     return ftsSearch(userId, query, limit);
+  }
+
+  /**
+   * Full-text search with match info (where found, snippet)
+   */
+  searchWithSnippets(userId: number, query: string, limit = 50): SearchResult[] {
+    return searchFilesWithSnippets(userId, query, limit);
   }
 
   /**

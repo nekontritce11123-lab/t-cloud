@@ -26,6 +26,9 @@ export interface FileRecord {
   forwardFromName?: string | null;
   forwardFromChatTitle?: string | null;
   createdAt: string;
+  // Search result fields (only present in search results)
+  matchedField?: 'file_name' | 'caption' | 'forward_from_name';
+  matchedSnippet?: string;
 }
 
 export interface LinkRecord {

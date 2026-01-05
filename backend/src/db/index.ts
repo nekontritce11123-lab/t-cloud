@@ -107,7 +107,7 @@ export async function initDatabase(): Promise<void> {
 }
 
 /**
- * Full-text search in files
+ * Full-text search in files (basic)
  */
 export function searchFiles(userId: number, query: string, limit = 50): schema.File[] {
   const stmt = sqlite.prepare(`
@@ -120,6 +120,61 @@ export function searchFiles(userId: number, query: string, limit = 50): schema.F
   `);
 
   return stmt.all(userId, query, limit) as schema.File[];
+}
+
+/**
+ * Search result with match info
+ */
+export interface SearchResult extends schema.File {
+  matchedField: 'file_name' | 'caption' | 'forward_from_name';
+  matchedSnippet: string;
+}
+
+/**
+ * Full-text search with snippets showing where match occurred
+ */
+export function searchFilesWithSnippets(userId: number, query: string, limit = 50): SearchResult[] {
+  // FTS5 snippet function: snippet(table, col_idx, start_mark, end_mark, ellipsis, max_tokens)
+  const stmt = sqlite.prepare(`
+    SELECT
+      f.*,
+      snippet(files_fts, 0, '**', '**', '...', 10) as snippet_file_name,
+      snippet(files_fts, 1, '**', '**', '...', 10) as snippet_caption,
+      snippet(files_fts, 2, '**', '**', '...', 10) as snippet_forward
+    FROM files f
+    JOIN files_fts ON f.id = files_fts.rowid
+    WHERE f.user_id = ? AND files_fts MATCH ?
+    ORDER BY rank
+    LIMIT ?
+  `);
+
+  const rows = stmt.all(userId, query, limit) as any[];
+
+  return rows.map(row => {
+    // Determine which field matched (check if snippet contains **)
+    let matchedField: 'file_name' | 'caption' | 'forward_from_name' = 'file_name';
+    let matchedSnippet = '';
+
+    if (row.snippet_caption && row.snippet_caption.includes('**')) {
+      matchedField = 'caption';
+      matchedSnippet = row.snippet_caption;
+    } else if (row.snippet_file_name && row.snippet_file_name.includes('**')) {
+      matchedField = 'file_name';
+      matchedSnippet = row.snippet_file_name;
+    } else if (row.snippet_forward && row.snippet_forward.includes('**')) {
+      matchedField = 'forward_from_name';
+      matchedSnippet = row.snippet_forward;
+    }
+
+    // Clean up the row (remove snippet_ fields)
+    const { snippet_file_name, snippet_caption, snippet_forward, ...file } = row;
+
+    return {
+      ...file,
+      matchedField,
+      matchedSnippet,
+    } as SearchResult;
+  });
 }
 
 // sqlite instance is kept private, use db for queries

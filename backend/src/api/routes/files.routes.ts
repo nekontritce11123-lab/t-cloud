@@ -99,7 +99,7 @@ router.get('/by-date', async (req, res: Response) => {
 
 /**
  * GET /api/files/search
- * Full-text search in files
+ * Full-text search in files with match info
  */
 router.get('/search', async (req, res: Response) => {
   const { telegramUser } = req as AuthenticatedRequest;
@@ -112,9 +112,23 @@ router.get('/search', async (req, res: Response) => {
 
   try {
     const limitNum = Math.min(parseInt(limit as string, 10), 100);
-    const files = filesRepo.search(telegramUser.id, q, limitNum);
+    // Use search with snippets to show where match occurred
+    const files = filesRepo.searchWithSnippets(telegramUser.id, q, limitNum);
 
-    res.json({ items: files, total: files.length });
+    // Add thumbnail URLs
+    const service = getThumbnailService();
+    const itemsWithThumbnails = await Promise.all(
+      files.map(async (file) => ({
+        ...file,
+        thumbnailUrl: await service.getThumbnailUrl(
+          file.thumbnailFileId,
+          file.fileId,
+          file.mediaType as MediaType
+        ),
+      }))
+    );
+
+    res.json({ items: itemsWithThumbnails, total: itemsWithThumbnails.length });
   } catch (error) {
     console.error('[API] Error searching files:', error);
     res.status(500).json({ error: 'Internal server error' });
