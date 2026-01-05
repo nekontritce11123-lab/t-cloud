@@ -117,12 +117,15 @@ export function useFiles(apiReady = true) {
   const search = useCallback((query: string) => {
     console.log('[useFiles] search called with:', query);
     setSearchQuery(query);
-    setIsLoading(true);
+
     if (query) {
-      // При новом поиске - очищаем данные сразу
+      // При новом поиске - очищаем данные и показываем загрузку
+      setIsLoading(true);
       setFiles([]);
       setLinks([]);
     }
+    // НЕ ставим isLoading при пустом query - данные загрузятся в фоне
+
     // Сразу запускаем загрузку с новым query
     loadDataForQuery(query, query ? null : selectedType);
   }, [loadDataForQuery, selectedType]);
