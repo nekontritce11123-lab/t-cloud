@@ -20,6 +20,10 @@ export function useFiles(apiReady = true) {
   const savedFilesRef = useRef<FileRecord[]>([]);
   const savedLinksRef = useRef<LinkRecord[]>([]);
 
+  // Ref для текущих данных (чтобы не зависеть от files/links в useCallback)
+  const currentFilesRef = useRef<FileRecord[]>([]);
+  const currentLinksRef = useRef<LinkRecord[]>([]);
+
   // Универсальная функция загрузки данных
   const loadDataForQuery = useCallback(async (query: string, type: CategoryType) => {
     if (!apiReady) return;
@@ -116,6 +120,12 @@ export function useFiles(apiReady = true) {
     }
   }, [apiReady]); // Только при изменении apiReady!
 
+  // Синхронизируем ref с state (для доступа в useCallback без deps)
+  useEffect(() => {
+    currentFilesRef.current = files;
+    currentLinksRef.current = links;
+  }, [files, links]);
+
   // Filter by type - сразу загружает данные
   const filterByType = useCallback((type: CategoryType) => {
     console.log('[useFiles] filterByType:', type);
@@ -135,9 +145,10 @@ export function useFiles(apiReady = true) {
     if (query) {
       // Начинаем поиск
       // Сохраняем данные ТОЛЬКО если ещё не были в режиме поиска
-      if (!wasSearchingRef.current && (files.length > 0 || links.length > 0)) {
-        savedFilesRef.current = files;
-        savedLinksRef.current = links;
+      // Используем refs чтобы не зависеть от files/links в deps
+      if (!wasSearchingRef.current && (currentFilesRef.current.length > 0 || currentLinksRef.current.length > 0)) {
+        savedFilesRef.current = currentFilesRef.current;
+        savedLinksRef.current = currentLinksRef.current;
         console.log('[useFiles] Saved data before search:', savedFilesRef.current.length, 'files,', savedLinksRef.current.length, 'links');
       }
       wasSearchingRef.current = true;
@@ -157,17 +168,19 @@ export function useFiles(apiReady = true) {
         wasSearchingRef.current = false;
 
         if (savedFilesRef.current.length > 0 || savedLinksRef.current.length > 0) {
+          // React 18 автоматически батчит эти вызовы
           setFiles(savedFilesRef.current);
           setLinks(savedLinksRef.current);
           setIsLoading(false);
         } else {
           // Нет сохранённых данных - загружаем
+          setIsLoading(true);
           loadDataForQuery('', selectedType);
         }
       }
       // Если не были в режиме поиска - ничего не делаем
     }
-  }, [loadDataForQuery, selectedType, files, links]);
+  }, [loadDataForQuery, selectedType]); // ← БЕЗ files и links!
 
   // Refresh - перезагрузка текущего состояния
   const refresh = useCallback(() => {
