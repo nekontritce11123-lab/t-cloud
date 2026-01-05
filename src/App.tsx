@@ -8,6 +8,7 @@ import { FileGrid } from './components/FileGrid/FileGrid';
 import { Timeline } from './components/Timeline/Timeline';
 import { LinkList } from './components/LinkCard/LinkCard';
 import { TrashView } from './components/TrashView/TrashView';
+import { FileViewer } from './components/FileViewer/FileViewer';
 import './styles/global.css';
 import styles from './App.module.css';
 
@@ -42,6 +43,7 @@ function App() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [sentFiles, setSentFiles] = useState<Record<number, number>>({});
   const [sendingFileId, setSendingFileId] = useState<number | null>(null); // Защита от двойного клика
+  const [viewingFile, setViewingFile] = useState<FileRecord | null>(null); // Файл для просмотра
 
   // Лимит на выбор
   const MAX_SELECTED_ITEMS = 20;
@@ -240,8 +242,8 @@ function App() {
     }
   }, [selectedFiles, selectedLinks, isDeleting, hapticFeedback, mainButton, refresh]);
 
-  // Handle file click - обычное нажатие отправляет один файл
-  const handleFileClick = useCallback(async (file: FileRecord) => {
+  // Handle file click - открываем FileViewer для просмотра
+  const handleFileClick = useCallback((file: FileRecord) => {
     hapticFeedback.light();
 
     if (isSelectionMode && selectionType === 'files') {
@@ -261,32 +263,37 @@ function App() {
         return next;
       });
     } else {
-      // Обычный режим - отправляем один файл через API
-      if (isOnCooldown(file.id)) {
-        hapticFeedback.warning();
-        return;
-      }
-
-      // Защита от двойного клика
-      if (sendingFileId !== null) {
-        return;
-      }
-
-      setSendingFileId(file.id);
-
-      try {
-        await apiClient.sendFile(file.id);
-        markAsSent(file.id);
-        hapticFeedback.success();
-        // НЕ закрываем приложение
-      } catch (error) {
-        console.error('Error sending file:', error);
-        hapticFeedback.error();
-      } finally {
-        setSendingFileId(null);
-      }
+      // Обычный режим - открываем просмотр файла
+      setViewingFile(file);
     }
-  }, [hapticFeedback, isSelectionMode, selectionType, isOnCooldown, markAsSent, sendingFileId]);
+  }, [hapticFeedback, isSelectionMode, selectionType]);
+
+  // Отправить файл из FileViewer
+  const handleSendFromViewer = useCallback(async (file: FileRecord) => {
+    if (isOnCooldown(file.id)) {
+      hapticFeedback.warning();
+      return;
+    }
+
+    // Защита от двойного клика
+    if (sendingFileId !== null) {
+      return;
+    }
+
+    setSendingFileId(file.id);
+
+    try {
+      await apiClient.sendFile(file.id);
+      markAsSent(file.id);
+      hapticFeedback.success();
+      setViewingFile(null); // Закрываем просмотр после отправки
+    } catch (error) {
+      console.error('Error sending file:', error);
+      hapticFeedback.error();
+    } finally {
+      setSendingFileId(null);
+    }
+  }, [hapticFeedback, isOnCooldown, markAsSent, sendingFileId]);
 
   // Handle long press - включает режим выбора файлов
   const handleFileLongPress = useCallback((file: FileRecord) => {
@@ -500,6 +507,17 @@ function App() {
           </div>
         )}
       </main>
+
+      {/* FileViewer modal */}
+      {viewingFile && (
+        <FileViewer
+          file={viewingFile}
+          onClose={() => setViewingFile(null)}
+          onSend={handleSendFromViewer}
+          isOnCooldown={isOnCooldown(viewingFile.id)}
+          isSending={sendingFileId === viewingFile.id}
+        />
+      )}
     </div>
   );
 }
