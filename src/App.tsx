@@ -31,6 +31,9 @@ function App() {
   const [selectedFiles, setSelectedFiles] = useState<Set<number>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
 
+  // Лимит на выбор файлов
+  const MAX_SELECTED_FILES = 20;
+
   // Initialize API with Telegram initData BEFORE loading files
   useEffect(() => {
     if (isReady) {
@@ -103,6 +106,11 @@ function App() {
         if (next.has(file.id)) {
           next.delete(file.id);
         } else {
+          // Проверяем лимит
+          if (next.size >= MAX_SELECTED_FILES) {
+            hapticFeedback.warning();
+            return prev;
+          }
           next.add(file.id);
         }
         return next;

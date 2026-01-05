@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 
 declare global {
   interface Window {
@@ -74,6 +74,7 @@ interface TelegramWebApp {
 export function useTelegram() {
   const [webApp, setWebApp] = useState<TelegramWebApp | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const mainButtonCallbackRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
@@ -107,16 +108,35 @@ export function useTelegram() {
     webApp?.sendData(data);
   };
 
-  // Показать/скрыть главную кнопку
-  const mainButton = {
-    show: (text: string, onClick: () => void) => {
-      if (webApp) {
-        webApp.MainButton.setText(text);
-        webApp.MainButton.onClick(onClick);
-        webApp.MainButton.show();
+  // Показать/скрыть главную кнопку (с правильной очисткой старого callback)
+  const showMainButton = useCallback((text: string, onClick: () => void) => {
+    if (webApp) {
+      // Удаляем старый callback если был
+      if (mainButtonCallbackRef.current) {
+        webApp.MainButton.offClick(mainButtonCallbackRef.current);
       }
-    },
-    hide: () => webApp?.MainButton.hide(),
+      // Сохраняем новый callback
+      mainButtonCallbackRef.current = onClick;
+      webApp.MainButton.setText(text);
+      webApp.MainButton.onClick(onClick);
+      webApp.MainButton.show();
+    }
+  }, [webApp]);
+
+  const hideMainButton = useCallback(() => {
+    if (webApp) {
+      // Удаляем callback при скрытии
+      if (mainButtonCallbackRef.current) {
+        webApp.MainButton.offClick(mainButtonCallbackRef.current);
+        mainButtonCallbackRef.current = null;
+      }
+      webApp.MainButton.hide();
+    }
+  }, [webApp]);
+
+  const mainButton = {
+    show: showMainButton,
+    hide: hideMainButton,
     setText: (text: string) => webApp?.MainButton.setText(text),
     showProgress: () => webApp?.MainButton.showProgress(true),
     hideProgress: () => webApp?.MainButton.hideProgress(),

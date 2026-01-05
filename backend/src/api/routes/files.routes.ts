@@ -172,6 +172,13 @@ router.get('/:id', async (req, res: Response) => {
   }
 });
 
+// Лимиты для предотвращения бана от Telegram
+const MAX_FILES_PER_REQUEST = 20;
+const DELAY_BETWEEN_SENDS_MS = 100; // 100ms между отправками
+
+// Утилита для задержки
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 /**
  * POST /api/files/send
  * Send multiple files to user via bot
@@ -185,13 +192,22 @@ router.post('/send', async (req, res: Response) => {
     return;
   }
 
+  // Лимит на количество файлов
+  if (fileIds.length > MAX_FILES_PER_REQUEST) {
+    res.status(400).json({
+      error: `Maximum ${MAX_FILES_PER_REQUEST} files per request allowed`
+    });
+    return;
+  }
+
   console.log('[Files] Sending files to user:', telegramUser.id, 'files:', fileIds);
 
   try {
     const sentFiles: number[] = [];
     const errors: string[] = [];
 
-    for (const id of fileIds) {
+    for (let i = 0; i < fileIds.length; i++) {
+      const id = fileIds[i];
       const file = await filesRepo.findById(id);
 
       if (!file || file.userId !== telegramUser.id) {
@@ -233,6 +249,11 @@ router.post('/send', async (req, res: Response) => {
         }
         sentFiles.push(id);
         console.log('[Files] Sent file:', file.id, file.fileName);
+
+        // Задержка между отправками (кроме последней)
+        if (i < fileIds.length - 1) {
+          await delay(DELAY_BETWEEN_SENDS_MS);
+        }
       } catch (sendError) {
         console.error('[Files] Error sending file:', id, sendError);
         errors.push(`Failed to send file ${id}`);
