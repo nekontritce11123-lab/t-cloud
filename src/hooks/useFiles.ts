@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiClient, FileRecord, LinkRecord, CategoryStats } from '../api/client';
 import { CategoryType } from '../components/CategoryChips/CategoryChips';
 
@@ -13,55 +13,70 @@ export function useFiles(apiReady = true) {
   const [searchQuery, setSearchQuery] = useState('');
   const [hasMore, setHasMore] = useState(false);
 
-  // Simple load function
-  const loadData = useCallback(async () => {
+  // Ref для отслеживания текущего запроса (для отмены устаревших)
+  const currentRequestId = useRef(0);
+
+  // Универсальная функция загрузки данных
+  const loadDataForQuery = useCallback(async (query: string, type: CategoryType) => {
     if (!apiReady) return;
 
-    console.log('[useFiles] loadData called, searchQuery:', searchQuery, 'selectedType:', selectedType);
+    const requestId = ++currentRequestId.current;
+    console.log('[useFiles] loadDataForQuery called, query:', query, 'type:', type, 'requestId:', requestId);
+
     setIsLoading(true);
     setError(null);
 
     try {
-      if (searchQuery && searchQuery.trim()) {
+      if (query && query.trim()) {
         // Search both files and links in parallel
         const [filesResult, linksResult] = await Promise.all([
-          apiClient.searchFiles(searchQuery),
-          apiClient.searchLinks(searchQuery),
+          apiClient.searchFiles(query),
+          apiClient.searchLinks(query),
         ]);
+        // Проверяем что это актуальный запрос
+        if (requestId !== currentRequestId.current) {
+          console.log('[useFiles] Ignoring stale response', requestId);
+          return;
+        }
         console.log('[useFiles] Search result - files:', filesResult, 'links:', linksResult);
         setFiles(filesResult.items || []);
         setLinks(linksResult.items || []);
         setHasMore(false);
-      } else if (selectedType === 'trash') {
+      } else if (type === 'trash') {
         // Load trash - handled separately by TrashView component
-        // Just clear main lists
+        if (requestId !== currentRequestId.current) return;
         setFiles([]);
         setLinks([]);
         setHasMore(false);
-      } else if (selectedType === 'link') {
+      } else if (type === 'link') {
         const result = await apiClient.getLinks({ page: 1, limit: 50 });
+        if (requestId !== currentRequestId.current) return;
         console.log('[useFiles] Links result:', result);
         setLinks(result.items || []);
         setFiles([]);
         setHasMore(false);
       } else {
         const result = await apiClient.getFiles({
-          type: selectedType || undefined,
+          type: type || undefined,
           page: 1,
           limit: 50,
         });
+        if (requestId !== currentRequestId.current) return;
         console.log('[useFiles] Files result:', result);
         setFiles(result.items || []);
         setLinks([]);
         setHasMore(false);
       }
     } catch (err) {
+      if (requestId !== currentRequestId.current) return;
       console.error('[useFiles] Error:', err);
       setError('Не удалось загрузить файлы');
     } finally {
-      setIsLoading(false);
+      if (requestId === currentRequestId.current) {
+        setIsLoading(false);
+      }
     }
-  }, [apiReady, selectedType, searchQuery]);
+  }, [apiReady]);
 
   // Load stats
   const loadStats = useCallback(async () => {
@@ -80,41 +95,43 @@ export function useFiles(apiReady = true) {
     }
   }, [apiReady]);
 
-  // Load on mount and when dependencies change
+  // Load on mount only
   useEffect(() => {
-    console.log('[useFiles] useEffect triggered, apiReady:', apiReady);
+    console.log('[useFiles] Initial load, apiReady:', apiReady);
     if (apiReady) {
-      loadData();
+      loadDataForQuery(searchQuery, selectedType);
       loadStats();
     }
-  }, [apiReady, selectedType, searchQuery, loadData, loadStats]);
+  }, [apiReady]); // Только при изменении apiReady!
 
-  // Filter by type
+  // Filter by type - сразу загружает данные
   const filterByType = useCallback((type: CategoryType) => {
+    console.log('[useFiles] filterByType:', type);
     setSelectedType(type);
     setSearchQuery('');
-  }, []);
+    setIsLoading(true);
+    loadDataForQuery('', type);
+  }, [loadDataForQuery]);
 
-  // Search
+  // Search - принимает query и сразу загружает
   const search = useCallback((query: string) => {
     console.log('[useFiles] search called with:', query);
-    // Всегда показываем спиннер при изменении поиска
-    setIsLoading(true);
     setSearchQuery(query);
+    setIsLoading(true);
     if (query) {
-      // При новом поиске - очищаем данные
+      // При новом поиске - очищаем данные сразу
       setFiles([]);
       setLinks([]);
     }
-    // При очистке поиска НЕ очищаем files - loadData сам загрузит новые
-    // loadData будет вызван автоматически через useEffect когда searchQuery изменится
-  }, []);
+    // Сразу запускаем загрузку с новым query
+    loadDataForQuery(query, query ? null : selectedType);
+  }, [loadDataForQuery, selectedType]);
 
-  // Refresh
+  // Refresh - перезагрузка текущего состояния
   const refresh = useCallback(() => {
-    loadData();
+    loadDataForQuery(searchQuery, selectedType);
     loadStats();
-  }, [loadData, loadStats]);
+  }, [loadDataForQuery, loadStats, searchQuery, selectedType]);
 
   // Delete file
   const deleteFile = useCallback(async (id: number) => {
