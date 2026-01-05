@@ -149,7 +149,14 @@
 }
 
 .icon {
-  font-size: 32px;
+  width: 32px;
+  height: 32px;
+  color: var(--app-hint-color);
+}
+
+.icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 .duration {
@@ -233,7 +240,10 @@
 }
 
 .forwardIcon {
-  font-size: var(--font-size-xs);
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  opacity: 0.8;
 }
 
 .forwardName {
@@ -283,7 +293,8 @@
   }
 
   .icon {
-    font-size: 40px;
+    width: 40px;
+    height: 40px;
   }
 }
 
@@ -304,6 +315,7 @@
   }
 
   .icon {
-    font-size: 48px;
+    width: 48px;
+    height: 48px;
   }
 }

@@ -40,6 +40,13 @@ button {
   background: none;
   cursor: pointer;
   color: inherit;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--app-button-color);
+  outline-offset: 2px;
 }
 
 input, textarea {
