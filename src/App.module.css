@@ -22,7 +22,10 @@
 .content {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-bottom: calc(var(--spacing-lg) + var(--safe-area-bottom));
+  /* Для корректной работы скролла на ПК */
+  overscroll-behavior: contain;
 }
 
 .loading {

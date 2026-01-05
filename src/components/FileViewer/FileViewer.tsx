@@ -164,7 +164,31 @@ export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending }: F
             <span>{getMediaTypeLabel(file.mediaType)}</span>
           </div>
 
-          <div className={styles.headerSpacer} />
+          <button
+            className={`${styles.headerSendButton} ${isOnCooldown ? styles.disabled : ''}`}
+            onClick={handleSend}
+            disabled={isOnCooldown || isSending}
+          >
+            {isSending ? (
+              <span className={styles.smallSpinner} />
+            ) : isOnCooldown ? (
+              <>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+                <span>Отправлено</span>
+              </>
+            ) : (
+              <>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 2 11 13" />
+                  <path d="M22 2 15 22 11 13 2 9 22 2z" />
+                </svg>
+                <span>Отправить</span>
+              </>
+            )}
+          </button>
         </div>
 
         {/* Preview */}
@@ -184,9 +208,14 @@ export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending }: F
 
         {/* Info */}
         <div className={styles.info}>
-          {/* Caption or filename */}
+          {/* Caption or filename - сохраняем переносы строк */}
           {file.caption && (
-            <div className={styles.caption}>{file.caption}</div>
+            <div className={styles.caption}>{file.caption.split('\n').map((line, i) => (
+              <span key={i}>
+                {line}
+                {i < file.caption!.split('\n').length - 1 && <br />}
+              </span>
+            ))}</div>
           )}
 
           {file.fileName && (
@@ -230,34 +259,6 @@ export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending }: F
           </div>
         </div>
 
-        {/* Actions */}
-        <div className={styles.actions}>
-          <button
-            className={`${styles.sendButton} ${isOnCooldown ? styles.disabled : ''}`}
-            onClick={handleSend}
-            disabled={isOnCooldown || isSending}
-          >
-            {isSending ? (
-              <span className={styles.spinner} />
-            ) : isOnCooldown ? (
-              <>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12 6 12 12 16 14" />
-                </svg>
-                <span>Отправлено</span>
-              </>
-            ) : (
-              <>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M22 2 11 13" />
-                  <path d="M22 2 15 22 11 13 2 9 22 2z" />
-                </svg>
-                <span>Отправить</span>
-              </>
-            )}
-          </button>
-        </div>
       </div>
     </div>
   );

@@ -7,6 +7,7 @@
   display: flex;
   gap: var(--spacing-sm);
   padding: 0 var(--spacing-lg);
+  padding-bottom: var(--spacing-sm);
   overflow-x: auto;
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -14,6 +15,24 @@
 
 .scroll::-webkit-scrollbar {
   display: none;
+}
+
+/* На ПК показываем скроллбар для удобства */
+@media (min-width: 768px) and (hover: hover) {
+  .scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--app-hint-color) transparent;
+  }
+
+  .scroll::-webkit-scrollbar {
+    display: block;
+    height: 4px;
+  }
+
+  .scroll::-webkit-scrollbar-thumb {
+    background: var(--app-hint-color);
+    border-radius: 2px;
+  }
 }
 
 .chip {
