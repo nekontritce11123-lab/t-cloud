@@ -1,6 +1,6 @@
 .container {
   padding: var(--spacing-md) 0;
-  overflow: hidden;
+  /* overflow: visible для работы скролла */
 }
 
 .scroll {
@@ -9,6 +9,10 @@
   padding: 0 var(--spacing-lg);
   padding-bottom: var(--spacing-sm);
   overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch; /* Для плавного скролла на iOS */
+  scroll-behavior: smooth;
+  /* Скрываем скроллбар на мобильном */
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
