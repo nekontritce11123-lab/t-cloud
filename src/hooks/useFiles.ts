@@ -16,6 +16,10 @@ export function useFiles(apiReady = true) {
   // Ref для отслеживания текущего запроса (для отмены устаревших)
   const currentRequestId = useRef(0);
 
+  // Сохраняем данные до поиска, чтобы восстановить при очистке
+  const savedFilesRef = useRef<FileRecord[]>([]);
+  const savedLinksRef = useRef<LinkRecord[]>([]);
+
   // Универсальная функция загрузки данных
   const loadDataForQuery = useCallback(async (query: string, type: CategoryType) => {
     if (!apiReady) return;
@@ -52,9 +56,13 @@ export function useFiles(apiReady = true) {
         const result = await apiClient.getLinks({ page: 1, limit: 50 });
         if (requestId !== currentRequestId.current) return;
         console.log('[useFiles] Links result:', result);
-        setLinks(result.items || []);
+        const linksData = result.items || [];
+        setLinks(linksData);
         setFiles([]);
         setHasMore(false);
+        // Сохраняем для восстановления после поиска
+        savedLinksRef.current = linksData;
+        savedFilesRef.current = [];
       } else {
         const result = await apiClient.getFiles({
           type: type || undefined,
@@ -63,9 +71,13 @@ export function useFiles(apiReady = true) {
         });
         if (requestId !== currentRequestId.current) return;
         console.log('[useFiles] Files result:', result);
-        setFiles(result.items || []);
+        const filesData = result.items || [];
+        setFiles(filesData);
         setLinks([]);
         setHasMore(false);
+        // Сохраняем для восстановления после поиска
+        savedFilesRef.current = filesData;
+        savedLinksRef.current = [];
       }
     } catch (err) {
       if (requestId !== currentRequestId.current) return;
@@ -121,17 +133,31 @@ export function useFiles(apiReady = true) {
     setSearchQuery(query);
 
     if (query) {
+      // Перед поиском сохраняем текущие данные (если это не результаты поиска)
+      if (!searchQuery && files.length > 0) {
+        savedFilesRef.current = files;
+        savedLinksRef.current = links;
+        console.log('[useFiles] Saved data before search:', savedFilesRef.current.length, 'files');
+      }
       // Новый поиск - показываем загрузку и очищаем старые результаты
       setIsLoading(true);
       setFiles([]);
       setLinks([]);
       loadDataForQuery(query, null);
     } else {
-      // Очистка поиска - НЕ показываем загрузку, данные загрузятся в фоне
-      // UI плавно перейдёт от результатов поиска к Timeline
-      loadDataForQuery('', selectedType);
+      // Очистка поиска - восстанавливаем сохранённые данные мгновенно
+      console.log('[useFiles] Restoring saved data:', savedFilesRef.current.length, 'files');
+      if (savedFilesRef.current.length > 0 || savedLinksRef.current.length > 0) {
+        // Восстанавливаем данные без загрузки
+        setFiles(savedFilesRef.current);
+        setLinks(savedLinksRef.current);
+        setIsLoading(false);
+      } else {
+        // Если нет сохранённых данных - загружаем
+        loadDataForQuery('', selectedType);
+      }
     }
-  }, [loadDataForQuery, selectedType]);
+  }, [loadDataForQuery, selectedType, searchQuery, files, links]);
 
   // Refresh - перезагрузка текущего состояния
   const refresh = useCallback(() => {
