@@ -43,9 +43,9 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 0, 0, 0.3);
   font-size: 12px;
-  color: var(--app-hint-color);
+  color: #ff3b30;
   transition: all var(--animation-fast) var(--easing-smooth);
   cursor: pointer;
   border: none;
