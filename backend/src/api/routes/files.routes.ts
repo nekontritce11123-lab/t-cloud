@@ -30,6 +30,8 @@ router.get('/', async (req, res: Response) => {
     limit = '20',
   } = req.query;
 
+  console.log('[Files] GET / for user:', telegramUser.id);
+
   try {
     const pageNum = parseInt(page as string, 10);
     const limitNum = Math.min(parseInt(limit as string, 10), 100);
@@ -40,6 +42,8 @@ router.get('/', async (req, res: Response) => {
       limit: limitNum,
       offset,
     });
+
+    console.log('[Files] Found', result.total, 'files, returning', result.items.length);
 
     // Add thumbnail URLs
     const service = getThumbnailService();

@@ -1,4 +1,7 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://217.60.3.122:3000';
+// Using HTTPS API with Let's Encrypt certificate
+const API_URL = import.meta.env.VITE_API_URL || 'https://api.factchain-traker.online';
+
+console.log('[ApiClient] API_URL:', API_URL);
 
 // Types
 export type MediaType = 'photo' | 'video' | 'document' | 'audio' | 'voice' | 'video_note' | 'animation' | 'sticker' | 'link';
@@ -82,15 +85,27 @@ class ApiClient {
     if (options.page) params.set('page', String(options.page));
     if (options.limit) params.set('limit', String(options.limit));
 
-    const response = await fetch(`${API_URL}/api/files?${params}`, {
-      headers: this.getHeaders(),
-    });
+    console.log('[ApiClient] Fetching files from:', `${API_URL}/api/files?${params}`);
+    console.log('[ApiClient] Headers:', JSON.stringify(this.getHeaders()));
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch files');
+    try {
+      const response = await fetch(`${API_URL}/api/files?${params}`, {
+        headers: this.getHeaders(),
+      });
+
+      console.log('[ApiClient] Response status:', response.status);
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('[ApiClient] Error response:', text);
+        throw new Error('Failed to fetch files');
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('[ApiClient] Fetch error:', error);
+      throw error;
     }
-
-    return response.json();
   }
 
   async getFilesByDate(): Promise<Record<string, FileRecord[]>> {
