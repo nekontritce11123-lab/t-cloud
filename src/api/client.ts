@@ -169,6 +169,33 @@ class ApiClient {
     }
   }
 
+  async sendFiles(fileIds: number[]): Promise<{ success: boolean; sent: number[]; errors?: string[] }> {
+    const response = await fetch(`${API_URL}/api/files/send`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ fileIds }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to send files');
+    }
+
+    return response.json();
+  }
+
+  async sendFile(id: number): Promise<{ success: boolean }> {
+    const response = await fetch(`${API_URL}/api/files/${id}/send`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to send file');
+    }
+
+    return response.json();
+  }
+
   // Links API
 
   async getLinks(options: {

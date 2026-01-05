@@ -173,8 +173,86 @@ router.get('/:id', async (req, res: Response) => {
 });
 
 /**
+ * POST /api/files/send
+ * Send multiple files to user via bot
+ */
+router.post('/send', async (req, res: Response) => {
+  const { telegramUser } = req as unknown as AuthenticatedRequest;
+  const { fileIds } = req.body as { fileIds: number[] };
+
+  if (!Array.isArray(fileIds) || fileIds.length === 0) {
+    res.status(400).json({ error: 'fileIds array is required' });
+    return;
+  }
+
+  console.log('[Files] Sending files to user:', telegramUser.id, 'files:', fileIds);
+
+  try {
+    const sentFiles: number[] = [];
+    const errors: string[] = [];
+
+    for (const id of fileIds) {
+      const file = await filesRepo.findById(id);
+
+      if (!file || file.userId !== telegramUser.id) {
+        errors.push(`File ${id} not found`);
+        continue;
+      }
+
+      const mediaType = file.mediaType as MediaType;
+      const caption = file.caption || undefined;
+
+      try {
+        switch (mediaType) {
+          case 'photo':
+            await bot.api.sendPhoto(telegramUser.id, file.fileId, { caption });
+            break;
+          case 'video':
+            await bot.api.sendVideo(telegramUser.id, file.fileId, { caption });
+            break;
+          case 'document':
+            await bot.api.sendDocument(telegramUser.id, file.fileId, { caption });
+            break;
+          case 'audio':
+            await bot.api.sendAudio(telegramUser.id, file.fileId, { caption });
+            break;
+          case 'voice':
+            await bot.api.sendVoice(telegramUser.id, file.fileId, { caption });
+            break;
+          case 'video_note':
+            await bot.api.sendVideoNote(telegramUser.id, file.fileId);
+            break;
+          case 'animation':
+            await bot.api.sendAnimation(telegramUser.id, file.fileId, { caption });
+            break;
+          case 'sticker':
+            await bot.api.sendSticker(telegramUser.id, file.fileId);
+            break;
+          default:
+            await bot.api.sendDocument(telegramUser.id, file.fileId, { caption });
+        }
+        sentFiles.push(id);
+        console.log('[Files] Sent file:', file.id, file.fileName);
+      } catch (sendError) {
+        console.error('[Files] Error sending file:', id, sendError);
+        errors.push(`Failed to send file ${id}`);
+      }
+    }
+
+    res.json({
+      success: true,
+      sent: sentFiles,
+      errors: errors.length > 0 ? errors : undefined,
+    });
+  } catch (error) {
+    console.error('[API] Error sending files:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * POST /api/files/:id/send
- * Request to send file back to chat
+ * Send single file to user via bot
  */
 router.post('/:id/send', async (req, res: Response) => {
   const { telegramUser } = req as unknown as AuthenticatedRequest;
@@ -193,13 +271,42 @@ router.post('/:id/send', async (req, res: Response) => {
       return;
     }
 
-    // Return file info for Mini App to trigger send via callback
-    res.json({
-      success: true,
-      fileId: file.id,
-      telegramFileId: file.fileId,
-      mediaType: file.mediaType,
-    });
+    const mediaType = file.mediaType as MediaType;
+    const caption = file.caption || undefined;
+
+    // Actually send the file via bot
+    switch (mediaType) {
+      case 'photo':
+        await bot.api.sendPhoto(telegramUser.id, file.fileId, { caption });
+        break;
+      case 'video':
+        await bot.api.sendVideo(telegramUser.id, file.fileId, { caption });
+        break;
+      case 'document':
+        await bot.api.sendDocument(telegramUser.id, file.fileId, { caption });
+        break;
+      case 'audio':
+        await bot.api.sendAudio(telegramUser.id, file.fileId, { caption });
+        break;
+      case 'voice':
+        await bot.api.sendVoice(telegramUser.id, file.fileId, { caption });
+        break;
+      case 'video_note':
+        await bot.api.sendVideoNote(telegramUser.id, file.fileId);
+        break;
+      case 'animation':
+        await bot.api.sendAnimation(telegramUser.id, file.fileId, { caption });
+        break;
+      case 'sticker':
+        await bot.api.sendSticker(telegramUser.id, file.fileId);
+        break;
+      default:
+        await bot.api.sendDocument(telegramUser.id, file.fileId, { caption });
+    }
+
+    console.log('[Files] Sent file:', file.id, file.fileName);
+
+    res.json({ success: true });
   } catch (error) {
     console.error('[API] Error sending file:', error);
     res.status(500).json({ error: 'Internal server error' });

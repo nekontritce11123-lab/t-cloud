@@ -10,7 +10,8 @@ import './styles/global.css';
 import styles from './App.module.css';
 
 function App() {
-  const { isReady, getInitData, hapticFeedback, sendData, mainButton } = useTelegram();
+  const { isReady, getInitData, hapticFeedback, mainButton, close } = useTelegram();
+  const [isSending, setIsSending] = useState(false);
   const [apiReady, setApiReady] = useState(false);
   const {
     files,
@@ -64,27 +65,35 @@ function App() {
   }, [selectedFiles.size]);
 
   // Отправить выбранные файлы
-  const handleSendSelected = useCallback(() => {
-    if (selectedFiles.size === 0) return;
+  const handleSendSelected = useCallback(async () => {
+    if (selectedFiles.size === 0 || isSending) return;
 
+    setIsSending(true);
     hapticFeedback.success();
 
-    // Собираем fileId выбранных файлов
-    const selectedFileIds = files
-      .filter(f => selectedFiles.has(f.id))
-      .map(f => ({ id: f.id, fileId: f.fileId, mediaType: f.mediaType }));
+    try {
+      const fileIds = Array.from(selectedFiles);
+      const result = await apiClient.sendFiles(fileIds);
 
-    // Отправляем данные боту
-    sendData(JSON.stringify({
-      action: 'send_files',
-      files: selectedFileIds
-    }));
+      if (result.success) {
+        // Выход из режима выбора
+        setIsSelectionMode(false);
+        setSelectedFiles(new Set());
+        mainButton.hide();
 
-    // Mini App закроется автоматически после sendData
-  }, [selectedFiles, files, hapticFeedback, sendData]);
+        // Закрыть Mini App после отправки
+        close();
+      }
+    } catch (error) {
+      console.error('Error sending files:', error);
+      hapticFeedback.error();
+    } finally {
+      setIsSending(false);
+    }
+  }, [selectedFiles, isSending, hapticFeedback, mainButton, close]);
 
   // Handle file click - обычное нажатие отправляет один файл
-  const handleFileClick = useCallback((file: FileRecord) => {
+  const handleFileClick = useCallback(async (file: FileRecord) => {
     hapticFeedback.light();
 
     if (isSelectionMode) {
@@ -99,13 +108,17 @@ function App() {
         return next;
       });
     } else {
-      // Обычный режим - отправляем один файл
-      sendData(JSON.stringify({
-        action: 'send_files',
-        files: [{ id: file.id, fileId: file.fileId, mediaType: file.mediaType }]
-      }));
+      // Обычный режим - отправляем один файл через API
+      try {
+        await apiClient.sendFile(file.id);
+        hapticFeedback.success();
+        close();
+      } catch (error) {
+        console.error('Error sending file:', error);
+        hapticFeedback.error();
+      }
     }
-  }, [hapticFeedback, isSelectionMode, sendData]);
+  }, [hapticFeedback, isSelectionMode, close]);
 
   // Handle long press - включает режим выбора
   const handleFileLongPress = useCallback((file: FileRecord) => {
