@@ -8,6 +8,7 @@ interface FileGridProps {
   onFileLongPress?: (file: FileRecord) => void;
   selectedFiles?: Set<number>;
   isSelectionMode?: boolean;
+  searchQuery?: string; // Если передан - показываем результаты поиска
 }
 
 const TYPE_EMOJI: Record<MediaType, string> = {
@@ -145,51 +146,79 @@ function FileCard({ file, onFileClick, onFileLongPress, isSelected, isSelectionM
         </div>
       )}
 
-      {/* Search match info - показывает где нашлось совпадение */}
-      {file.matchedField && file.matchedSnippet && (
-        <div className={styles.matchInfo}>
-          <span className={styles.matchLabel}>
-            {file.matchedField === 'caption' && 'В подписи: '}
-            {file.matchedField === 'file_name' && 'В имени: '}
-            {file.matchedField === 'forward_from_name' && 'В отправителе: '}
-          </span>
-          <span
-            className={styles.matchSnippet}
-            dangerouslySetInnerHTML={{
-              __html: file.matchedSnippet
-                .replace(/\*\*/g, '<mark>')
-                .replace(/<mark>([^<]*)<mark>/g, '<mark>$1</mark>')
-            }}
-          />
-        </div>
-      )}
     </button>
   );
 }
 
-export function FileGrid({ files, onFileClick, onFileLongPress, selectedFiles, isSelectionMode }: FileGridProps) {
+// Форматирование snippet с подсветкой
+function formatSnippet(snippet: string): string {
+  return snippet
+    .replace(/\*\*([^*]+)\*\*/g, '<mark>$1</mark>');
+}
+
+// Получить описание где найдено
+function getMatchDescription(field: string): string {
+  switch (field) {
+    case 'caption': return 'в подписи';
+    case 'file_name': return 'в имени файла';
+    case 'forward_from_name': return 'в отправителе';
+    default: return '';
+  }
+}
+
+export function FileGrid({ files, onFileClick, onFileLongPress, selectedFiles, isSelectionMode, searchQuery }: FileGridProps) {
   if (files.length === 0) {
     return (
       <div className={styles.empty}>
         <span className={styles.emptyIcon}>📭</span>
-        <p>Файлы не найдены</p>
-        <p className={styles.emptyHint}>Пересылайте файлы боту, чтобы они появились здесь</p>
+        <p>{searchQuery ? 'Ничего не найдено' : 'Файлы не найдены'}</p>
+        <p className={styles.emptyHint}>
+          {searchQuery
+            ? `По запросу "${searchQuery}" ничего не найдено`
+            : 'Пересылайте файлы боту, чтобы они появились здесь'
+          }
+        </p>
       </div>
     );
   }
 
+  // Группируем результаты поиска по месту совпадения
+  const isSearchResult = searchQuery && files.some(f => f.matchedField);
+
   return (
-    <div className={styles.grid}>
-      {files.map(file => (
-        <FileCard
-          key={file.id}
-          file={file}
-          onFileClick={onFileClick}
-          onFileLongPress={onFileLongPress}
-          isSelected={selectedFiles?.has(file.id)}
-          isSelectionMode={isSelectionMode}
-        />
-      ))}
+    <div className={styles.searchResults}>
+      {/* Заголовок результатов поиска */}
+      {isSearchResult && (
+        <div className={styles.searchHeader}>
+          <span className={styles.searchCount}>
+            Найдено: {files.length}
+          </span>
+        </div>
+      )}
+
+      <div className={styles.grid}>
+        {files.map(file => (
+          <div key={file.id} className={styles.searchItem}>
+            <FileCard
+              file={file}
+              onFileClick={onFileClick}
+              onFileLongPress={onFileLongPress}
+              isSelected={selectedFiles?.has(file.id)}
+              isSelectionMode={isSelectionMode}
+            />
+            {/* Подпись под карточкой - где найдено */}
+            {file.matchedField && file.matchedSnippet && (
+              <div className={styles.matchBadge}>
+                <span className={styles.matchWhere}>{getMatchDescription(file.matchedField)}:</span>
+                <span
+                  className={styles.matchText}
+                  dangerouslySetInnerHTML={{ __html: formatSnippet(file.matchedSnippet) }}
+                />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

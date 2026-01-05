@@ -212,13 +212,14 @@ function App() {
         {selectedType === 'link' ? (
           <LinkList links={links} onLinkClick={handleLinkClick} />
         ) : searchInput ? (
-          /* При поиске показываем обычную сетку без группировки */
+          /* При поиске показываем обычную сетку с результатами */
           <FileGrid
             files={files}
             onFileClick={handleFileClick}
             onFileLongPress={handleFileLongPress}
             selectedFiles={selectedFiles}
             isSelectionMode={isSelectionMode}
+            searchQuery={searchInput}
           />
         ) : (
           /* По умолчанию - Timeline с группировкой по датам */

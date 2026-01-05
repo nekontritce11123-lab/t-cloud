@@ -166,26 +166,50 @@
   max-width: 250px;
 }
 
-/* Search match info */
-.matchInfo {
+/* Search results container */
+.searchResults {
+  display: flex;
+  flex-direction: column;
+}
+
+.searchHeader {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: var(--app-bg-color);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.searchCount {
+  font-size: var(--font-size-sm);
+  color: var(--app-hint-color);
+}
+
+/* Search item wrapper */
+.searchItem {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Match badge under card */
+.matchBadge {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: var(--spacing-xs) var(--spacing-sm);
-  background: rgba(51, 144, 236, 0.1);
-  border-top: 1px solid rgba(51, 144, 236, 0.2);
+  padding: var(--spacing-xs);
+  background: rgba(51, 144, 236, 0.08);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  margin-top: -4px;
 }
 
-.matchLabel {
+.matchWhere {
   font-size: 9px;
   color: var(--tg-theme-button-color, #3390ec);
   font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
-.matchSnippet {
-  font-size: var(--font-size-xs);
+.matchText {
+  font-size: 10px;
   color: var(--app-hint-color);
   white-space: nowrap;
   overflow: hidden;
@@ -193,9 +217,10 @@
   text-align: left;
 }
 
-.matchSnippet :global(mark) {
-  background: rgba(51, 144, 236, 0.3);
+.matchText :global(mark) {
+  background: rgba(51, 144, 236, 0.4);
   color: var(--app-text-color);
-  padding: 0 2px;
+  padding: 1px 3px;
   border-radius: 2px;
+  font-weight: var(--font-weight-semibold);
 }

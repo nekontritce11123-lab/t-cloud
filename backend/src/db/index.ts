@@ -166,11 +166,26 @@ export function searchFilesWithSnippets(userId: number, query: string, limit = 5
       matchedSnippet = row.snippet_forward;
     }
 
-    // Clean up the row (remove snippet_ fields)
-    const { snippet_file_name, snippet_caption, snippet_forward, ...file } = row;
-
+    // Convert snake_case to camelCase for frontend compatibility
     return {
-      ...file,
+      id: row.id,
+      userId: row.user_id,
+      fileId: row.file_id,
+      fileUniqueId: row.file_unique_id,
+      originalMessageId: row.original_message_id,
+      chatId: row.chat_id,
+      mediaType: row.media_type,
+      mimeType: row.mime_type,
+      fileName: row.file_name,
+      fileSize: row.file_size,
+      duration: row.duration,
+      width: row.width,
+      height: row.height,
+      thumbnailFileId: row.thumbnail_file_id,
+      caption: row.caption,
+      forwardFromName: row.forward_from_name,
+      forwardFromChatTitle: row.forward_from_chat_title,
+      createdAt: row.created_at,
       matchedField,
       matchedSnippet,
     } as SearchResult;
