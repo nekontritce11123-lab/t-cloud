@@ -12,14 +12,49 @@ const filesRepo = new FilesRepository();
 // Telegram caption limit: 1024 for photos, 4096 for other media
 const PHOTO_CAPTION_LIMIT = 1024;
 const DEFAULT_CAPTION_LIMIT = 4096;
+const TEXT_MESSAGE_LIMIT = 4096;
 
-// Truncate caption to fit Telegram limits
-function truncateCaption(caption: string | null | undefined, mediaType: string): string | undefined {
+// Check if caption fits the limit
+function getCaptionForMedia(caption: string | null | undefined, mediaType: string): string | undefined {
   if (!caption) return undefined;
   const limit = mediaType === 'photo' ? PHOTO_CAPTION_LIMIT : DEFAULT_CAPTION_LIMIT;
   if (caption.length <= limit) return caption;
-  // Truncate with ellipsis
-  return caption.substring(0, limit - 3) + '...';
+  // Caption too long - will be sent separately
+  return undefined;
+}
+
+// Check if caption needs to be sent separately
+function needsSeparateMessage(caption: string | null | undefined, mediaType: string): boolean {
+  if (!caption) return false;
+  const limit = mediaType === 'photo' ? PHOTO_CAPTION_LIMIT : DEFAULT_CAPTION_LIMIT;
+  return caption.length > limit;
+}
+
+// Send long caption as separate text message(s)
+async function sendCaptionAsText(chatId: number, caption: string): Promise<void> {
+  // Split into chunks if needed
+  const chunks: string[] = [];
+  let remaining = caption;
+  while (remaining.length > 0) {
+    if (remaining.length <= TEXT_MESSAGE_LIMIT) {
+      chunks.push(remaining);
+      break;
+    }
+    // Find a good break point (newline or space)
+    let breakPoint = remaining.lastIndexOf('\n', TEXT_MESSAGE_LIMIT);
+    if (breakPoint === -1 || breakPoint < TEXT_MESSAGE_LIMIT / 2) {
+      breakPoint = remaining.lastIndexOf(' ', TEXT_MESSAGE_LIMIT);
+    }
+    if (breakPoint === -1 || breakPoint < TEXT_MESSAGE_LIMIT / 2) {
+      breakPoint = TEXT_MESSAGE_LIMIT;
+    }
+    chunks.push(remaining.substring(0, breakPoint));
+    remaining = remaining.substring(breakPoint).trimStart();
+  }
+
+  for (const chunk of chunks) {
+    await bot.api.sendMessage(chatId, chunk);
+  }
 }
 
 // Lazy init thumbnail service (bot needs to be initialized first)
@@ -320,7 +355,8 @@ router.post('/send', async (req, res: Response) => {
       }
 
       const mediaType = file.mediaType as MediaType;
-      const caption = truncateCaption(file.caption, mediaType);
+      const caption = getCaptionForMedia(file.caption, mediaType);
+      const sendCaptionSeparately = needsSeparateMessage(file.caption, mediaType);
 
       try {
         switch (mediaType) {
@@ -351,6 +387,12 @@ router.post('/send', async (req, res: Response) => {
           default:
             await bot.api.sendDocument(telegramUser.id, file.fileId, { caption });
         }
+
+        // Send caption as separate message if it was too long
+        if (sendCaptionSeparately && file.caption) {
+          await sendCaptionAsText(telegramUser.id, file.caption);
+        }
+
         sentFiles.push(id);
         console.log('[Files] Sent file:', file.id, file.fileName);
 
@@ -397,7 +439,8 @@ router.post('/:id/send', async (req, res: Response) => {
     }
 
     const mediaType = file.mediaType as MediaType;
-    const caption = truncateCaption(file.caption, mediaType);
+    const caption = getCaptionForMedia(file.caption, mediaType);
+    const sendCaptionSeparately = needsSeparateMessage(file.caption, mediaType);
 
     // Actually send the file via bot
     switch (mediaType) {
@@ -427,6 +470,11 @@ router.post('/:id/send', async (req, res: Response) => {
         break;
       default:
         await bot.api.sendDocument(telegramUser.id, file.fileId, { caption });
+    }
+
+    // Send caption as separate message if it was too long
+    if (sendCaptionSeparately && file.caption) {
+      await sendCaptionAsText(telegramUser.id, file.caption);
     }
 
     console.log('[Files] Sent file:', file.id, file.fileName);

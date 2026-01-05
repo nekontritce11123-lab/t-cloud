@@ -86,6 +86,12 @@ function App() {
     }
   }, [sentFiles]);
 
+  // Очистка cooldown (для отладки)
+  const clearCooldown = useCallback(() => {
+    setSentFiles({});
+    localStorage.removeItem('t-cloud-sent-files');
+  }, []);
+
   // Initialize API with Telegram initData BEFORE loading files
   useEffect(() => {
     if (isReady) {
@@ -367,7 +373,13 @@ function App() {
           </div>
         ) : (
           <>
-            <h1 className={styles.title}>T-Cloud</h1>
+            <h1
+              className={styles.title}
+              onDoubleClick={clearCooldown}
+              title="Double-click to reset cooldown"
+            >
+              T-Cloud
+            </h1>
             <SearchBar
               value={searchInput}
               onChange={handleSearchChange}
