@@ -96,6 +96,10 @@
   border-radius: var(--radius-md);
   overflow: hidden;
   transition: transform var(--animation-fast) var(--easing-smooth);
+  /* Fix white pixels on edges - use both techniques */
+  isolation: isolate;
+  -webkit-mask-image: radial-gradient(white, black);
+  mask-image: radial-gradient(white, black);
 }
 
 .card:active {

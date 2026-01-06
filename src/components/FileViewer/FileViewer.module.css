@@ -26,7 +26,6 @@
   margin: 0 auto;
   width: 100%;
   padding-top: var(--safe-area-top);
-  padding-bottom: var(--safe-area-bottom);
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
@@ -129,6 +128,7 @@
 
 /* Preview */
 .previewContainer {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
