@@ -164,7 +164,9 @@
   flex-shrink: 0;
   padding: var(--spacing-md) var(--spacing-lg);
   padding-bottom: calc(var(--spacing-md) + var(--safe-area-bottom, 16px));
-  background: var(--app-bg-color);
+  background: rgba(24, 34, 45, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
