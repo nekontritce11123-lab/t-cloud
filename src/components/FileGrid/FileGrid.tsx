@@ -166,52 +166,69 @@ function FileCard({ file, onFileClick, onFileLongPress, isSelected, isSelectionM
         </div>
       )}
 
-      {/* Thumbnail or icon */}
-      <div className={styles.preview}>
-        {file.thumbnailUrl ? (
-          <img
-            src={file.thumbnailUrl}
-            alt=""
-            className={styles.thumbnail}
-            loading="lazy"
-          />
-        ) : (
-          <span className={styles.icon}>
+      {file.thumbnailUrl ? (
+        /* === КАРТОЧКА С ПРЕВЬЮ === */
+        <>
+          <div className={styles.preview}>
+            <img
+              src={file.thumbnailUrl}
+              alt=""
+              className={styles.thumbnail}
+              loading="lazy"
+            />
+            {/* Duration badge for video/audio */}
+            {file.duration && (
+              <span className={styles.duration}>
+                {formatDuration(file.duration)}
+              </span>
+            )}
+          </div>
+
+          {/* File info - адаптивная панель */}
+          {(file.caption || file.fileName) ? (
+            <div className={styles.info}>
+              {file.caption ? (
+                <>
+                  <span className={styles.caption}>{file.caption}</span>
+                  {file.fileName && (
+                    <span className={styles.fileName}>{file.fileName}</span>
+                  )}
+                </>
+              ) : (
+                <>
+                  {file.fileName && (
+                    <span className={styles.name}>{file.fileName}</span>
+                  )}
+                </>
+              )}
+              {file.fileSize && (
+                <span className={styles.size}>{formatFileSize(file.fileSize)}</span>
+              )}
+            </div>
+          ) : (
+            /* Компактный бейдж для фото/видео без текста */
+            <div className={styles.miniBadge}>
+              <span className={styles.miniBadgeIcon}>
+                {MediaTypeIcons[file.mediaType]}
+              </span>
+              {file.fileSize && <span>{formatFileSize(file.fileSize)}</span>}
+            </div>
+          )}
+        </>
+      ) : (
+        /* === КАРТОЧКА БЕЗ ПРЕВЬЮ (документы) === */
+        <div className={styles.noThumbContent}>
+          <span className={styles.iconLarge}>
             {MediaTypeIcons[file.mediaType] || FolderIcon}
           </span>
-        )}
-
-        {/* Duration badge for video/audio */}
-        {file.duration && (
-          <span className={styles.duration}>
-            {formatDuration(file.duration)}
-          </span>
-        )}
-      </div>
-
-      {/* File info - Smart Card: caption > fileName */}
-      <div className={styles.info}>
-        {file.caption ? (
-          <>
-            {/* Caption как основной текст */}
-            <span className={styles.caption}>{file.caption}</span>
-            {/* Filename мелко снизу */}
-            {file.fileName && (
-              <span className={styles.fileName}>{file.fileName}</span>
-            )}
-          </>
-        ) : (
-          <>
-            {/* Если нет caption - показываем filename (без emoji) */}
-            {file.fileName && (
-              <span className={styles.name}>{file.fileName}</span>
-            )}
-          </>
-        )}
-        {file.fileSize && (
-          <span className={styles.size}>{formatFileSize(file.fileSize)}</span>
-        )}
-      </div>
+          {file.fileName && (
+            <span className={styles.fileNameCenter}>{file.fileName}</span>
+          )}
+          {file.fileSize && (
+            <span className={styles.fileSizeCenter}>{formatFileSize(file.fileSize)}</span>
+          )}
+        </div>
+      )}
 
       {/* Forward info badge - от кого переслано */}
       {(file.forwardFromName || file.forwardFromChatTitle) && (
