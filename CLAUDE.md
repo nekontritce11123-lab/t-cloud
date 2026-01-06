@@ -56,8 +56,29 @@ print('Done!')
 
 ### Backend (на tcloud сервере)
 ```bash
-npm run build:backend
-systemctl restart t-cloud
+# Локальный build + деплой через paramiko:
+cd "f:/Code/Хранилище - ПУПУПУ" && npm run build:backend && /c/Users/Daniel\ Simples/AppData/Local/Programs/Python/Python313/python -c "
+import paramiko
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
+
+HOST = '217.60.3.122'
+USER = 'root'
+PASS = 'ZiW_1qjEippLtS2xrV'
+
+ssh = paramiko.SSHClient()
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+ssh.connect(HOST, 22, USER, PASS, timeout=30)
+
+stdin, stdout, stderr = ssh.exec_command('cd /root/t-cloud && git pull && npm run build:backend && systemctl restart t-cloud && echo OK')
+print(stdout.read().decode('utf-8', errors='replace'))
+err = stderr.read().decode('utf-8', errors='replace')
+if err:
+    print('STDERR:', err)
+
+ssh.close()
+print('Backend deployed!')
+"
 ```
 
 ## Архитектура

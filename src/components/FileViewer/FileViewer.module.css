@@ -32,6 +32,7 @@
 /* Header */
 .header {
   flex-shrink: 0; /* НЕ сжимать header */
+  position: relative; /* Для абсолютного позиционирования title */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -64,6 +65,11 @@
 }
 
 .headerTitle {
+  /* Абсолютное позиционирование по центру - не зависит от ширины кнопок */
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -71,8 +77,8 @@
   color: var(--app-text-color);
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
-  flex: 1;
   text-align: center;
+  pointer-events: none; /* Чтобы не блокировать клики на кнопки */
 }
 
 .mediaTypeIcon {
