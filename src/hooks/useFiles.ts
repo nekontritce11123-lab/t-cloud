@@ -11,7 +11,6 @@ export function useFiles(apiReady = true) {
   const [error, setError] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<CategoryType>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [hasMore, setHasMore] = useState(false);
 
   // Ref для отслеживания текущего запроса (для отмены устаревших)
   const currentRequestId = useRef(0);
@@ -41,20 +40,17 @@ export function useFiles(apiReady = true) {
         console.log('[useFiles] Search result - files:', filesResult, 'links:', linksResult);
         setFiles(filesResult.items || []);
         setLinks(linksResult.items || []);
-        setHasMore(false);
       } else if (type === 'trash') {
         // Load trash - handled separately by TrashView component
         if (requestId !== currentRequestId.current) return;
         setFiles([]);
         setLinks([]);
-        setHasMore(false);
       } else if (type === 'link') {
         const result = await apiClient.getLinks({ page: 1, limit: 50 });
         if (requestId !== currentRequestId.current) return;
         console.log('[useFiles] Links result:', result);
         setLinks(result.items || []);
         setFiles([]);
-        setHasMore(false);
       } else {
         const result = await apiClient.getFiles({
           type: type || undefined,
@@ -65,7 +61,6 @@ export function useFiles(apiReady = true) {
         console.log('[useFiles] Files result:', result);
         setFiles(result.items || []);
         setLinks([]);
-        setHasMore(false);
       }
     } catch (err) {
       if (requestId !== currentRequestId.current) return;
@@ -148,7 +143,6 @@ export function useFiles(apiReady = true) {
       setFiles(result.items || []);
       setLinks([]);
       setSearchQuery(''); // Очищаем ПОСЛЕ того как данные готовы
-      setHasMore(false);
     } catch (err) {
       if (requestId !== currentRequestId.current) return;
       console.error('[useFiles] clearSearch error:', err);
@@ -166,19 +160,6 @@ export function useFiles(apiReady = true) {
     loadStats();
   }, [loadDataForQuery, loadStats, searchQuery, selectedType]);
 
-  // Delete file
-  const deleteFile = useCallback(async (id: number) => {
-    await apiClient.deleteFile(id);
-    setFiles(prev => prev.filter(f => f.id !== id));
-    loadStats();
-  }, [loadStats]);
-
-  // Delete link
-  const deleteLink = useCallback(async (id: number) => {
-    await apiClient.deleteLink(id);
-    setLinks(prev => prev.filter(l => l.id !== id));
-  }, []);
-
   return {
     files,
     links,
@@ -188,13 +169,9 @@ export function useFiles(apiReady = true) {
     error,
     selectedType,
     searchQuery,
-    hasMore,
     filterByType,
     search,
     clearSearch,
-    loadMore: () => {},
     refresh,
-    deleteFile,
-    deleteLink,
   };
 }

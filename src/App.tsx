@@ -25,11 +25,9 @@ function App() {
     error,
     selectedType,
     searchQuery,
-    hasMore,
     filterByType,
     search,
     clearSearch,
-    loadMore,
     refresh,
   } = useFiles(apiReady);
 
@@ -347,15 +345,6 @@ function App() {
     mainButton.hide();
   }, [mainButton]);
 
-  // Handle scroll for infinite loading
-  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLDivElement;
-    const bottom = target.scrollHeight - target.scrollTop <= target.clientHeight + 100;
-    if (bottom && hasMore && !isLoading) {
-      loadMore();
-    }
-  }, [hasMore, isLoading, loadMore]);
-
   // Подсказка для поиска (из первого результата)
   const searchHint = searchQuery && files.length > 0 && files[0].matchedField && files[0].matchedSnippet
     ? { field: files[0].matchedField, snippet: files[0].matchedSnippet }
@@ -418,7 +407,7 @@ function App() {
       )}
 
       {/* Content */}
-      <main className={styles.content} onScroll={handleScroll}>
+      <main className={styles.content}>
         {error && (
           <div className={styles.error}>
             <span>❌ {error}</span>
@@ -501,7 +490,7 @@ function App() {
         )}
 
         {/* End of list */}
-        {!isLoading && !hasMore && selectedType !== 'trash' && (files.length > 0 || links.length > 0) && (
+        {!isLoading && selectedType !== 'trash' && (files.length > 0 || links.length > 0) && (
           <div className={styles.endOfList}>
             Это все файлы
           </div>

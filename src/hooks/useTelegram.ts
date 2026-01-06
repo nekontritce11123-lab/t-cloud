@@ -103,11 +103,6 @@ export function useTelegram() {
     return window.Telegram?.WebApp?.initData || '';
   };
 
-  // Отправить данные боту и закрыть Mini App
-  const sendData = (data: string) => {
-    webApp?.sendData(data);
-  };
-
   // Показать/скрыть главную кнопку (с правильной очисткой старого callback)
   const showMainButton = useCallback((text: string, onClick: () => void) => {
     if (webApp) {
@@ -142,9 +137,6 @@ export function useTelegram() {
     hideProgress: () => webApp?.MainButton.hideProgress(),
   };
 
-  // Закрыть Mini App
-  const close = () => webApp?.close();
-
   return {
     webApp,
     isReady,
@@ -153,8 +145,6 @@ export function useTelegram() {
     themeParams: webApp?.themeParams,
     hapticFeedback,
     getInitData,
-    sendData,
     mainButton,
-    close,
   };
 }

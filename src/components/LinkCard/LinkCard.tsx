@@ -1,5 +1,5 @@
-import { useRef, useCallback } from 'react';
 import { LinkRecord } from '../../api/client';
+import { useLongPress } from '../../hooks/useLongPress';
 import styles from './LinkCard.module.css';
 
 interface LinkCardProps {
@@ -45,41 +45,18 @@ function formatRelativeDate(dateStr: string): string {
 }
 
 export function LinkCard({ link, onClick, onLongPress, isSelected, isSelectionMode }: LinkCardProps) {
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isLongPress = useRef(false);
-
-  const handleTouchStart = useCallback(() => {
-    isLongPress.current = false;
-    longPressTimer.current = setTimeout(() => {
-      isLongPress.current = true;
-      onLongPress?.(link);
-    }, 500); // 500ms для long press
-  }, [link, onLongPress]);
-
-  const handleTouchEnd = useCallback(() => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  }, []);
-
-  const handleClick = useCallback(() => {
-    if (!isLongPress.current) {
-      onClick(link);
-    }
-    isLongPress.current = false;
-  }, [link, onClick]);
+  const longPress = useLongPress(link, onLongPress, onClick);
 
   return (
     <button
       className={`${styles.card} ${isSelected ? styles.selected : ''}`}
-      onClick={handleClick}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchEnd}
-      onMouseDown={handleTouchStart}
-      onMouseUp={handleTouchEnd}
-      onMouseLeave={handleTouchEnd}
+      onClick={longPress.onClick}
+      onTouchStart={longPress.onTouchStart}
+      onTouchEnd={longPress.onTouchEnd}
+      onTouchCancel={longPress.onTouchCancel}
+      onMouseDown={longPress.onMouseDown}
+      onMouseUp={longPress.onMouseUp}
+      onMouseLeave={longPress.onMouseLeave}
     >
       {/* Selection checkbox */}
       {isSelectionMode && (

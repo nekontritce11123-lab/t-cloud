@@ -116,18 +116,6 @@ class ApiClient {
     }
   }
 
-  async getFilesByDate(): Promise<Record<string, FileRecord[]>> {
-    const response = await fetch(`${API_URL}/api/files/by-date`, {
-      headers: this.getHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch files by date');
-    }
-
-    return response.json();
-  }
-
   async searchFiles(query: string, limit = 50): Promise<{ items: FileRecord[]; total: number }> {
     const params = new URLSearchParams({ q: query, limit: String(limit) });
 
@@ -168,29 +156,6 @@ class ApiClient {
     }
 
     return response.json();
-  }
-
-  async getFile(id: number): Promise<FileRecord> {
-    const response = await fetch(`${API_URL}/api/files/${id}`, {
-      headers: this.getHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch file');
-    }
-
-    return response.json();
-  }
-
-  async deleteFile(id: number): Promise<void> {
-    const response = await fetch(`${API_URL}/api/files/${id}`, {
-      method: 'DELETE',
-      headers: this.getHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to delete file');
-    }
   }
 
   async sendFiles(fileIds: number[]): Promise<{ success: boolean; sent: number[]; errors?: string[] }> {
@@ -239,17 +204,6 @@ class ApiClient {
     }
 
     return response.json();
-  }
-
-  async deleteLink(id: number): Promise<void> {
-    const response = await fetch(`${API_URL}/api/links/${id}`, {
-      method: 'DELETE',
-      headers: this.getHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to delete link');
-    }
   }
 
   // Trash API - Files

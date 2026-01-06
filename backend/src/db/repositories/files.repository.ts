@@ -261,12 +261,4 @@ export class FilesRepository {
 
     return result.changes;
   }
-
-  /**
-   * Legacy delete method - now uses soft delete
-   * @deprecated Use softDelete instead
-   */
-  async delete(id: number, userId: number): Promise<boolean> {
-    return this.softDelete(id, userId);
-  }
 }
