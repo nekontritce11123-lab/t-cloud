@@ -288,6 +288,11 @@ function App() {
     } catch (error) {
       console.error('Error sending file:', error);
       hapticFeedback.error();
+      // Показываем сообщение об ошибке
+      const message = (error as Error).message === 'FILE_UNAVAILABLE'
+        ? 'Файл недоступен'
+        : 'Не удалось отправить файл';
+      alert(message);
     } finally {
       setSendingFileId(null);
     }

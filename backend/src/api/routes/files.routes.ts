@@ -418,6 +418,57 @@ router.post('/send', async (req, res: Response) => {
 });
 
 /**
+ * Send file by file_id based on media type
+ * If photo/video fails with type mismatch, fallback to document
+ */
+async function sendFileByFileId(
+  chatId: number,
+  fileId: string,
+  mediaType: MediaType,
+  caption?: string
+): Promise<void> {
+  try {
+    switch (mediaType) {
+      case 'photo':
+        await bot.api.sendPhoto(chatId, fileId, { caption });
+        break;
+      case 'video':
+        await bot.api.sendVideo(chatId, fileId, { caption });
+        break;
+      case 'document':
+        await bot.api.sendDocument(chatId, fileId, { caption });
+        break;
+      case 'audio':
+        await bot.api.sendAudio(chatId, fileId, { caption });
+        break;
+      case 'voice':
+        await bot.api.sendVoice(chatId, fileId, { caption });
+        break;
+      case 'video_note':
+        await bot.api.sendVideoNote(chatId, fileId);
+        break;
+      case 'animation':
+        await bot.api.sendAnimation(chatId, fileId, { caption });
+        break;
+      case 'sticker':
+        await bot.api.sendSticker(chatId, fileId);
+        break;
+      default:
+        await bot.api.sendDocument(chatId, fileId, { caption });
+    }
+  } catch (error: unknown) {
+    // If photo/video fails with type mismatch, try as document
+    const errMsg = error instanceof Error ? error.message : String(error);
+    if (errMsg.includes("can't use file of type") && (mediaType === 'photo' || mediaType === 'video')) {
+      console.log('[Files] Type mismatch, sending as document instead');
+      await bot.api.sendDocument(chatId, fileId, { caption });
+    } else {
+      throw error;
+    }
+  }
+}
+
+/**
  * POST /api/files/:id/send
  * Send single file to user via bot
  */
@@ -442,34 +493,29 @@ router.post('/:id/send', async (req, res: Response) => {
     const caption = getCaptionForMedia(file.caption, mediaType);
     const sendCaptionSeparately = needsSeparateMessage(file.caption, mediaType);
 
-    // Actually send the file via bot
-    switch (mediaType) {
-      case 'photo':
-        await bot.api.sendPhoto(telegramUser.id, file.fileId, { caption });
-        break;
-      case 'video':
-        await bot.api.sendVideo(telegramUser.id, file.fileId, { caption });
-        break;
-      case 'document':
-        await bot.api.sendDocument(telegramUser.id, file.fileId, { caption });
-        break;
-      case 'audio':
-        await bot.api.sendAudio(telegramUser.id, file.fileId, { caption });
-        break;
-      case 'voice':
-        await bot.api.sendVoice(telegramUser.id, file.fileId, { caption });
-        break;
-      case 'video_note':
-        await bot.api.sendVideoNote(telegramUser.id, file.fileId);
-        break;
-      case 'animation':
-        await bot.api.sendAnimation(telegramUser.id, file.fileId, { caption });
-        break;
-      case 'sticker':
-        await bot.api.sendSticker(telegramUser.id, file.fileId);
-        break;
-      default:
-        await bot.api.sendDocument(telegramUser.id, file.fileId, { caption });
+    let sent = false;
+
+    // Try to copy original message first (preserves formatting, quality)
+    try {
+      await bot.api.copyMessage(telegramUser.id, file.chatId, file.originalMessageId);
+      sent = true;
+      console.log('[Files] Sent via copyMessage:', file.id);
+    } catch (copyError) {
+      console.log('[Files] copyMessage failed, trying file_id:', copyError);
+
+      // Fallback: send by file_id
+      try {
+        await sendFileByFileId(telegramUser.id, file.fileId, mediaType, caption);
+        sent = true;
+        console.log('[Files] Sent via file_id:', file.id);
+      } catch (sendError) {
+        console.error('[Files] Both methods failed:', sendError);
+      }
+    }
+
+    if (!sent) {
+      res.status(410).json({ error: 'File no longer available' });
+      return;
     }
 
     // Send caption as separate message if it was too long

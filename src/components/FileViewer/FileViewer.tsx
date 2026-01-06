@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { FileRecord, MediaType } from '../../api/client';
 import { MediaTypeIcons } from '../../shared/icons';
 import { formatFileSize, formatDuration } from '../../shared/formatters';
+import { getEffectiveMediaType } from '../../shared/mediaType';
 import styles from './FileViewer.module.css';
 
 interface FileViewerProps {
@@ -53,16 +54,6 @@ function getMediaTypeLabel(type: MediaType): string {
   return labels[type] || type;
 }
 
-// Определяет "эффективный" тип медиа на основе mimeType
-// Изображения и видео без сжатия (отправленные как документы) показываем как фото/видео
-function getEffectiveMediaType(file: FileRecord): MediaType {
-  if (file.mediaType === 'document' && file.mimeType) {
-    if (file.mimeType.startsWith('image/')) return 'photo';
-    if (file.mimeType.startsWith('video/')) return 'video';
-  }
-  return file.mediaType;
-}
-
 export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending }: FileViewerProps) {
   const handleSend = useCallback(() => {
     if (!isOnCooldown && !isSending) {
@@ -90,9 +81,9 @@ export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending }: F
 
           <div className={styles.headerTitle}>
             <span className={styles.mediaTypeIcon}>
-              {MediaTypeIcons[getEffectiveMediaType(file)]}
+              {MediaTypeIcons[getEffectiveMediaType(file.mediaType, file.mimeType)]}
             </span>
-            <span>{getMediaTypeLabel(getEffectiveMediaType(file))}</span>
+            <span>{getMediaTypeLabel(getEffectiveMediaType(file.mediaType, file.mimeType))}</span>
           </div>
 
           <button

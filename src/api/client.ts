@@ -179,6 +179,9 @@ class ApiClient {
     });
 
     if (!response.ok) {
+      if (response.status === 410) {
+        throw new Error('FILE_UNAVAILABLE');
+      }
       throw new Error('Failed to send file');
     }
 

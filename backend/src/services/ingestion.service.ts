@@ -100,18 +100,16 @@ export class IngestionService {
 
   /**
    * Document - any files
-   * Note: Large PNG/JPEG files are sent by Telegram as documents, not photos
+   * Note: Files sent "without compression" come as documents even if they're images/videos
+   * We store the REAL type (document) - UI uses mimeType to determine visual type
    */
   private extractDocument(msg: Message): ExtractedMedia {
     const doc = msg.document!;
 
-    // Check if this is actually an image sent as document (large PNG/JPEG)
-    const isImage = doc.mime_type?.startsWith('image/');
-
     return {
       fileId: doc.file_id,
       fileUniqueId: doc.file_unique_id,
-      mediaType: isImage ? 'photo' : 'document', // Classify images as photos
+      mediaType: 'document', // Always store real type - UI uses mimeType for display
       mimeType: doc.mime_type,
       fileName: doc.file_name,
       fileSize: doc.file_size,

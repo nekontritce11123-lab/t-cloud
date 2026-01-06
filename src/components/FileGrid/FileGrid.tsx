@@ -1,6 +1,7 @@
 import { FileRecord } from '../../api/client';
 import { MediaTypeIcons, ForwardIcon, FolderIcon } from '../../shared/icons';
 import { formatFileSize, formatDuration } from '../../shared/formatters';
+import { getEffectiveMediaType } from '../../shared/mediaType';
 import { useLongPress } from '../../hooks/useLongPress';
 import cardStyles from '../../styles/Card.module.css';
 import gridStyles from './FileGrid.module.css';
@@ -89,7 +90,7 @@ function FileCard({ file, onFileClick, onFileLongPress, isSelected, isSelectionM
           ) : (
             <div className={styles.miniBadge}>
               <span className={styles.miniBadgeIcon}>
-                {MediaTypeIcons[file.mediaType]}
+                {MediaTypeIcons[getEffectiveMediaType(file.mediaType, file.mimeType)]}
               </span>
               {file.fileSize && <span>{formatFileSize(file.fileSize)}</span>}
             </div>
@@ -98,7 +99,7 @@ function FileCard({ file, onFileClick, onFileLongPress, isSelected, isSelectionM
       ) : (
         <div className={styles.noThumbContent}>
           <span className={styles.iconLarge}>
-            {MediaTypeIcons[file.mediaType] || FolderIcon}
+            {MediaTypeIcons[getEffectiveMediaType(file.mediaType, file.mimeType)] || FolderIcon}
           </span>
           {file.fileName && (
             <span className={styles.fileNameCenter}>{file.fileName}</span>
