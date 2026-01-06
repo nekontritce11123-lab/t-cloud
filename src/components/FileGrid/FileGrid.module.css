@@ -231,9 +231,9 @@
 
 .info {
   position: absolute;
-  bottom: -2px;
-  left: -2px;
-  right: -2px;
+  bottom: 0;
+  left: 0;
+  right: 0;
   padding: 6px 8px 8px;
   padding-top: 24px;
   background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.5) 35%, rgba(0, 0, 0, 0.95) 100%);
@@ -241,6 +241,7 @@
   flex-direction: column;
   gap: 2px;
   z-index: 5;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
 }
 
 .name {
@@ -290,9 +291,9 @@
 
 .forward {
   position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
+  top: 0;
+  left: 0;
+  right: 0;
   padding: 6px 8px;
   padding-bottom: 18px;
   background: linear-gradient(to bottom, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.4) 50%, transparent 100%);
@@ -300,6 +301,7 @@
   align-items: center;
   gap: 4px;
   z-index: 5;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
 }
 
 .forwardIcon {
