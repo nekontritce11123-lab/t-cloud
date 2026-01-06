@@ -57,10 +57,16 @@ export class IngestionService {
       thumbPhoto = photos[0];
     }
 
+    // Generate filename for photos (Telegram doesn't provide one)
+    const timestamp = msg.date || Math.floor(Date.now() / 1000);
+    const fileName = `photo_${timestamp}.jpg`;
+
     return {
       fileId: bestPhoto.file_id,
       fileUniqueId: bestPhoto.file_unique_id,
       mediaType: 'photo',
+      mimeType: 'image/jpeg',
+      fileName,
       fileSize: bestPhoto.file_size,
       width: bestPhoto.width,
       height: bestPhoto.height,
@@ -94,14 +100,18 @@ export class IngestionService {
 
   /**
    * Document - any files
+   * Note: Large PNG/JPEG files are sent by Telegram as documents, not photos
    */
   private extractDocument(msg: Message): ExtractedMedia {
     const doc = msg.document!;
 
+    // Check if this is actually an image sent as document (large PNG/JPEG)
+    const isImage = doc.mime_type?.startsWith('image/');
+
     return {
       fileId: doc.file_id,
       fileUniqueId: doc.file_unique_id,
-      mediaType: 'document',
+      mediaType: isImage ? 'photo' : 'document', // Classify images as photos
       mimeType: doc.mime_type,
       fileName: doc.file_name,
       fileSize: doc.file_size,

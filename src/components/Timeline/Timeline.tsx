@@ -1,6 +1,10 @@
 import React, { useMemo, useRef, useCallback } from 'react';
 import { FileRecord, MediaType } from '../../api/client';
-import styles from './Timeline.module.css';
+import cardStyles from '../../styles/Card.module.css';
+import layoutStyles from './Timeline.module.css';
+
+// Объединяем стили: cardStyles для карточек, layoutStyles для layout
+const styles = { ...cardStyles, ...layoutStyles };
 
 interface TimelineProps {
   files: FileRecord[];

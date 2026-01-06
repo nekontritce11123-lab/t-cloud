@@ -50,6 +50,8 @@
   margin: calc(-1 * var(--spacing-sm));
   border-radius: var(--radius-md);
   transition: background var(--animation-fast) var(--easing-smooth);
+  min-width: 100px;
+  justify-content: flex-start;
 }
 
 .backButton:active {
@@ -64,10 +66,13 @@
 .headerTitle {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--spacing-sm);
   color: var(--app-text-color);
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
+  flex: 1;
+  text-align: center;
 }
 
 .mediaTypeIcon {
@@ -94,6 +99,8 @@
   border-radius: var(--radius-md);
   background: none;
   transition: background var(--animation-fast) var(--easing-smooth);
+  min-width: 100px;
+  justify-content: flex-end;
 }
 
 .headerSendButton:active:not(.disabled) {

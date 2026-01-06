@@ -21,14 +21,40 @@
 
 ## Деплой
 
-### Frontend (оба сервера)
+### Frontend на Factchain (основной)
 ```bash
-npm run build
-# Основной сервер - через git pull
-# Factchain - через SFTP загрузку dist/
+# Сначала build, потом deploy одной командой:
+cd "f:/Code/Хранилище - ПУПУПУ" && npm run build && /c/Users/Daniel\ Simples/AppData/Local/Programs/Python/Python313/python -c "
+import paramiko
+import os
+
+HOST = '37.140.192.181'
+USER = 'u3372484'
+PASS = 'j758aqXHELv2l2AM'
+LOCAL_DIST = 'f:/Code/Хранилище - ПУПУПУ/dist'
+REMOTE_PATH = '/var/www/u3372484/data/www/factchain-traker.online'
+
+ssh = paramiko.SSHClient()
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+ssh.connect(HOST, 22, USER, PASS, timeout=30)
+sftp = ssh.open_sftp()
+
+stdin, stdout, stderr = ssh.exec_command(f'rm -rf {REMOTE_PATH}/assets/* {REMOTE_PATH}/index.html')
+stdout.read()
+
+sftp.put(f'{LOCAL_DIST}/index.html', f'{REMOTE_PATH}/index.html')
+local_assets = f'{LOCAL_DIST}/assets'
+for f in os.listdir(local_assets):
+    sftp.put(f'{local_assets}/{f}', f'{REMOTE_PATH}/assets/{f}')
+    print(f'Uploaded: {f}')
+
+sftp.close()
+ssh.close()
+print('Done!')
+"
 ```
 
-### Backend
+### Backend (на tcloud сервере)
 ```bash
 npm run build:backend
 systemctl restart t-cloud

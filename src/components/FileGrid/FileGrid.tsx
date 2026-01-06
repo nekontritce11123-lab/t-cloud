@@ -1,6 +1,10 @@
 import React, { useRef, useCallback } from 'react';
 import { FileRecord, MediaType } from '../../api/client';
-import styles from './FileGrid.module.css';
+import cardStyles from '../../styles/Card.module.css';
+import gridStyles from './FileGrid.module.css';
+
+// Объединяем стили: cardStyles для карточек, gridStyles для сетки и поиска
+const styles = { ...cardStyles, ...gridStyles };
 
 interface FileGridProps {
   files: FileRecord[];

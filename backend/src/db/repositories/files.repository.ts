@@ -1,4 +1,4 @@
-import { eq, and, desc, sql, isNull, isNotNull, lt } from 'drizzle-orm';
+import { eq, and, desc, sql, isNull, isNotNull, lt, or } from 'drizzle-orm';
 import { db, searchFiles as ftsSearch, searchFilesWithSnippets, SearchResult } from '../index.js';
 import { files, NewFile, File } from '../schema.js';
 import { MediaType, CategoryStats } from '../../types/index.js';
@@ -61,7 +61,26 @@ export class FilesRepository {
     const baseCondition = and(eq(files.userId, userId), isNull(files.deletedAt));
 
     let whereCondition = baseCondition;
-    if (mediaType) {
+    if (mediaType === 'photo') {
+      // Фото + изображения отправленные как документы
+      whereCondition = and(
+        baseCondition,
+        or(
+          eq(files.mediaType, 'photo'),
+          and(
+            eq(files.mediaType, 'document'),
+            sql`${files.mimeType} LIKE 'image/%'`
+          )
+        )
+      );
+    } else if (mediaType === 'document') {
+      // Документы БЕЗ изображений (они показываются в Фото)
+      whereCondition = and(
+        baseCondition,
+        eq(files.mediaType, 'document'),
+        sql`(${files.mimeType} IS NULL OR ${files.mimeType} NOT LIKE 'image/%')`
+      );
+    } else if (mediaType) {
       whereCondition = and(baseCondition, eq(files.mediaType, mediaType));
     }
 
@@ -115,16 +134,30 @@ export class FilesRepository {
 
   /**
    * Get category statistics for a user (excludes deleted)
+   * Images sent as documents are counted in 'photo' category
    */
   async getCategoryStats(userId: number): Promise<CategoryStats[]> {
+    // Use CASE to reclassify document images as photos
     const result = await db
       .select({
-        mediaType: files.mediaType,
+        mediaType: sql<string>`
+          CASE
+            WHEN ${files.mediaType} = 'document' AND ${files.mimeType} LIKE 'image/%'
+            THEN 'photo'
+            ELSE ${files.mediaType}
+          END
+        `,
         count: sql<number>`count(*)`,
       })
       .from(files)
       .where(and(eq(files.userId, userId), isNull(files.deletedAt)))
-      .groupBy(files.mediaType);
+      .groupBy(sql`
+        CASE
+          WHEN ${files.mediaType} = 'document' AND ${files.mimeType} LIKE 'image/%'
+          THEN 'photo'
+          ELSE ${files.mediaType}
+        END
+      `);
 
     return result.map(r => ({
       mediaType: r.mediaType as MediaType,

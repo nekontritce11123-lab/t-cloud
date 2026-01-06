@@ -218,12 +218,15 @@ export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending }: F
             ))}</div>
           )}
 
-          {file.fileName && (
-            <div className={styles.fileName}>{file.fileName}</div>
-          )}
-
           {/* Meta info */}
           <div className={styles.meta}>
+            {file.fileName && (
+              <div className={styles.metaItem}>
+                <span className={styles.metaLabel}>Название:</span>
+                <span>{file.fileName}</span>
+              </div>
+            )}
+
             {file.fileSize && (
               <div className={styles.metaItem}>
                 <span className={styles.metaLabel}>Размер:</span>
