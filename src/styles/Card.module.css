@@ -407,3 +407,8 @@
     font-size: 11px;
   }
 }
+
+/* No scale on active - for trash cards */
+.noActiveScale:active {
+  transform: none;
+}

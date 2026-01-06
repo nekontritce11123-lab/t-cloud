@@ -1,14 +1,14 @@
 import { useMemo, useState, useRef, useCallback } from 'react';
 import { FileRecord } from '../../api/client';
-import { MediaTypeIcons, ForwardIcon, FolderIcon } from '../../shared/icons';
-import { formatFileSize, formatDuration } from '../../shared/formatters';
-import { getEffectiveMediaType } from '../../shared/mediaType';
-import { useLongPress } from '../../hooks/useLongPress';
+import { FileCard } from '../FileCard';
+import { DayCheckbox } from '../DayCheckbox';
+import gridStyles from '../../styles/Grid.module.css';
+import dateHeaderStyles from '../../styles/DateHeader.module.css';
 import cardStyles from '../../styles/Card.module.css';
 import layoutStyles from './TrashTimeline.module.css';
 
-// Объединяем стили: cardStyles для карточек, layoutStyles для layout
-const styles = { ...cardStyles, ...layoutStyles };
+// Объединяем стили
+const styles = { ...cardStyles, ...gridStyles, ...dateHeaderStyles, ...layoutStyles };
 
 interface TrashTimelineProps {
   files: FileRecord[];
@@ -75,147 +75,13 @@ function groupFilesByDeletedDate(files: FileRecord[]): Map<string, FileRecord[]>
   return groups;
 }
 
-interface TrashFileCardProps {
-  file: FileRecord;
-  onFileClick: (file: FileRecord) => void;
-  onFileLongPress: (file: FileRecord) => void;
-  isSelected: boolean;
-  isSelectionMode: boolean;
-}
-
-function TrashFileCard({ file, onFileClick, onFileLongPress, isSelected, isSelectionMode }: TrashFileCardProps) {
-  const longPress = useLongPress(file, onFileLongPress, onFileClick);
-  const daysRemaining = getDaysRemaining(file.deletedAt!);
-
+// Бейдж с количеством дней до удаления
+function DaysRemainingBadge({ deletedAt }: { deletedAt: string }) {
+  const daysRemaining = getDaysRemaining(deletedAt);
   return (
-    <button
-      className={`${styles.card} ${isSelected ? styles.selected : ''}`}
-      data-file-id={file.id}
-      onClick={longPress.onClick}
-      onTouchStart={longPress.onTouchStart}
-      onTouchEnd={longPress.onTouchEnd}
-      onTouchCancel={longPress.onTouchCancel}
-      onMouseDown={longPress.onMouseDown}
-      onMouseUp={longPress.onMouseUp}
-      onMouseLeave={longPress.onMouseLeave}
-    >
-      {/* Days remaining badge */}
-      <div className={styles.daysRemainingBadge}>
-        {daysRemaining === 0 ? 'Сегодня' : `${daysRemaining} дн.`}
-      </div>
-
-      {isSelectionMode && (
-        <div className={styles.checkbox}>
-          {isSelected ? '✓' : ''}
-        </div>
-      )}
-
-      {file.thumbnailUrl ? (
-        /* === КАРТОЧКА С ПРЕВЬЮ === */
-        <>
-          <div className={styles.preview}>
-            <img
-              src={file.thumbnailUrl}
-              alt=""
-              className={styles.thumbnail}
-              loading="lazy"
-            />
-            {file.duration && (
-              <span className={styles.duration}>
-                {formatDuration(file.duration)}
-              </span>
-            )}
-          </div>
-
-          {/* File info */}
-          {(file.caption || file.fileName) ? (
-            <div className={styles.info}>
-              {file.caption ? (
-                <>
-                  <span className={styles.caption}>{file.caption}</span>
-                  {file.fileName && (
-                    <span className={styles.fileName}>{file.fileName}</span>
-                  )}
-                </>
-              ) : (
-                <>
-                  {file.fileName && (
-                    <span className={styles.name}>{file.fileName}</span>
-                  )}
-                </>
-              )}
-              {file.fileSize && (
-                <span className={styles.size}>{formatFileSize(file.fileSize)}</span>
-              )}
-            </div>
-          ) : (
-            /* Компактный бейдж для фото/видео без текста */
-            <div className={styles.miniBadge}>
-              <span className={styles.miniBadgeIcon}>
-                {MediaTypeIcons[getEffectiveMediaType(file.mediaType, file.mimeType)]}
-              </span>
-              {file.fileSize && <span>{formatFileSize(file.fileSize)}</span>}
-            </div>
-          )}
-        </>
-      ) : (
-        /* === КАРТОЧКА БЕЗ ПРЕВЬЮ (документы) === */
-        <div className={styles.noThumbContent}>
-          <span className={styles.iconLarge}>
-            {MediaTypeIcons[getEffectiveMediaType(file.mediaType, file.mimeType)] || FolderIcon}
-          </span>
-          {file.fileName && (
-            <span className={styles.fileNameCenter}>{file.fileName}</span>
-          )}
-          {file.fileSize && (
-            <span className={styles.fileSizeCenter}>{formatFileSize(file.fileSize)}</span>
-          )}
-        </div>
-      )}
-
-      {(file.forwardFromName || file.forwardFromChatTitle) && (
-        <div className={styles.forward}>
-          <ForwardIcon className={styles.forwardIcon} />
-          <span className={styles.forwardName}>
-            {file.forwardFromName || file.forwardFromChatTitle}
-          </span>
-        </div>
-      )}
-    </button>
-  );
-}
-
-// Компонент чекбокса для выбора всех за день
-interface DayCheckboxProps {
-  dateFiles: FileRecord[];
-  selectedFiles: Set<number>;
-  isSelectionMode: boolean;
-  onSelectDay: (files: FileRecord[], action: 'add' | 'remove') => void;
-}
-
-function DayCheckbox({ dateFiles, selectedFiles, isSelectionMode, onSelectDay }: DayCheckboxProps) {
-  if (!isSelectionMode) return null;
-
-  // Считаем сколько выбрано за этот день
-  const selectedCount = dateFiles.filter(f => selectedFiles.has(f.id)).length;
-  const isAllSelected = selectedCount === dateFiles.length && dateFiles.length > 0;
-
-  const handleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (isAllSelected) {
-      onSelectDay(dateFiles, 'remove');
-    } else {
-      onSelectDay(dateFiles, 'add');
-    }
-  };
-
-  return (
-    <button
-      className={`${styles.dateCheckbox} ${isAllSelected ? styles.dateCheckboxSelected : ''}`}
-      onClick={handleClick}
-    >
-      {isAllSelected ? '✓' : ''}
-    </button>
+    <div className={styles.daysRemainingBadge}>
+      {daysRemaining === 0 ? 'Сегодня' : `${daysRemaining} дн.`}
+    </div>
   );
 }
 
@@ -331,13 +197,16 @@ export function TrashTimeline({
           </div>
           <div className={styles.grid}>
             {dateFiles.map(file => (
-              <TrashFileCard
+              <FileCard
                 key={file.id}
                 file={file}
                 onFileClick={onFileClick}
                 onFileLongPress={onFileLongPress}
                 isSelected={selectedFiles.has(file.id)}
                 isSelectionMode={isSelectionMode}
+                badge={<DaysRemainingBadge deletedAt={file.deletedAt!} />}
+                disableActiveScale
+                includeDataFileId
               />
             ))}
           </div>

@@ -21,23 +21,7 @@
   display: none;
 }
 
-/* На ПК показываем скроллбар для удобства */
-@media (min-width: 768px) and (hover: hover) {
-  .scroll {
-    scrollbar-width: thin;
-    scrollbar-color: var(--app-hint-color) transparent;
-  }
-
-  .scroll::-webkit-scrollbar {
-    display: block;
-    height: 4px;
-  }
-
-  .scroll::-webkit-scrollbar-thumb {
-    background: var(--app-hint-color);
-    border-radius: 2px;
-  }
-}
+/* Скроллбар скрыт везде, скролл мышкой работает */
 
 .chip {
   display: flex;

@@ -1,0 +1,64 @@
+/* Общие стили для заголовков дат */
+/* Используется в Timeline и TrashTimeline */
+
+/* Sticky date header */
+.dateHeader {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: var(--app-bg-color);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dateText {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--app-text-color);
+}
+
+.dateCount {
+  font-size: var(--font-size-xs);
+  color: var(--app-hint-color);
+  background: var(--app-secondary-bg-color);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* Date header actions container */
+.dateActions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+/* Day selection checkbox */
+.dateCheckbox {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--tg-theme-button-color, #3390ec);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: all var(--animation-fast) ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dateCheckbox:active {
+  transform: scale(0.9);
+}
+
+.dateCheckboxSelected {
+  background: var(--tg-theme-button-color, #3390ec);
+}

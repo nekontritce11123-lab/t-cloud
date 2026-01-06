@@ -13,7 +13,7 @@ html, body {
   color: var(--app-text-color);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* overflow: hidden убрано - не нужно, скролл в .content */
+  overflow-x: hidden;
 }
 
 body {

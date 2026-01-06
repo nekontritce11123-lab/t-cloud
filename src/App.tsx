@@ -43,8 +43,6 @@ function App() {
   const [sendingFileId, setSendingFileId] = useState<number | null>(null); // Защита от двойного клика
   const [viewingFile, setViewingFile] = useState<FileRecord | null>(null); // Файл для просмотра
 
-  // Лимит на выбор
-  const MAX_SELECTED_ITEMS = 20;
   const COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 часа
 
   // Загрузка cooldown из localStorage
@@ -122,9 +120,14 @@ function App() {
 
     // Debounce для поиска
     debounceTimerRef.current = setTimeout(() => {
-      search(value);
+      if (value.trim() === '') {
+        // При пустом значении используем clearSearch чтобы избежать race condition
+        clearSearch();
+      } else {
+        search(value);
+      }
     }, 300);
-  }, [search]);
+  }, [search, clearSearch]);
 
   // Мгновенная очистка поиска
   const handleClearSearch = useCallback(() => {
@@ -251,11 +254,6 @@ function App() {
         if (next.has(file.id)) {
           next.delete(file.id);
         } else {
-          // Проверяем лимит
-          if (next.size >= MAX_SELECTED_ITEMS) {
-            hapticFeedback.warning();
-            return prev;
-          }
           next.add(file.id);
         }
         return next;
@@ -318,11 +316,6 @@ function App() {
         if (next.has(link.id)) {
           next.delete(link.id);
         } else {
-          // Проверяем лимит
-          if (next.size >= MAX_SELECTED_ITEMS) {
-            hapticFeedback.warning();
-            return prev;
-          }
           next.add(link.id);
         }
         return next;
@@ -350,6 +343,35 @@ function App() {
     mainButton.hide();
   }, [mainButton]);
 
+  // Выбрать/снять все файлы за день
+  const handleSelectDay = useCallback((filesToSelect: FileRecord[], action: 'add' | 'remove') => {
+    hapticFeedback.selection();
+    setSelectedFiles(prev => {
+      const next = new Set(prev);
+      for (const file of filesToSelect) {
+        if (action === 'add') {
+          next.add(file.id);
+        } else {
+          next.delete(file.id);
+        }
+      }
+      return next;
+    });
+  }, [hapticFeedback]);
+
+  // Toggle одного файла (для drag selection)
+  const handleToggleFile = useCallback((file: FileRecord) => {
+    setSelectedFiles(prev => {
+      const next = new Set(prev);
+      if (next.has(file.id)) {
+        next.delete(file.id);
+      } else {
+        next.add(file.id);
+      }
+      return next;
+    });
+  }, []);
+
   // Подсказка для поиска (из первого результата)
   const searchHint = searchQuery && files.length > 0 && files[0].matchedField && files[0].matchedSnippet
     ? { field: files[0].matchedField, snippet: files[0].matchedSnippet }
@@ -375,7 +397,15 @@ function App() {
             <button onClick={exitSelectionMode} className={styles.cancelBtn}>✕</button>
             <span>Выбрано: {selectionType === 'files' ? selectedFiles.size : selectedLinks.size}</span>
             {selectionType === 'files' && selectedFiles.size > 0 && (
-              <button onClick={handleDeleteSelected} className={styles.deleteBtn}>🗑️</button>
+              <button onClick={handleDeleteSelected} className={styles.deleteBtn}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 6h18" />
+                  <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                  <line x1="10" y1="11" x2="10" y2="17" />
+                  <line x1="14" y1="11" x2="14" y2="17" />
+                </svg>
+              </button>
             )}
           </div>
         ) : (
@@ -482,8 +512,11 @@ function App() {
             onFileClick={handleFileClick}
             onFileLongPress={handleFileLongPress}
             selectedFiles={selectedFiles}
-            isSelectionMode={isSelectionMode}
+            isSelectionMode={isSelectionMode && selectionType === 'files'}
             isOnCooldown={isOnCooldown}
+            onSelectDay={handleSelectDay}
+            onToggleFile={handleToggleFile}
+            hapticFeedback={hapticFeedback}
           />
         )}
 

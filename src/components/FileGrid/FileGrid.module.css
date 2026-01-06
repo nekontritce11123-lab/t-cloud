@@ -1,52 +1,6 @@
 /* FileGrid-specific styles */
-/* Общие стили карточек импортируются из Card.module.css */
-
-.grid {
-  display: grid;
-  /* Mobile: ~100px карточки */
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: var(--spacing-sm);
-  padding: var(--spacing-lg);
-}
-
-/* Small tablet: ~130px */
-@media (min-width: 480px) {
-  .grid {
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-    gap: var(--spacing-md);
-  }
-}
-
-/* Tablet landscape: ~160px */
-@media (min-width: 640px) {
-  .grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  }
-}
-
-/* Small desktop: ~200px */
-@media (min-width: 768px) {
-  .grid {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    padding: var(--spacing-lg) var(--spacing-xl);
-  }
-}
-
-/* Desktop: ~260px */
-@media (min-width: 1024px) {
-  .grid {
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  }
-}
-
-/* Large desktop: ~320px + max-width */
-@media (min-width: 1200px) {
-  .grid {
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    max-width: 1800px;
-    margin: 0 auto;
-  }
-}
+/* Grid styles are imported from ../../styles/Grid.module.css */
+/* Card styles are imported from ../../styles/Card.module.css */
 
 /* Search results container */
 .searchResults {
