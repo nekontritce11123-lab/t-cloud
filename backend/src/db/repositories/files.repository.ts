@@ -73,12 +73,24 @@ export class FilesRepository {
           )
         )
       );
+    } else if (mediaType === 'video') {
+      // Видео + видео отправленные как документы
+      whereCondition = and(
+        baseCondition,
+        or(
+          eq(files.mediaType, 'video'),
+          and(
+            eq(files.mediaType, 'document'),
+            sql`${files.mimeType} LIKE 'video/%'`
+          )
+        )
+      );
     } else if (mediaType === 'document') {
-      // Документы БЕЗ изображений (они показываются в Фото)
+      // Документы БЕЗ изображений и видео (они показываются в Фото/Видео)
       whereCondition = and(
         baseCondition,
         eq(files.mediaType, 'document'),
-        sql`(${files.mimeType} IS NULL OR ${files.mimeType} NOT LIKE 'image/%')`
+        sql`(${files.mimeType} IS NULL OR (${files.mimeType} NOT LIKE 'image/%' AND ${files.mimeType} NOT LIKE 'video/%'))`
       );
     } else if (mediaType) {
       whereCondition = and(baseCondition, eq(files.mediaType, mediaType));
@@ -134,16 +146,18 @@ export class FilesRepository {
 
   /**
    * Get category statistics for a user (excludes deleted)
-   * Images sent as documents are counted in 'photo' category
+   * Images/videos sent as documents are counted in 'photo'/'video' categories
    */
   async getCategoryStats(userId: number): Promise<CategoryStats[]> {
-    // Use CASE to reclassify document images as photos
+    // Use CASE to reclassify document images/videos
     const result = await db
       .select({
         mediaType: sql<string>`
           CASE
             WHEN ${files.mediaType} = 'document' AND ${files.mimeType} LIKE 'image/%'
             THEN 'photo'
+            WHEN ${files.mediaType} = 'document' AND ${files.mimeType} LIKE 'video/%'
+            THEN 'video'
             ELSE ${files.mediaType}
           END
         `,
@@ -155,6 +169,8 @@ export class FilesRepository {
         CASE
           WHEN ${files.mediaType} = 'document' AND ${files.mimeType} LIKE 'image/%'
           THEN 'photo'
+          WHEN ${files.mediaType} = 'document' AND ${files.mimeType} LIKE 'video/%'
+          THEN 'video'
           ELSE ${files.mediaType}
         END
       `);
