@@ -1,114 +1,89 @@
 .container {
-  padding: var(--spacing-md);
+  /* display: contents убирает контейнер из layout, дети рендерятся как будто его нет */
+  display: contents;
 }
 
-.header {
-  padding: var(--spacing-md);
-  margin-bottom: var(--spacing-md);
-  background: var(--app-secondary-bg-color);
-  border-radius: var(--radius-md);
-}
-
-.headerText {
-  font-size: var(--font-size-sm);
-  color: var(--app-hint-color);
-}
-
-.list {
+/* Selection Header */
+.selectionHeader {
+  position: sticky;
+  top: 0;
+  z-index: 30;
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-}
-
-.item {
-  background: var(--app-secondary-bg-color);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-}
-
-.itemContent {
-  display: flex;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md);
-  width: 100%;
-  text-align: left;
-}
-
-.preview {
-  width: 60px;
-  height: 60px;
-  border-radius: var(--radius-sm);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-lg);
   background: var(--app-bg-color);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.cancelBtn {
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  overflow: hidden;
+  color: var(--app-link-color);
+  border-radius: var(--radius-md);
+  transition: background var(--animation-fast) ease;
 }
 
-.thumbnail {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.cancelBtn:active {
+  background: rgba(255, 255, 255, 0.1);
 }
 
-.emoji {
-  font-size: 28px;
+.cancelBtn svg {
+  width: 20px;
+  height: 20px;
 }
 
-.info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-  min-width: 0;
-}
-
-.title {
+.selectionCount {
   font-size: var(--font-size-md);
-  font-weight: var(--font-weight-medium);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-weight: var(--font-weight-semibold);
+  color: var(--app-text-color);
 }
 
-.subtitle {
-  font-size: var(--font-size-sm);
-  color: var(--app-hint-color);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.remaining {
-  font-size: var(--font-size-xs);
-  color: var(--app-destructive-text-color, #ff3b30);
-}
-
-.actions {
+.selectionActions {
   display: flex;
+  align-items: center;
   gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md) var(--spacing-md);
+}
+
+.restoreBtn,
+.deleteBtn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  transition: all var(--animation-fast) ease;
 }
 
 .restoreBtn {
-  flex: 1;
-  padding: var(--spacing-sm) var(--spacing-md);
-  background: var(--app-button-color);
-  color: var(--app-button-text-color);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  color: var(--app-button-color);
 }
 
-.permanentDeleteBtn {
-  flex: 1;
-  padding: var(--spacing-sm) var(--spacing-md);
-  background: var(--app-destructive-text-color, #ff3b30);
-  color: white;
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+.deleteBtn {
+  color: var(--app-destructive-text-color, #ff3b30);
+}
+
+.restoreBtn:active:not(:disabled),
+.deleteBtn:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(0.95);
+}
+
+.restoreBtn:disabled,
+.deleteBtn:disabled {
+  opacity: 0.3;
+}
+
+.restoreBtn svg,
+.deleteBtn svg {
+  width: 22px;
+  height: 22px;
 }
 
 /* Loading */
@@ -116,25 +91,4 @@
   display: flex;
   justify-content: center;
   padding: var(--spacing-xl);
-}
-
-/* Empty state */
-.empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-xxl);
-  text-align: center;
-  gap: var(--spacing-md);
-}
-
-.emptyIcon {
-  font-size: 48px;
-}
-
-.emptyHint {
-  font-size: var(--font-size-sm);
-  color: var(--app-hint-color);
-  max-width: 250px;
 }
