@@ -7,7 +7,7 @@ import { sqlite } from '../../db/index.js';
 const router = Router();
 const filesRepo = new FilesRepository();
 
-const BOT_USERNAME = process.env.BOT_USERNAME || 'TCloudStorageBot';
+const BOT_USERNAME = process.env.BOT_USERNAME || 'FC_Cloudbot';
 
 interface FileShare {
   id: number;
