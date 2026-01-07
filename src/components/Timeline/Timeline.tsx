@@ -53,6 +53,7 @@ export function Timeline({
   // Drag selection state
   const [isDragging, setIsDragging] = useState(false);
   const draggedFileIds = useRef<Set<number>>(new Set());
+  const lastTouchMoveTime = useRef<number>(0); // Throttle для touchMove
 
   // Создаём Map для быстрого поиска файла по id
   const filesById = useMemo(() => {
@@ -79,6 +80,11 @@ export function Timeline({
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!isDragging || !isSelectionMode || !onToggleFile) return;
+
+    // Throttle: не чаще чем раз в 50ms (20 fps достаточно для drag selection)
+    const now = Date.now();
+    if (now - lastTouchMoveTime.current < 50) return;
+    lastTouchMoveTime.current = now;
 
     const touch = e.touches[0];
     const element = document.elementFromPoint(touch.clientX, touch.clientY);

@@ -3,6 +3,7 @@ import { LONG_PRESS_MS } from '../constants/config';
 
 /**
  * Hook for handling long press interactions
+ * Cancels long press if finger moves (user is scrolling)
  * Returns handlers for touch/mouse events
  */
 export function useLongPress<T>(
@@ -22,6 +23,14 @@ export function useLongPress<T>(
     }, timeout);
   }, [item, onLongPress, timeout]);
 
+  // Cancel long press if user moves finger (scrolling)
+  const handleTouchMove = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
   const handleTouchEnd = useCallback(() => {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
@@ -38,10 +47,12 @@ export function useLongPress<T>(
 
   return {
     handleTouchStart,
+    handleTouchMove,
     handleTouchEnd,
     handleClick,
     // Aliases for event handlers
     onTouchStart: handleTouchStart,
+    onTouchMove: handleTouchMove,
     onTouchEnd: handleTouchEnd,
     onTouchCancel: handleTouchEnd,
     onMouseDown: handleTouchStart,

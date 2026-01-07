@@ -108,7 +108,7 @@ export function CategoryChips({ stats, selectedType, onSelect, trashCount = 0, d
     if (!scrollRef.current) return;
     // Если есть горизонтальный скролл - используем его напрямую
     if (e.deltaX !== 0) return;
-    e.preventDefault();
+    // preventDefault убран - он блокировал оптимизацию браузера при скролле
     scrollRef.current.scrollLeft += e.deltaY;
   }, []);
 

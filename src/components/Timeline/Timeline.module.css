@@ -5,6 +5,8 @@
 .timeline {
   display: flex;
   flex-direction: column;
+  /* Оптимизация touch для скролла */
+  touch-action: pan-y;
 }
 
 .group {

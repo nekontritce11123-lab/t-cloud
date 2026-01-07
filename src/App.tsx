@@ -79,6 +79,20 @@ function App() {
     }
   }, []);
 
+  // Глобальная блокировка контекстного меню на карточках (capture phase)
+  useEffect(() => {
+    const blockContextMenu = (e: Event) => {
+      const target = e.target as HTMLElement;
+      // Блокируем только на карточках файлов и кнопках
+      if (target.closest('[data-file-id]') || target.closest('button')) {
+        e.preventDefault();
+        return false;
+      }
+    };
+    document.addEventListener('contextmenu', blockContextMenu, true);
+    return () => document.removeEventListener('contextmenu', blockContextMenu, true);
+  }, []);
+
   // Проверка cooldown
   const isOnCooldown = useCallback((fileId: number): boolean => {
     const sentAt = sentFiles[fileId];

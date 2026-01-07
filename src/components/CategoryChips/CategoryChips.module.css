@@ -66,9 +66,15 @@
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   background: var(--app-bg-color);
-  padding: 2px 6px;
+  padding: 0 6px;
   border-radius: var(--radius-full);
   color: var(--app-hint-color);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  min-width: 20px;
+  height: 20px;
 }
 
 .chip.selected .count {

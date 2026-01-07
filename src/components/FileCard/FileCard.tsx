@@ -70,7 +70,9 @@ export function FileCard({
       className={cardClassName}
       data-file-id={includeDataFileId ? file.id : undefined}
       onClick={longPress.onClick}
+      onContextMenu={(e) => e.preventDefault()}
       onTouchStart={longPress.onTouchStart}
+      onTouchMove={longPress.onTouchMove}
       onTouchEnd={longPress.onTouchEnd}
       onTouchCancel={longPress.onTouchCancel}
       onMouseDown={longPress.onMouseDown}

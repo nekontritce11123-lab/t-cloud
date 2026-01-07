@@ -30,6 +30,9 @@
   max-width: 100%;
   /* Резервирует место под скроллбар всегда - предотвращает скачки ширины */
   scrollbar-gutter: stable;
+  /* Оптимизация скролла на мобильных */
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 .loading {

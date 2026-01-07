@@ -7,6 +7,8 @@
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   gap: var(--spacing-sm);
   padding: var(--spacing-sm) var(--spacing-lg) var(--spacing-lg);
+  /* Оптимизация touch для скролла */
+  touch-action: pan-y;
 }
 
 /* Small tablet: ~130px */
