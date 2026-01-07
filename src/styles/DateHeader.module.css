@@ -51,7 +51,8 @@
   font-weight: 600;
   color: white;
   cursor: pointer;
-  transition: all var(--animation-fast) ease;
+  transition: transform var(--animation-fast) ease,
+              background-color var(--animation-fast) ease;
   -webkit-tap-highlight-color: transparent;
 }
 

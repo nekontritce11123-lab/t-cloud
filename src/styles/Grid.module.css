@@ -9,6 +9,8 @@
   padding: var(--spacing-sm) var(--spacing-lg) var(--spacing-lg);
   /* Оптимизация touch для скролла */
   touch-action: pan-y;
+  /* Изоляция layout расчётов для производительности */
+  contain: layout style;
 }
 
 /* Small tablet: ~130px */

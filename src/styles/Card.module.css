@@ -20,6 +20,10 @@
   -webkit-touch-callout: none;
   user-select: none;
   -webkit-user-select: none;
+  /* Оптимизация скролла - изоляция layout/paint расчётов */
+  contain: layout paint;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 120px;
 }
 
 /* Тёмная обводка поверх всего контента маскирует артефакты */
@@ -35,6 +39,7 @@
 }
 
 .card:active {
+  will-change: transform;
   transform: scale(0.95);
 }
 
@@ -172,9 +177,7 @@
   bottom: var(--spacing-xs);
   right: var(--spacing-xs);
   padding: 2px 6px;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.75);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
@@ -190,9 +193,7 @@
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.75);
   border-radius: 6px;
   font-size: 10px;
   color: rgba(255, 255, 255, 0.9);
@@ -231,9 +232,7 @@
   max-width: calc(100% - 12px);
   width: fit-content;
   padding: 4px 8px;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.75);
   border-radius: 6px;
   display: flex;
   flex-direction: column;
@@ -288,9 +287,7 @@
   left: 6px;
   max-width: calc(100% - 40px);
   padding: 4px 8px;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.75);
   border-radius: 6px;
   display: flex;
   align-items: center;
