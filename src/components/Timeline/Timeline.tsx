@@ -1,8 +1,9 @@
-import { useMemo, useState, useRef, useCallback } from 'react';
+import { useMemo, useState, useRef, useCallback, RefObject } from 'react';
 import { FileRecord } from '../../api/client';
 import { FileCard } from '../FileCard';
 import { DayCheckbox } from '../DayCheckbox';
 import { formatDateHeader } from '../../shared/formatters';
+import { useAutoScroll } from '../../hooks/useAutoScroll';
 import gridStyles from '../../styles/Grid.module.css';
 import dateHeaderStyles from '../../styles/DateHeader.module.css';
 import layoutStyles from './Timeline.module.css';
@@ -18,8 +19,9 @@ interface TimelineProps {
   isSelectionMode?: boolean;
   isOnCooldown?: (fileId: number) => boolean;
   onSelectDay?: (files: FileRecord[], action: 'add' | 'remove') => void;
-  onToggleFile?: (file: FileRecord) => void;
+  onSelectRange?: (fileIds: number[]) => void;
   hapticFeedback?: { light: () => void };
+  scrollContainerRef?: RefObject<HTMLElement | null>;
 }
 
 // Группировка файлов по датам
@@ -45,72 +47,147 @@ export function Timeline({
   isSelectionMode,
   isOnCooldown,
   onSelectDay,
-  onToggleFile,
-  hapticFeedback
+  onSelectRange,
+  hapticFeedback,
+  scrollContainerRef
 }: TimelineProps) {
   const groupedFiles = useMemo(() => groupFilesByDate(files), [files]);
 
   // Drag selection state
   const [isDragging, setIsDragging] = useState(false);
-  const draggedFileIds = useRef<Set<number>>(new Set());
-  const lastTouchMoveTime = useRef<number>(0); // Throttle для touchMove
+  const dragAnchorId = useRef<number | null>(null);
+  const lastSelectedRange = useRef<Set<number>>(new Set());
+  const lastTouchMoveTime = useRef<number>(0);
 
-  // Создаём Map для быстрого поиска файла по id
-  const filesById = useMemo(() => {
-    const map = new Map<number, FileRecord>();
-    for (const file of files) {
-      map.set(file.id, file);
+  // Fallback ref если scrollContainerRef не передан
+  const fallbackRef = useRef<HTMLElement>(null);
+
+  // Auto-scroll при drag
+  const { updatePosition: updateAutoScrollPosition } = useAutoScroll(
+    isDragging,
+    scrollContainerRef ?? fallbackRef
+  );
+
+  // Создаём список файлов в ВИЗУАЛЬНОМ порядке (как они отображаются на экране)
+  // Важно: sortedGroups сортирует даты по убыванию (новые сверху)
+  const visualFileOrder = useMemo(() => {
+    const sortedGroups = Array.from(groupedFiles.entries()).sort(
+      (a, b) => b[0].localeCompare(a[0])
+    );
+    const flatList: FileRecord[] = [];
+    for (const [, dateFiles] of sortedGroups) {
+      flatList.push(...dateFiles);
     }
+    return flatList;
+  }, [groupedFiles]);
+
+  // Map для быстрого поиска ВИЗУАЛЬНОГО индекса файла
+  const visualIndexById = useMemo(() => {
+    const map = new Map<number, number>();
+    visualFileOrder.forEach((file, index) => {
+      map.set(file.id, index);
+    });
     return map;
-  }, [files]);
+  }, [visualFileOrder]);
 
-  // Drag selection handlers
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (!isSelectionMode) return;
+  // Функция для выделения range от anchor до current (использует ВИЗУАЛЬНЫЙ порядок)
+  const selectRange = useCallback((anchorId: number, currentId: number) => {
+    const anchorIndex = visualIndexById.get(anchorId);
+    const currentIndex = visualIndexById.get(currentId);
 
-    const touch = e.touches[0];
-    // Проверяем, начинается ли касание на карточке
-    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (anchorIndex === undefined || currentIndex === undefined) return;
+
+    const start = Math.min(anchorIndex, currentIndex);
+    const end = Math.max(anchorIndex, currentIndex);
+
+    // Получаем все id файлов в range (из визуального порядка!)
+    const rangeIds = visualFileOrder.slice(start, end + 1).map(f => f.id);
+    const newRange = new Set(rangeIds);
+
+    // Проверяем изменился ли range
+    if (newRange.size !== lastSelectedRange.current.size ||
+        ![...newRange].every(id => lastSelectedRange.current.has(id))) {
+      lastSelectedRange.current = newRange;
+      onSelectRange?.(rangeIds);
+      hapticFeedback?.light();
+    }
+  }, [visualFileOrder, visualIndexById, onSelectRange, hapticFeedback]);
+
+  // Получить file id из элемента под координатами
+  const getFileIdAtPoint = useCallback((clientX: number, clientY: number): number | null => {
+    const element = document.elementFromPoint(clientX, clientY);
     const cardElement = element?.closest('[data-file-id]');
     if (cardElement) {
-      setIsDragging(true);
-      draggedFileIds.current = new Set();
+      const fileIdStr = cardElement.getAttribute('data-file-id');
+      if (fileIdStr) {
+        return Number(fileIdStr);
+      }
     }
-  }, [isSelectionMode]);
+    return null;
+  }, []);
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isDragging || !isSelectionMode || !onToggleFile) return;
+  // === POINTER EVENTS (работают для touch и mouse) ===
 
-    // Throttle: не чаще чем раз в 50ms (20 fps достаточно для drag selection)
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    if (!isSelectionMode) return;
+
+    const fileId = getFileIdAtPoint(e.clientX, e.clientY);
+    if (fileId !== null && !isOnCooldown?.(fileId)) {
+      setIsDragging(true);
+      dragAnchorId.current = fileId;
+      lastSelectedRange.current = new Set([fileId]);
+
+      // Сразу выделяем anchor файл
+      onSelectRange?.([fileId]);
+
+      // Захватываем pointer для получения событий за пределами элемента
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    }
+  }, [isSelectionMode, isOnCooldown, getFileIdAtPoint, onSelectRange]);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!isDragging || !isSelectionMode || dragAnchorId.current === null) return;
+
+    // Обновляем позицию для auto-scroll (без throttle - нужна плавность)
+    updateAutoScrollPosition(e.clientY);
+
+    // Throttle для selection logic (50ms)
     const now = Date.now();
     if (now - lastTouchMoveTime.current < 50) return;
     lastTouchMoveTime.current = now;
 
-    const touch = e.touches[0];
-    const element = document.elementFromPoint(touch.clientX, touch.clientY);
-    const cardElement = element?.closest('[data-file-id]');
+    const currentFileId = getFileIdAtPoint(e.clientX, e.clientY);
+    if (currentFileId !== null) {
+      selectRange(dragAnchorId.current, currentFileId);
+    }
+  }, [isDragging, isSelectionMode, getFileIdAtPoint, selectRange, updateAutoScrollPosition]);
 
-    if (cardElement) {
-      const fileIdStr = cardElement.getAttribute('data-file-id');
-      if (fileIdStr) {
-        const fileId = Number(fileIdStr);
-        // Проверяем что это новый файл и не на cooldown
-        if (!draggedFileIds.current.has(fileId) && !isOnCooldown?.(fileId)) {
-          draggedFileIds.current.add(fileId);
-          const file = filesById.get(fileId);
-          if (file) {
-            onToggleFile(file);
-            hapticFeedback?.light();
-          }
-        }
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    if (isDragging) {
+      setIsDragging(false);
+      dragAnchorId.current = null;
+      lastSelectedRange.current = new Set();
+
+      // Освобождаем pointer capture
+      try {
+        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch {
+        // Игнорируем ошибку если capture уже освобождён
       }
     }
-  }, [isDragging, isSelectionMode, onToggleFile, isOnCooldown, filesById, hapticFeedback]);
+  }, [isDragging]);
 
-  const handleTouchEnd = useCallback(() => {
-    setIsDragging(false);
-    draggedFileIds.current = new Set();
-  }, []);
+  // Обёрнутый handler для long press - сразу инициализирует drag selection
+  const handleFileLongPress = useCallback((file: FileRecord) => {
+    // Вызываем оригинальный handler (он войдёт в selection mode)
+    onFileLongPress?.(file);
+
+    // Сразу инициализируем drag state чтобы можно было продолжить выделение
+    // не отпуская палец/мышь
+    setIsDragging(true);
+    dragAnchorId.current = file.id;
+    lastSelectedRange.current = new Set([file.id]);
+  }, [onFileLongPress]);
 
   if (files.length === 0) {
     return (
@@ -134,10 +211,11 @@ export function Timeline({
   return (
     <div
       className={styles.timeline}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchEnd}
+      style={isDragging ? { touchAction: 'none' } : undefined}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
     >
       {sortedGroups.map(([dateKey, dateFiles]) => (
         <div key={dateKey} className={styles.group}>
@@ -162,7 +240,7 @@ export function Timeline({
                 key={file.id}
                 file={file}
                 onFileClick={onFileClick}
-                onFileLongPress={onFileLongPress}
+                onFileLongPress={handleFileLongPress}
                 isSelected={selectedFiles?.has(file.id)}
                 isSelectionMode={isSelectionMode}
                 isOnCooldown={isOnCooldown?.(file.id)}

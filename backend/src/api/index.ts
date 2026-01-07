@@ -4,6 +4,7 @@ import { config } from '../config.js';
 import { authMiddleware, devAuthMiddleware } from './middleware/auth.js';
 import filesRoutes from './routes/files.routes.js';
 import linksRoutes from './routes/links.routes.js';
+import sharesRoutes from './routes/shares.routes.js';
 
 const app = express();
 
@@ -52,6 +53,8 @@ const auth = process.env.NODE_ENV === 'production' ? authMiddleware : devAuthMid
 
 // API routes (require authentication)
 app.use('/api/files', auth, filesRoutes);
+app.use('/api/files', auth, sharesRoutes); // for POST/GET /:id/share
+app.use('/api/shares', auth, sharesRoutes); // for DELETE /:token
 app.use('/api/links', auth, linksRoutes);
 
 // 404 handler

@@ -9,7 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dbPath = path.join(__dirname, '../../data/tcloud.db');
 
 // Create SQLite connection
-const sqlite = new Database(dbPath);
+const sqlite: InstanceType<typeof Database> = new Database(dbPath);
 
 // Enable WAL mode for better concurrent read performance
 sqlite.pragma('journal_mode = WAL');
@@ -130,6 +130,34 @@ export async function initDatabase(): Promise<void> {
       INSERT INTO links_fts(rowid, url, title, description, site_name)
       VALUES (NEW.id, NEW.url, NEW.title, NEW.description, NEW.site_name);
     END;
+
+    -- File sharing tables
+    CREATE TABLE IF NOT EXISTS file_shares (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+      owner_id INTEGER NOT NULL REFERENCES users(id),
+      token TEXT NOT NULL UNIQUE,
+      max_recipients INTEGER DEFAULT NULL,
+      expires_at INTEGER DEFAULT NULL,
+      use_count INTEGER DEFAULT 0,
+      is_active INTEGER DEFAULT 1,
+      created_at INTEGER DEFAULT (unixepoch()),
+      updated_at INTEGER DEFAULT (unixepoch())
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_shares_token ON file_shares(token);
+    CREATE INDEX IF NOT EXISTS idx_shares_owner ON file_shares(owner_id);
+    CREATE INDEX IF NOT EXISTS idx_shares_file ON file_shares(file_id);
+
+    CREATE TABLE IF NOT EXISTS share_recipients (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      share_id INTEGER NOT NULL REFERENCES file_shares(id) ON DELETE CASCADE,
+      recipient_id INTEGER NOT NULL,
+      received_at INTEGER DEFAULT (unixepoch()),
+      UNIQUE(share_id, recipient_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_recipients_share ON share_recipients(share_id);
   `);
 
   console.log('[Database] Initialized successfully');
@@ -463,4 +491,90 @@ export function getUserDictionary(userId: number): string[] {
   return Array.from(wordSet).sort();
 }
 
-// sqlite instance is kept private, use db for queries
+// Export sqlite for raw queries (needed for share handlers)
+export { sqlite };
+
+/**
+ * Share types
+ */
+export interface FileShare {
+  id: number;
+  file_id: number;
+  owner_id: number;
+  token: string;
+  max_recipients: number | null;
+  expires_at: number | null;
+  use_count: number;
+  is_active: number;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface ShareRecipient {
+  id: number;
+  share_id: number;
+  recipient_id: number;
+  received_at: number;
+}
+
+export interface FileForShare {
+  id: number;
+  file_id: string;
+  file_name: string | null;
+  caption: string | null;
+  media_type: string;
+  thumbnail_file_id: string | null;
+  deleted_at: number | null;
+}
+
+/**
+ * Get share by token
+ */
+export function getShareByToken(token: string): FileShare | null {
+  const stmt = sqlite.prepare(`
+    SELECT * FROM file_shares
+    WHERE token = ? AND is_active = 1
+  `);
+  return stmt.get(token) as FileShare | null;
+}
+
+/**
+ * Get file for share (with necessary fields for sending)
+ */
+export function getFileForShare(fileId: number): FileForShare | null {
+  const stmt = sqlite.prepare(`
+    SELECT id, file_id, file_name, caption, media_type, thumbnail_file_id, deleted_at
+    FROM files
+    WHERE id = ?
+  `);
+  return stmt.get(fileId) as FileForShare | null;
+}
+
+/**
+ * Check if recipient already received this share
+ */
+export function hasRecipientReceivedShare(shareId: number, recipientId: number): boolean {
+  const stmt = sqlite.prepare(`
+    SELECT 1 FROM share_recipients
+    WHERE share_id = ? AND recipient_id = ?
+  `);
+  return stmt.get(shareId, recipientId) !== undefined;
+}
+
+/**
+ * Record that recipient received the share and increment use_count
+ */
+export function recordShareRecipient(shareId: number, recipientId: number): void {
+  const insertStmt = sqlite.prepare(`
+    INSERT INTO share_recipients (share_id, recipient_id)
+    VALUES (?, ?)
+  `);
+  const updateStmt = sqlite.prepare(`
+    UPDATE file_shares
+    SET use_count = use_count + 1, updated_at = unixepoch()
+    WHERE id = ?
+  `);
+
+  insertStmt.run(shareId, recipientId);
+  updateStmt.run(shareId);
+}

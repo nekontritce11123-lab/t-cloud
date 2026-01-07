@@ -57,6 +57,7 @@ function App() {
   const [sentFiles, setSentFiles] = useState<Record<number, number>>({});
   const [sendingFileId, setSendingFileId] = useState<number | null>(null); // Защита от двойного клика
   const [viewingFile, setViewingFile] = useState<FileRecord | null>(null); // Файл для просмотра
+  const contentRef = useRef<HTMLElement>(null); // Ref для scroll контейнера (используется в Timeline для auto-scroll)
 
   // Загрузка cooldown из localStorage
   useEffect(() => {
@@ -533,9 +534,9 @@ function App() {
     });
   }, [hapticFeedback]);
 
-  // Toggle одного файла (для drag selection)
-  const handleToggleFile = useCallback((file: FileRecord) => {
-    setSelectedFiles(prev => toggleInSet(prev, file.id));
+  // Выбрать range файлов (для drag selection)
+  const handleSelectRange = useCallback((fileIds: number[]) => {
+    setSelectedFiles(new Set(fileIds));
   }, []);
 
   // Loading state
@@ -615,7 +616,7 @@ function App() {
       )}
 
       {/* Content */}
-      <main className={styles.content}>
+      <main className={styles.content} ref={contentRef}>
         {error && (
           <div className={styles.error}>
             <span>❌ {error}</span>
@@ -694,8 +695,9 @@ function App() {
             isSelectionMode={isSelectionMode && selectionType === 'files'}
             isOnCooldown={isOnCooldown}
             onSelectDay={handleSelectDay}
-            onToggleFile={handleToggleFile}
+            onSelectRange={handleSelectRange}
             hapticFeedback={hapticFeedback}
+            scrollContainerRef={contentRef}
           />
         )}
 

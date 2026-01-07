@@ -5,15 +5,209 @@ import { setupTextHandlers } from './handlers/text.handler.js';
 import { setupRetrievalHandlers } from './handlers/retrieval.handler.js';
 import { FilesRepository } from '../db/repositories/files.repository.js';
 import { MediaType } from '../types/index.js';
+import {
+  getShareByToken,
+  getFileForShare,
+  hasRecipientReceivedShare,
+  recordShareRecipient,
+  type FileShare,
+  type FileForShare,
+} from '../db/index.js';
 
 // Create bot instance
 export const bot = new Bot(config.botToken);
 
 /**
+ * Validate share token and return validation result
+ */
+interface ShareValidationResult {
+  valid: boolean;
+  error?: string;
+  share?: FileShare;
+  file?: FileForShare;
+}
+
+function validateShare(token: string, recipientId: number): ShareValidationResult {
+  // Get share by token
+  const share = getShareByToken(token);
+  if (!share) {
+    return { valid: false, error: '❌ Ссылка недействительна или истекла' };
+  }
+
+  // Check expiration
+  const now = Math.floor(Date.now() / 1000);
+  if (share.expires_at !== null && share.expires_at <= now) {
+    return { valid: false, error: '❌ Срок действия ссылки истёк' };
+  }
+
+  // Check max recipients limit
+  if (share.max_recipients !== null && share.use_count >= share.max_recipients) {
+    return { valid: false, error: '❌ Лимит получателей исчерпан' };
+  }
+
+  // Check if recipient is owner
+  if (share.owner_id === recipientId) {
+    return { valid: false, error: '⚠️ Это ваш собственный файл' };
+  }
+
+  // Check if already received
+  if (hasRecipientReceivedShare(share.id, recipientId)) {
+    return { valid: false, error: '⚠️ Вы уже получили этот файл' };
+  }
+
+  // Get file
+  const file = getFileForShare(share.file_id);
+  if (!file) {
+    return { valid: false, error: '❌ Файл не найден' };
+  }
+
+  // Check if file deleted
+  if (file.deleted_at !== null) {
+    return { valid: false, error: '❌ Файл был удалён владельцем' };
+  }
+
+  return { valid: true, share, file };
+}
+
+/**
+ * Send file to user based on media type
+ */
+async function sendFileToUser(
+  ctx: any,
+  file: FileForShare,
+  caption?: string
+): Promise<void> {
+  const mediaType = file.media_type as MediaType;
+
+  switch (mediaType) {
+    case 'photo':
+      await ctx.replyWithPhoto(file.file_id, { caption });
+      break;
+    case 'video':
+      await ctx.replyWithVideo(file.file_id, { caption });
+      break;
+    case 'document':
+      await ctx.replyWithDocument(file.file_id, { caption });
+      break;
+    case 'audio':
+      await ctx.replyWithAudio(file.file_id, { caption });
+      break;
+    case 'voice':
+      await ctx.replyWithVoice(file.file_id, { caption });
+      break;
+    case 'video_note':
+      await ctx.replyWithVideoNote(file.file_id);
+      break;
+    default:
+      await ctx.replyWithDocument(file.file_id, { caption });
+  }
+}
+
+/**
  * Setup all bot handlers
  */
 export function setupBot(): void {
-  // /start command
+  // Share handler - must be BEFORE main /start handler
+  bot.command('start', async (ctx, next) => {
+    const payload = ctx.match;
+
+    // If no payload or not a share link, pass to next handler
+    if (!payload || !payload.startsWith('share_')) {
+      await next();
+      return;
+    }
+
+    const recipientId = ctx.from?.id;
+    if (!recipientId) {
+      await ctx.reply('❌ Не удалось определить пользователя');
+      return;
+    }
+
+    const token = payload.replace('share_', '');
+    console.log(`[Bot] Share link opened: token=${token}, recipient=${recipientId}`);
+
+    // Validate share
+    const validation = validateShare(token, recipientId);
+    if (!validation.valid) {
+      await ctx.reply(validation.error!);
+      return;
+    }
+
+    const { file } = validation;
+    if (!file) {
+      await ctx.reply('❌ Файл не найден');
+      return;
+    }
+
+    // Build preview message
+    const fileName = file.file_name || 'Файл';
+    const captionText = file.caption ? `\n${file.caption}` : '';
+    const previewText = `📎 ${fileName}${captionText}\n\nНажмите кнопку чтобы получить файл`;
+
+    const keyboard = {
+      inline_keyboard: [[
+        { text: '📥 Получить файл', callback_data: `claim_${token}` }
+      ]]
+    };
+
+    // Send preview with thumbnail if available
+    try {
+      if (file.thumbnail_file_id && ['photo', 'video'].includes(file.media_type)) {
+        await ctx.replyWithPhoto(file.thumbnail_file_id, {
+          caption: previewText,
+          reply_markup: keyboard
+        });
+      } else {
+        await ctx.reply(previewText, { reply_markup: keyboard });
+      }
+    } catch (error) {
+      console.error('[Bot] Error sending share preview:', error);
+      // Fallback to text-only
+      await ctx.reply(previewText, { reply_markup: keyboard });
+    }
+  });
+
+  // Callback query handler for claiming shared files
+  bot.callbackQuery(/^claim_(.+)$/, async (ctx) => {
+    const token = ctx.match[1];
+    const recipientId = ctx.from?.id;
+
+    if (!recipientId) {
+      await ctx.answerCallbackQuery({ text: '❌ Ошибка авторизации', show_alert: true });
+      return;
+    }
+
+    console.log(`[Bot] Claim request: token=${token}, recipient=${recipientId}`);
+
+    // Validate share again (in case something changed)
+    const validation = validateShare(token, recipientId);
+    if (!validation.valid) {
+      await ctx.answerCallbackQuery({ text: validation.error!, show_alert: true });
+      return;
+    }
+
+    const { share, file } = validation;
+    if (!share || !file) {
+      await ctx.answerCallbackQuery({ text: '❌ Файл не найден', show_alert: true });
+      return;
+    }
+
+    try {
+      // Send the file
+      await sendFileToUser(ctx, file, file.caption || undefined);
+
+      // Record recipient and increment use_count
+      recordShareRecipient(share.id, recipientId);
+
+      console.log(`[Bot] File shared successfully: file=${file.id}, recipient=${recipientId}`);
+      await ctx.answerCallbackQuery({ text: '✅ Файл отправлен!' });
+    } catch (error) {
+      console.error('[Bot] Error sending shared file:', error);
+      await ctx.answerCallbackQuery({ text: '❌ Ошибка при отправке файла', show_alert: true });
+    }
+  });
+
+  // /start command (main)
   bot.command('start', async (ctx) => {
     const keyboard = {
       inline_keyboard: [

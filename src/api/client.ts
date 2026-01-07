@@ -59,6 +59,24 @@ export interface CategoryStats {
   count: number;
 }
 
+export interface ShareInfo {
+  id: number;
+  fileId: number;
+  token: string;
+  maxRecipients: number | null;
+  expiresAt: string | null;
+  useCount: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface ShareResponse {
+  share: ShareInfo;
+  shareUrl: string;
+  isExisting?: boolean;
+  recipients?: number;
+}
+
 class ApiClient {
   private initData: string = '';
 
@@ -417,6 +435,52 @@ class ApiClient {
 
     if (!response.ok) {
       throw new Error('Failed to permanently delete link');
+    }
+  }
+
+  // Share API
+
+  async createShareLink(fileId: number, options?: {
+    maxRecipients?: number;
+    expiresIn?: number; // hours
+  }): Promise<ShareResponse> {
+    const response = await fetch(`${API_URL}/api/files/${fileId}/share`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(options || {}),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create share link');
+    }
+
+    return response.json();
+  }
+
+  async getShareInfo(fileId: number): Promise<ShareResponse | null> {
+    try {
+      const response = await fetch(`${API_URL}/api/files/${fileId}/share`, {
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      return response.json();
+    } catch {
+      return null;
+    }
+  }
+
+  async deleteShareLink(token: string): Promise<void> {
+    const response = await fetch(`${API_URL}/api/shares/${token}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete share link');
     }
   }
 }

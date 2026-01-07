@@ -1,8 +1,9 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { FileRecord } from '../../api/client';
-import { MediaTypeIcons } from '../../shared/icons';
+import { MediaTypeIcons, ShareIcon } from '../../shared/icons';
 import { formatFileSize, formatDuration, formatDate, getMediaTypeLabel, highlightMatch } from '../../shared/formatters';
 import { getEffectiveMediaType } from '../../shared/mediaType';
+import { ShareModal } from '../ShareModal';
 import styles from './FileViewer.module.css';
 
 interface FileViewerProps {
@@ -15,6 +16,8 @@ interface FileViewerProps {
 }
 
 export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending, searchQuery }: FileViewerProps) {
+  const [showShareModal, setShowShareModal] = useState(false);
+
   const handleSend = useCallback(() => {
     if (!isOnCooldown && !isSending) {
       onSend(file);
@@ -163,8 +166,24 @@ export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending, sea
               <span>{formatDate(file.createdAt)}</span>
             </div>
           </div>
+
+          {/* Share Button */}
+          <button
+            className={styles.shareButton}
+            onClick={() => setShowShareModal(true)}
+          >
+            <span className={styles.shareIcon}>{ShareIcon}</span>
+            Поделиться
+          </button>
         </div>
 
+        {/* Share Modal */}
+        {showShareModal && (
+          <ShareModal
+            file={file}
+            onClose={() => setShowShareModal(false)}
+          />
+        )}
       </div>
     </div>
   );

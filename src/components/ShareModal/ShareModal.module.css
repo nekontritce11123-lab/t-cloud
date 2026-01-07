@@ -1,0 +1,288 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 150;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: fadeIn var(--animation-fast) var(--easing-smooth);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.modal {
+  width: 100%;
+  max-width: 500px;
+  max-height: 80vh;
+  background: var(--app-bg-color);
+  border-radius: 16px 16px 0 0;
+  padding: 20px;
+  overflow-y: auto;
+  animation: slideUp var(--animation-normal) var(--easing-smooth);
+}
+
+@media (min-width: 768px) {
+  .overlay {
+    align-items: center;
+  }
+
+  .modal {
+    border-radius: 16px;
+    animation: fadeIn var(--animation-normal) var(--easing-smooth);
+  }
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--app-text-color);
+}
+
+.closeButton {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--app-secondary-bg-color);
+  border-radius: 50%;
+  color: var(--app-hint-color);
+  transition: all var(--animation-fast) var(--easing-smooth);
+}
+
+.closeButton:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.closeButton svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Link Section */
+.linkSection {
+  margin-bottom: 20px;
+}
+
+.linkContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--app-secondary-bg-color);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.linkInput {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--app-text-color);
+  font-size: 14px;
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.linkInput:focus {
+  outline: none;
+}
+
+.copyButton {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--app-link-color);
+  color: #fff;
+  border-radius: 10px;
+  transition: all var(--animation-fast) var(--easing-smooth);
+}
+
+.copyButton:active {
+  transform: scale(0.95);
+}
+
+.copyButton.copied {
+  background: var(--color-success, #34c759);
+}
+
+.copyButton svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Settings Section */
+.settingsSection {
+  margin-bottom: 20px;
+}
+
+.settingLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--app-hint-color);
+  margin-bottom: 10px;
+}
+
+.chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  padding: 8px 16px;
+  background: var(--app-secondary-bg-color);
+  color: var(--app-text-color);
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all var(--animation-fast) var(--easing-smooth);
+}
+
+.chip:active {
+  transform: scale(0.95);
+}
+
+.chip.active {
+  background: var(--app-link-color);
+  color: #fff;
+}
+
+/* Stats Section */
+.statsSection {
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: var(--app-secondary-bg-color);
+  border-radius: 12px;
+}
+
+.statItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.statLabel {
+  color: var(--app-hint-color);
+}
+
+.statValue {
+  color: var(--app-text-color);
+  font-weight: 500;
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.createButton {
+  width: 100%;
+  padding: 14px;
+  background: var(--app-link-color);
+  color: #fff;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all var(--animation-fast) var(--easing-smooth);
+}
+
+.createButton:active {
+  transform: scale(0.98);
+}
+
+.createButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.deleteButton {
+  width: 100%;
+  padding: 14px;
+  background: transparent;
+  border: 1px solid #ff3b30;
+  color: #ff3b30;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all var(--animation-fast) var(--easing-smooth);
+}
+
+.deleteButton:active {
+  background: rgba(255, 59, 48, 0.1);
+  transform: scale(0.98);
+}
+
+.deleteButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Loading State */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--app-hint-color);
+  border-top-color: var(--app-link-color);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Empty State */
+.emptyState {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.emptyText {
+  font-size: 14px;
+  color: var(--app-hint-color);
+  margin-bottom: 16px;
+}
