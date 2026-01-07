@@ -13,8 +13,6 @@ const MEDIA_REACTIONS: Record<MediaType, TelegramReaction> = {
   audio: '🎉',
   voice: '👏',
   video_note: '👀',
-  animation: '😁',
-  sticker: '🤩',
   link: '💯',
 };
 
@@ -26,7 +24,7 @@ export function setupMediaHandlers(bot: Bot<Context>): void {
   const filesRepo = new FilesRepository();
   const usersRepo = new UsersRepository();
 
-  // Universal handler for all media types
+  // Universal handler for all media types (animation и sticker игнорируются)
   bot.on(
     [
       'message:photo',
@@ -35,8 +33,6 @@ export function setupMediaHandlers(bot: Bot<Context>): void {
       'message:audio',
       'message:voice',
       'message:video_note',
-      'message:animation',
-      'message:sticker',
     ],
     async (ctx) => {
       const msg = ctx.message;

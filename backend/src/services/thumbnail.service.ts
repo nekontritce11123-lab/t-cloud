@@ -74,8 +74,6 @@ export class ThumbnailService {
       audio: '/icons/audio.svg',
       voice: '/icons/voice.svg',
       video_note: '/icons/video-note.svg',
-      animation: '/icons/animation.svg',
-      sticker: '/icons/sticker.svg',
       link: '/icons/link.svg',
     };
 

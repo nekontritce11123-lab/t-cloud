@@ -4,7 +4,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://api.factchain-traker.on
 console.log('[ApiClient] API_URL:', API_URL);
 
 // Types
-export type MediaType = 'photo' | 'video' | 'document' | 'audio' | 'voice' | 'video_note' | 'animation' | 'sticker' | 'link';
+export type MediaType = 'photo' | 'video' | 'document' | 'audio' | 'voice' | 'video_note' | 'link';
 
 export interface FileRecord {
   id: number;

@@ -461,12 +461,6 @@ async function sendFileByFileId(
       case 'video_note':
         await bot.api.sendVideoNote(chatId, fileId);
         break;
-      case 'animation':
-        await bot.api.sendAnimation(chatId, fileId, { caption });
-        break;
-      case 'sticker':
-        await bot.api.sendSticker(chatId, fileId);
-        break;
       default:
         await bot.api.sendDocument(chatId, fileId, { caption });
     }

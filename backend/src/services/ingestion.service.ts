@@ -27,12 +27,7 @@ export class IngestionService {
     if (msg.video_note) {
       return this.extractVideoNote(msg);
     }
-    if (msg.animation) {
-      return this.extractAnimation(msg);
-    }
-    if (msg.sticker) {
-      return this.extractSticker(msg);
-    }
+    // animation и sticker игнорируются - никто не сохраняет GIF и стикеры
 
     return null;
   }
@@ -179,46 +174,6 @@ export class IngestionService {
   }
 
   /**
-   * Animation (GIF)
-   */
-  private extractAnimation(msg: Message): ExtractedMedia {
-    const animation = msg.animation!;
-
-    return {
-      fileId: animation.file_id,
-      fileUniqueId: animation.file_unique_id,
-      mediaType: 'animation',
-      mimeType: animation.mime_type,
-      fileName: animation.file_name,
-      fileSize: animation.file_size,
-      duration: animation.duration,
-      width: animation.width,
-      height: animation.height,
-      thumbnailFileId: animation.thumbnail?.file_id,
-      caption: msg.caption,
-      ...this.extractForwardInfo(msg),
-    };
-  }
-
-  /**
-   * Sticker
-   */
-  private extractSticker(msg: Message): ExtractedMedia {
-    const sticker = msg.sticker!;
-
-    return {
-      fileId: sticker.file_id,
-      fileUniqueId: sticker.file_unique_id,
-      mediaType: 'sticker',
-      fileSize: sticker.file_size,
-      width: sticker.width,
-      height: sticker.height,
-      thumbnailFileId: sticker.thumbnail?.file_id,
-      ...this.extractForwardInfo(msg),
-    };
-  }
-
-  /**
    * Extract forward information from message
    */
   private extractForwardInfo(msg: Message): Pick<ExtractedMedia, 'forwardFromName' | 'forwardFromChatTitle'> {
@@ -257,8 +212,6 @@ export function getMediaEmoji(type: MediaType): string {
     audio: '🎵',
     voice: '🎤',
     video_note: '⭕',
-    animation: '🎞',
-    sticker: '🎨',
     link: '🔗',
   };
   return emojis[type] || '📁';

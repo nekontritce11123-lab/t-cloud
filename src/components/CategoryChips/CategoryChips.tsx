@@ -63,24 +63,10 @@ const Icons = {
       <line x1="12" x2="12" y1="19" y2="22" />
     </svg>
   ),
-  animation: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="2" width="20" height="20" rx="2.18" />
-      <line x1="7" x2="7" y1="2" y2="22" />
-      <line x1="17" x2="17" y1="2" y2="22" />
-      <line x1="2" x2="22" y1="12" y2="12" />
-      <line x1="2" x2="7" y1="7" y2="7" />
-      <line x1="2" x2="7" y1="17" y2="17" />
-      <line x1="17" x2="22" y1="17" y2="17" />
-      <line x1="17" x2="22" y1="7" y2="7" />
-    </svg>
-  ),
-  sticker: (
+  video_note: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="10" />
-      <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-      <line x1="9" x2="9.01" y1="9" y2="9" strokeWidth="2" />
-      <line x1="15" x2="15.01" y1="9" y2="9" strokeWidth="2" />
+      <polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none" />
     </svg>
   ),
   trash: (
@@ -109,8 +95,7 @@ const CATEGORIES: Category[] = [
   { type: 'link', label: 'Ссылки', icon: 'link', color: 'var(--color-link)' },
   { type: 'audio', label: 'Аудио', icon: 'audio', color: 'var(--color-audio)' },
   { type: 'voice', label: 'Голос', icon: 'voice', color: 'var(--color-voice)' },
-  { type: 'animation', label: 'GIF', icon: 'animation', color: 'var(--color-animation)' },
-  { type: 'sticker', label: 'Стикеры', icon: 'sticker', color: 'var(--color-sticker)' },
+  { type: 'video_note', label: 'Кружки', icon: 'video_note', color: 'var(--color-video-note, #5856d6)' },
   { type: 'trash', label: 'Корзина', icon: 'trash', color: 'var(--app-destructive-text-color, #ff3b30)' },
 ];
 

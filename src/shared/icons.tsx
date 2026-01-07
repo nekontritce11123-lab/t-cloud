@@ -43,22 +43,6 @@ export const MediaTypeIcons: Record<MediaType, React.ReactElement> = {
       <path d="m10 9 5 3-5 3V9Z" fill="currentColor" stroke="none" />
     </svg>
   ),
-  animation: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="2" width="20" height="20" rx="2.18" />
-      <line x1="7" x2="7" y1="2" y2="22" />
-      <line x1="17" x2="17" y1="2" y2="22" />
-      <line x1="2" x2="22" y1="12" y2="12" />
-    </svg>
-  ),
-  sticker: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-      <line x1="9" x2="9.01" y1="9" y2="9" strokeWidth="2" />
-      <line x1="15" x2="15.01" y1="9" y2="9" strokeWidth="2" />
-    </svg>
-  ),
   link: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />

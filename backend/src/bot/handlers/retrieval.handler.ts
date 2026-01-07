@@ -112,12 +112,6 @@ async function sendByFileId(
     case 'video_note':
       await ctx.replyWithVideoNote(file.fileId);
       break;
-    case 'animation':
-      await ctx.replyWithAnimation(file.fileId, options);
-      break;
-    case 'sticker':
-      await ctx.replyWithSticker(file.fileId);
-      break;
     default:
       await ctx.replyWithDocument(file.fileId, options);
   }

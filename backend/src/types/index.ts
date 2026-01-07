@@ -15,8 +15,6 @@ export type MediaType =
   | 'audio'
   | 'voice'
   | 'video_note'
-  | 'animation'
-  | 'sticker'
   | 'link';
 
 // Extracted media metadata from Telegram message

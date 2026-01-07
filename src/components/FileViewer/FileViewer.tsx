@@ -46,9 +46,7 @@ function getMediaTypeLabel(type: MediaType): string {
     document: 'Документ',
     audio: 'Аудио',
     voice: 'Голосовое',
-    video_note: 'Видеосообщение',
-    animation: 'GIF',
-    sticker: 'Стикер',
+    video_note: 'Кружок',
     link: 'Ссылка',
   };
   return labels[type] || type;
