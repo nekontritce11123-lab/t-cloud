@@ -19,15 +19,39 @@ interface FileGridProps {
 
 export function FileGrid({ files, onFileClick, onFileLongPress, selectedFiles, isSelectionMode, searchQuery, isOnCooldown }: FileGridProps) {
   if (files.length === 0) {
+    // Search empty state - с подсказками
+    if (searchQuery) {
+      return (
+        <div className={styles.empty}>
+          <span className={styles.emptyIcon}>🔍</span>
+          <h3 className={styles.emptyTitle}>Ничего не найдено</h3>
+          <p className={styles.emptyQuery}>«{searchQuery}»</p>
+
+          <div className={styles.emptyTips}>
+            <div className={styles.emptyTipsTitle}>Советы</div>
+            <ul className={styles.emptyTipsList}>
+              <li>Проверьте правописание</li>
+              <li>Попробуйте другие слова</li>
+              <li>Используйте часть слова</li>
+            </ul>
+          </div>
+
+          <div className={styles.emptyFields}>
+            <span className={styles.emptyFieldChip}>📝 Подписи</span>
+            <span className={styles.emptyFieldChip}>📄 Имена</span>
+            <span className={styles.emptyFieldChip}>↗️ От кого</span>
+          </div>
+        </div>
+      );
+    }
+
+    // Default empty state
     return (
       <div className={styles.empty}>
         <span className={styles.emptyIcon}>📭</span>
-        <p>{searchQuery ? 'Ничего не найдено' : 'Файлы не найдены'}</p>
+        <h3 className={styles.emptyTitle}>Файлы не найдены</h3>
         <p className={styles.emptyHint}>
-          {searchQuery
-            ? `По запросу "${searchQuery}" ничего не найдено`
-            : 'Пересылайте файлы боту, чтобы они появились здесь'
-          }
+          Пересылайте файлы боту,<br />чтобы они появились здесь
         </p>
       </div>
     );

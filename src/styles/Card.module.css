@@ -323,19 +323,100 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-xxl);
+  padding: var(--spacing-xxl) var(--spacing-lg);
   text-align: center;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
+  min-height: 300px;
 }
 
 .emptyIcon {
-  font-size: 48px;
+  font-size: 56px;
+  margin-bottom: var(--spacing-sm);
+  opacity: 0.9;
+}
+
+.emptyTitle {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--app-text-color);
+  margin: 0;
+}
+
+.emptyQuery {
+  font-size: var(--font-size-md);
+  color: var(--app-hint-color);
+  margin: 0;
+  max-width: 280px;
+  word-break: break-word;
 }
 
 .emptyHint {
   font-size: var(--font-size-sm);
   color: var(--app-hint-color);
-  max-width: 250px;
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+/* Search tips */
+.emptyTips {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: var(--app-secondary-bg-color);
+  border-radius: var(--radius-md);
+  text-align: left;
+  max-width: 280px;
+}
+
+.emptyTipsTitle {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--app-hint-color);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--spacing-sm);
+}
+
+.emptyTipsList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.emptyTipsList li {
+  font-size: var(--font-size-sm);
+  color: var(--app-text-color);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.emptyTipsList li::before {
+  content: '•';
+  color: var(--app-link-color);
+  font-weight: bold;
+}
+
+/* Search fields info */
+.emptyFields {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+}
+
+.emptyFieldChip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: var(--app-secondary-bg-color);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  color: var(--app-hint-color);
 }
 
 /* Адаптивные размеры текста для больших карточек */

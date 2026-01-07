@@ -522,9 +522,14 @@ function App() {
             )}
             {files.length === 0 && links.length === 0 && !isLoading && (
               <div className={styles.empty}>
-                <span className={styles.emptyIcon}>🔍</span>
-                <p>Ничего не найдено</p>
-                <p className={styles.emptyHint}>По запросу "{searchQuery}" ничего не найдено</p>
+                <div className={styles.emptyIconWrapper}>
+                  <svg className={styles.emptySearchIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.35-4.35" />
+                  </svg>
+                </div>
+                <h3 className={styles.emptyTitle}>Ничего не найдено</h3>
+                <p className={styles.emptyQuery}>«{searchQuery}»</p>
               </div>
             )}
           </>
