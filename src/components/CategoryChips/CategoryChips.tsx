@@ -1,3 +1,4 @@
+import { useRef, useCallback } from 'react';
 import { MediaType, CategoryStats } from '../../api/client';
 import styles from './CategoryChips.module.css';
 
@@ -100,6 +101,17 @@ const CATEGORIES: Category[] = [
 ];
 
 export function CategoryChips({ stats, selectedType, onSelect, trashCount = 0, disabledTypes }: CategoryChipsProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Простая конвертация вертикального скролла в горизонтальный
+  const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    if (!scrollRef.current) return;
+    // Если есть горизонтальный скролл - используем его напрямую
+    if (e.deltaX !== 0) return;
+    e.preventDefault();
+    scrollRef.current.scrollLeft += e.deltaY;
+  }, []);
+
   const getCount = (type: CategoryType): number => {
     if (type === null) {
       return stats.reduce((sum, s) => sum + s.count, 0);
@@ -119,7 +131,11 @@ export function CategoryChips({ stats, selectedType, onSelect, trashCount = 0, d
 
   return (
     <div className={styles.container}>
-      <div className={styles.scroll}>
+      <div
+        ref={scrollRef}
+        className={styles.scroll}
+        onWheel={handleWheel}
+      >
         {CATEGORIES.map(category => {
           const count = getCount(category.type);
           const isSelected = selectedType === category.type;
