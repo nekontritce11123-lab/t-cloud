@@ -177,20 +177,29 @@ function App() {
     }
 
     setIsSending(true);
-    hapticFeedback.success();
 
     try {
       const result = await apiClient.sendFiles(fileIds);
 
-      if (result.success) {
-        // Маркируем все как отправленные одним вызовом
-        markAsSent(result.sent || fileIds);
+      // Маркируем ТОЛЬКО успешно отправленные
+      if (result.sent && result.sent.length > 0) {
+        markAsSent(result.sent);
+        hapticFeedback.success();
+      }
 
-        // Выход из режима выбора
+      // Логируем ошибки если были
+      if (result.errors && result.errors.length > 0) {
+        console.warn('[App] Some files failed to send:', result.errors);
+      }
+
+      // Выход из режима выбора если хоть что-то отправилось
+      if (result.sent && result.sent.length > 0) {
         setIsSelectionMode(false);
         setSelectedFiles(new Set());
         mainButton.hide();
-        // НЕ закрываем приложение
+      } else {
+        // Ничего не отправилось - показываем ошибку
+        hapticFeedback.error();
       }
     } catch (error) {
       console.error('Error sending files:', error);

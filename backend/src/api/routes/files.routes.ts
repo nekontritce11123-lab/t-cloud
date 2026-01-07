@@ -335,7 +335,7 @@ router.get('/:id', async (req, res: Response) => {
 
 // Лимиты для предотвращения бана от Telegram
 const MAX_FILES_PER_REQUEST = 20;
-const DELAY_BETWEEN_SENDS_MS = 100; // 100ms между отправками
+const DELAY_BETWEEN_SENDS_MS = 300; // 300ms между отправками
 
 // Утилита для задержки
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -381,42 +381,34 @@ router.post('/send', async (req, res: Response) => {
       const sendCaptionSeparately = needsSeparateMessage(file.caption, mediaType);
 
       try {
-        switch (mediaType) {
-          case 'photo':
-            await bot.api.sendPhoto(telegramUser.id, file.fileId, { caption });
-            break;
-          case 'video':
-            await bot.api.sendVideo(telegramUser.id, file.fileId, { caption });
-            break;
-          case 'document':
-            await bot.api.sendDocument(telegramUser.id, file.fileId, { caption });
-            break;
-          case 'audio':
-            await bot.api.sendAudio(telegramUser.id, file.fileId, { caption });
-            break;
-          case 'voice':
-            await bot.api.sendVoice(telegramUser.id, file.fileId, { caption });
-            break;
-          case 'video_note':
-            await bot.api.sendVideoNote(telegramUser.id, file.fileId);
-            break;
-          case 'animation':
-            await bot.api.sendAnimation(telegramUser.id, file.fileId, { caption });
-            break;
-          case 'sticker':
-            await bot.api.sendSticker(telegramUser.id, file.fileId);
-            break;
-          default:
-            await bot.api.sendDocument(telegramUser.id, file.fileId, { caption });
+        let sent = false;
+
+        // Приоритет 1: copyMessage (сохраняет оригинальное сообщение)
+        if (file.chatId && file.originalMessageId) {
+          try {
+            await bot.api.copyMessage(telegramUser.id, file.chatId, file.originalMessageId);
+            sent = true;
+            console.log('[Files] Sent via copyMessage:', file.id, file.fileName);
+          } catch (copyError) {
+            console.log('[Files] copyMessage failed, trying sendFileByFileId:', copyError instanceof Error ? copyError.message : copyError);
+          }
         }
 
-        // Send caption as separate message if it was too long
-        if (sendCaptionSeparately && file.caption) {
+        // Приоритет 2: sendFileByFileId (fallback)
+        if (!sent) {
+          await sendFileByFileId(telegramUser.id, file.fileId, mediaType, caption);
+          console.log('[Files] Sent via file_id:', file.id, file.fileName);
+        }
+
+        // Отправка длинного caption отдельно (если был copyMessage, caption не был отправлен через sendFileByFileId)
+        if (sent && sendCaptionSeparately && file.caption) {
+          await sendCaptionAsText(telegramUser.id, file.caption);
+        } else if (!sent && sendCaptionSeparately && file.caption) {
+          // Если отправляли через sendFileByFileId, caption уже был обрезан, отправляем полный отдельно
           await sendCaptionAsText(telegramUser.id, file.caption);
         }
 
         sentFiles.push(id);
-        console.log('[Files] Sent file:', file.id, file.fileName);
 
         // Задержка между отправками (кроме последней)
         if (i < fileIds.length - 1) {
@@ -429,7 +421,7 @@ router.post('/send', async (req, res: Response) => {
     }
 
     res.json({
-      success: true,
+      success: sentFiles.length === fileIds.length,
       sent: sentFiles,
       errors: errors.length > 0 ? errors : undefined,
     });
