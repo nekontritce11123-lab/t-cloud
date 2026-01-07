@@ -181,6 +181,18 @@ function App() {
     setSearchTags(prev => prev.filter(t => t.id !== tagId));
   }, []);
 
+  // Создание тега напрямую (для автодополнения с пробелами в имени)
+  const handleCreateTag = useCallback((type: 'from' | 'chat', value: string) => {
+    const newTag: SearchTag = {
+      id: `tag-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      type,
+      label: type === 'from' ? `От: ${value}` : `Из: ${value}`,
+      value,
+      raw: `${type === 'from' ? 'от' : 'из'}:${value}`,
+    };
+    setSearchTags(prev => [...prev, newTag]);
+  }, []);
+
   // Мгновенная очистка поиска по крестику (сохраняем в историю)
   const handleClearSearch = useCallback(() => {
     // Сохраняем текущий запрос в историю перед очисткой
@@ -488,6 +500,7 @@ function App() {
           onHistoryClear={clearHistory}
           tags={searchTags}
           onTagRemove={handleTagRemove}
+          onCreateTag={handleCreateTag}
           senders={senders}
         />
       </header>

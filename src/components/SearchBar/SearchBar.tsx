@@ -100,6 +100,8 @@ interface SearchBarProps {
   /** Smart tags extracted from search input */
   tags?: SearchTag[];
   onTagRemove?: (tagId: string) => void;
+  /** Create a tag directly (for autocomplete) */
+  onCreateTag?: (type: 'from' | 'chat', value: string) => void;
   /** Available senders for autocomplete */
   senders?: { names: string[]; chats: string[] };
 }
@@ -137,6 +139,7 @@ export function SearchBar({
   onHistoryClear,
   tags = [],
   onTagRemove,
+  onCreateTag,
   senders = { names: [], chats: [] },
 }: SearchBarProps) {
   const [isFocused, setIsFocused] = useState(false);
@@ -145,20 +148,18 @@ export function SearchBar({
 
   // Определяем режим автодополнения: 'from' | 'chat' | null
   const autocompleteMode = useMemo(() => {
-    const trimmed = value.trim().toLowerCase();
-    // Проверяем последнее слово
+    // Проверяем последнее слово (регистронезависимо)
     const words = value.split(/\s+/);
-    const lastWord = words[words.length - 1]?.toLowerCase() || '';
+    const lastWord = words[words.length - 1] || '';
 
-    if (lastWord.startsWith('от:') || lastWord.startsWith('from:')) {
+    // Проверяем от:/from: (любой регистр)
+    if (/^(от|from):/i.test(lastWord)) {
       return 'from';
     }
-    if (lastWord.startsWith('из:') || lastWord.startsWith('chat:')) {
+    // Проверяем из:/chat: (любой регистр)
+    if (/^(из|chat):/i.test(lastWord)) {
       return 'chat';
     }
-    // Также показываем если просто ввели "от:" или "из:"
-    if (trimmed === 'от:' || trimmed === 'from:') return 'from';
-    if (trimmed === 'из:' || trimmed === 'chat:') return 'chat';
     return null;
   }, [value]);
 
@@ -222,15 +223,17 @@ export function SearchBar({
     onHistoryRemove?.(query);
   }, [onHistoryRemove]);
 
-  // Выбор из автодополнения
+  // Выбор из автодополнения - создаём тег напрямую
   const handleAutocompleteSelect = useCallback((item: string) => {
-    // Заменяем последнее слово на полный тег с пробелом в конце
-    const words = value.split(/\s+/);
-    words.pop(); // Убираем неполное слово
-    const prefix = autocompleteMode === 'from' ? 'от:' : 'из:';
-    const newValue = [...words, `${prefix}${item} `].join(' ').replace(/^\s+/, '');
-    onChange(newValue);
-  }, [value, autocompleteMode, onChange]);
+    if (onCreateTag && autocompleteMode) {
+      // Создаём тег напрямую
+      onCreateTag(autocompleteMode, item);
+      // Убираем "от:" или "из:" из инпута
+      const words = value.split(/\s+/);
+      words.pop(); // Убираем неполное слово (от:... или из:...)
+      onChange(words.join(' '));
+    }
+  }, [value, autocompleteMode, onChange, onCreateTag]);
 
   return (
     <div className={styles.wrapper} ref={wrapperRef}>
