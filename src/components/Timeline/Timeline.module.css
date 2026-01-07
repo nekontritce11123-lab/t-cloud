@@ -12,6 +12,49 @@
   flex-direction: column;
 }
 
+/* Empty state - когда файлов нет */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px var(--spacing-lg);
+  text-align: center;
+  gap: var(--spacing-md);
+}
+
+.emptyIconWrapper {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--app-secondary-bg-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.emptyFolderIcon {
+  width: 36px;
+  height: 36px;
+  color: var(--app-hint-color);
+  opacity: 0.6;
+}
+
+.emptyTitle {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--app-text-color);
+  margin: 0;
+}
+
+.emptyHint {
+  font-size: var(--font-size-sm);
+  color: var(--app-hint-color);
+  margin: 0;
+  line-height: 1.5;
+}
+
 /* Large desktop: max-width for timeline container */
 @media (min-width: 1200px) {
   .timeline {
