@@ -516,7 +516,14 @@ router.post('/:id/send', async (req, res: Response) => {
       sent = true;
       console.log('[Files] Sent via copyMessage:', file.id);
     } catch (copyError) {
+      const copyErrMsg = copyError instanceof Error ? copyError.message : String(copyError);
       console.log('[Files] copyMessage failed, trying file_id:', copyError);
+
+      // Если ошибка VOICE_MESSAGES_FORBIDDEN на copyMessage - сразу отдаём ошибку
+      if (copyErrMsg.includes('VOICE_MESSAGES_FORBIDDEN')) {
+        res.status(403).json({ error: 'VOICE_FORBIDDEN' });
+        return;
+      }
 
       // Fallback: send by file_id
       try {
@@ -524,12 +531,19 @@ router.post('/:id/send', async (req, res: Response) => {
         sent = true;
         console.log('[Files] Sent via file_id:', file.id);
       } catch (sendError) {
+        const errMsg = sendError instanceof Error ? sendError.message : String(sendError);
         console.error('[Files] Both methods failed:', sendError);
+
+        // Проверяем на VOICE_MESSAGES_FORBIDDEN
+        if (errMsg.includes('VOICE_MESSAGES_FORBIDDEN')) {
+          res.status(403).json({ error: 'VOICE_FORBIDDEN' });
+          return;
+        }
       }
     }
 
     if (!sent) {
-      res.status(410).json({ error: 'File no longer available' });
+      res.status(410).json({ error: 'FILE_UNAVAILABLE' });
       return;
     }
 

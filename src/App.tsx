@@ -299,9 +299,15 @@ function App() {
       console.error('Error sending file:', error);
       hapticFeedback.error();
       // Показываем сообщение об ошибке
-      const message = (error as Error).message === 'FILE_UNAVAILABLE'
-        ? 'Файл недоступен'
-        : 'Не удалось отправить файл';
+      const errMsg = (error as Error).message;
+      let message: string;
+      if (errMsg === 'FILE_UNAVAILABLE') {
+        message = 'Файл недоступен';
+      } else if (errMsg === 'VOICE_FORBIDDEN') {
+        message = 'Не удалось отправить кружок/голосовое.\n\nВключите в настройках Telegram:\nКонфиденциальность → Голосовые сообщения → Все';
+      } else {
+        message = 'Не удалось отправить файл';
+      }
       alert(message);
     } finally {
       setSendingFileId(null);

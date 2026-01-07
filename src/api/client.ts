@@ -203,6 +203,12 @@ class ApiClient {
       if (response.status === 410) {
         throw new Error('FILE_UNAVAILABLE');
       }
+      if (response.status === 403) {
+        const data = await response.json();
+        if (data.error === 'VOICE_FORBIDDEN') {
+          throw new Error('VOICE_FORBIDDEN');
+        }
+      }
       throw new Error('Failed to send file');
     }
 
