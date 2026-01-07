@@ -415,8 +415,15 @@ router.post('/send', async (req, res: Response) => {
           await delay(DELAY_BETWEEN_SENDS_MS);
         }
       } catch (sendError) {
-        console.error('[Files] Error sending file:', id, sendError);
-        errors.push(`Failed to send file ${id}`);
+        const errMsg = sendError instanceof Error ? sendError.message : String(sendError);
+
+        if (errMsg.includes('VOICE_MESSAGES_FORBIDDEN')) {
+          console.log('[Files] Voice messages forbidden for file:', id);
+          errors.push(`VOICE_FORBIDDEN:${id}`);
+        } else {
+          console.error('[Files] Error sending file:', id, sendError);
+          errors.push(`Failed to send file ${id}`);
+        }
       }
     }
 

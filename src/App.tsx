@@ -187,8 +187,11 @@ function App() {
         hapticFeedback.success();
       }
 
-      // Логируем ошибки если были
-      if (result.errors && result.errors.length > 0) {
+      // Проверяем на VOICE_MESSAGES_FORBIDDEN (кружки/голосовые)
+      if (result.errors?.some(e => e.includes('VOICE_FORBIDDEN'))) {
+        alert('Не удалось отправить кружок/голосовое.\n\nВключите в настройках Telegram:\nКонфиденциальность → Голосовые сообщения → Все');
+      } else if (result.errors && result.errors.length > 0) {
+        // Логируем другие ошибки
         console.warn('[App] Some files failed to send:', result.errors);
       }
 
