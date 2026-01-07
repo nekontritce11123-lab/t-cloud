@@ -2,6 +2,7 @@ import { useMemo, useState, useRef, useCallback } from 'react';
 import { FileRecord } from '../../api/client';
 import { FileCard } from '../FileCard';
 import { DayCheckbox } from '../DayCheckbox';
+import { getDaysRemaining, formatDateHeader } from '../../shared/formatters';
 import gridStyles from '../../styles/Grid.module.css';
 import dateHeaderStyles from '../../styles/DateHeader.module.css';
 import cardStyles from '../../styles/Card.module.css';
@@ -19,44 +20,6 @@ interface TrashTimelineProps {
   onSelectDay: (files: FileRecord[], action: 'add' | 'remove') => void;
   onToggleFile: (file: FileRecord) => void;
   hapticFeedback: { light: () => void };
-}
-
-// Вычисляет дни до автоудаления (30 дней с момента удаления)
-function getDaysRemaining(deletedAt: string): number {
-  const deleted = new Date(deletedAt);
-  const now = new Date();
-  const thirtyDays = 30 * 24 * 60 * 60 * 1000;
-  const deleteDate = new Date(deleted.getTime() + thirtyDays);
-  const remaining = Math.ceil((deleteDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  return Math.max(0, remaining);
-}
-
-// Форматирование даты удаления для заголовка группы
-function formatDeletedDateHeader(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const fileDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
-  if (fileDate.getTime() === today.getTime()) {
-    return 'Удалено сегодня';
-  }
-  if (fileDate.getTime() === yesterday.getTime()) {
-    return 'Удалено вчера';
-  }
-
-  const months = [
-    'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
-    'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
-  ];
-
-  const isCurrentYear = date.getFullYear() === now.getFullYear();
-  if (isCurrentYear) {
-    return `Удалено ${date.getDate()} ${months[date.getMonth()]}`;
-  }
-  return `Удалено ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
 }
 
 // Группировка файлов по дате удаления
@@ -100,7 +63,6 @@ export function TrashTimeline({
   // Drag selection state
   const [isDragging, setIsDragging] = useState(false);
   const draggedFileIds = useRef<Set<number>>(new Set());
-  const lastTouchY = useRef<number>(0);
 
   // Создаём Map для быстрого поиска файла по id
   const filesById = useMemo(() => {
@@ -116,8 +78,6 @@ export function TrashTimeline({
     if (!isSelectionMode) return;
 
     const touch = e.touches[0];
-    lastTouchY.current = touch.clientY;
-
     const element = document.elementFromPoint(touch.clientX, touch.clientY);
     const cardElement = element?.closest('[data-file-id]');
     if (cardElement) {
@@ -147,8 +107,6 @@ export function TrashTimeline({
         }
       }
     }
-
-    lastTouchY.current = touch.clientY;
   }, [isDragging, isSelectionMode, onToggleFile, filesById, hapticFeedback]);
 
   const handleTouchEnd = useCallback(() => {
@@ -182,7 +140,7 @@ export function TrashTimeline({
       {sortedGroups.map(([dateKey, dateFiles]) => (
         <div key={dateKey} className={styles.group}>
           <div className={styles.dateHeader}>
-            <span className={styles.dateText}>{formatDeletedDateHeader(dateKey)}</span>
+            <span className={styles.dateText}>{formatDateHeader(dateKey, 'Удалено')}</span>
             <div className={styles.dateActions}>
               {!isSelectionMode && (
                 <span className={styles.dateCount}>{dateFiles.length}</span>

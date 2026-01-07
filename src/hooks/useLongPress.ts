@@ -1,4 +1,5 @@
 import { useRef, useCallback } from 'react';
+import { LONG_PRESS_MS } from '../constants/config';
 
 /**
  * Hook for handling long press interactions
@@ -8,7 +9,7 @@ export function useLongPress<T>(
   item: T,
   onLongPress?: (item: T) => void,
   onClick?: (item: T) => void,
-  timeout = 500
+  timeout = LONG_PRESS_MS
 ) {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLongPress = useRef(false);

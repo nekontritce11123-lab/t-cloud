@@ -2,6 +2,7 @@ import { useMemo, useState, useRef, useCallback } from 'react';
 import { FileRecord } from '../../api/client';
 import { FileCard } from '../FileCard';
 import { DayCheckbox } from '../DayCheckbox';
+import { formatDateHeader } from '../../shared/formatters';
 import gridStyles from '../../styles/Grid.module.css';
 import dateHeaderStyles from '../../styles/DateHeader.module.css';
 import layoutStyles from './Timeline.module.css';
@@ -19,36 +20,6 @@ interface TimelineProps {
   onSelectDay?: (files: FileRecord[], action: 'add' | 'remove') => void;
   onToggleFile?: (file: FileRecord) => void;
   hapticFeedback?: { light: () => void };
-}
-
-// Форматирование даты для заголовка группы
-function formatDateHeader(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const fileDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
-  if (fileDate.getTime() === today.getTime()) {
-    return 'Сегодня';
-  }
-  if (fileDate.getTime() === yesterday.getTime()) {
-    return 'Вчера';
-  }
-
-  // Проверяем, текущий ли это год
-  const isCurrentYear = date.getFullYear() === now.getFullYear();
-
-  const months = [
-    'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
-    'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
-  ];
-
-  if (isCurrentYear) {
-    return `${date.getDate()} ${months[date.getMonth()]}`;
-  }
-  return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
 }
 
 // Группировка файлов по датам
@@ -82,7 +53,6 @@ export function Timeline({
   // Drag selection state
   const [isDragging, setIsDragging] = useState(false);
   const draggedFileIds = useRef<Set<number>>(new Set());
-  const lastTouchY = useRef<number>(0);
 
   // Создаём Map для быстрого поиска файла по id
   const filesById = useMemo(() => {
@@ -98,8 +68,6 @@ export function Timeline({
     if (!isSelectionMode) return;
 
     const touch = e.touches[0];
-    lastTouchY.current = touch.clientY;
-
     // Проверяем, начинается ли касание на карточке
     const element = document.elementFromPoint(touch.clientX, touch.clientY);
     const cardElement = element?.closest('[data-file-id]');
@@ -131,8 +99,6 @@ export function Timeline({
         }
       }
     }
-
-    lastTouchY.current = touch.clientY;
   }, [isDragging, isSelectionMode, onToggleFile, isOnCooldown, filesById, hapticFeedback]);
 
   const handleTouchEnd = useCallback(() => {

@@ -6,14 +6,18 @@ import { MediaType } from '../../types/index.js';
 import { bot } from '../../bot/index.js';
 import { config } from '../../config.js';
 import { getUserDictionary } from '../../db/index.js';
+import {
+  PHOTO_CAPTION_LIMIT,
+  DEFAULT_CAPTION_LIMIT,
+  TEXT_MESSAGE_LIMIT,
+  DEFAULT_PAGE_SIZE,
+  DEFAULT_SEARCH_LIMIT,
+  MAX_PAGE_SIZE,
+  MAX_BATCH_SIZE
+} from '../../constants.js';
 
 const router = Router();
 const filesRepo = new FilesRepository();
-
-// Telegram caption limit: 1024 for photos, 4096 for other media
-const PHOTO_CAPTION_LIMIT = 1024;
-const DEFAULT_CAPTION_LIMIT = 4096;
-const TEXT_MESSAGE_LIMIT = 4096;
 
 // Check if caption fits the limit
 function getCaptionForMedia(caption: string | null | undefined, mediaType: string): string | undefined {
@@ -76,14 +80,14 @@ router.get('/', async (req, res: Response) => {
   const {
     type,
     page = '1',
-    limit = '20',
+    limit = String(DEFAULT_PAGE_SIZE),
   } = req.query;
 
   console.log('[Files] GET / for user:', telegramUser.id);
 
   try {
     const pageNum = parseInt(page as string, 10);
-    const limitNum = Math.min(parseInt(limit as string, 10), 100);
+    const limitNum = Math.min(parseInt(limit as string, 10), MAX_PAGE_SIZE);
     const offset = (pageNum - 1) * limitNum;
 
     const result = await filesRepo.findByUser(telegramUser.id, {
@@ -163,7 +167,7 @@ router.get('/by-date', async (req, res: Response) => {
  */
 router.get('/search', async (req, res: Response) => {
   const { telegramUser } = req as AuthenticatedRequest;
-  const { q, limit = '50', type, deleted, dateFrom, dateTo, sizeMin, sizeMax, from, chat } = req.query;
+  const { q, limit = String(DEFAULT_SEARCH_LIMIT), type, deleted, dateFrom, dateTo, sizeMin, sizeMax, from, chat } = req.query;
 
   // At least q or one filter is required
   const hasQuery = q && typeof q === 'string' && q.trim().length > 0;
@@ -175,7 +179,7 @@ router.get('/search', async (req, res: Response) => {
   }
 
   try {
-    const limitNum = Math.min(parseInt(limit as string, 10), 100);
+    const limitNum = Math.min(parseInt(limit as string, 10), MAX_PAGE_SIZE);
 
     // Build search options
     const searchOptions: {
@@ -356,8 +360,8 @@ router.post('/delete-many', async (req, res: Response) => {
     return;
   }
 
-  if (fileIds.length > 100) {
-    res.status(400).json({ error: 'Maximum 100 files per request' });
+  if (fileIds.length > MAX_BATCH_SIZE) {
+    res.status(400).json({ error: `Maximum ${MAX_BATCH_SIZE} files per request` });
     return;
   }
 

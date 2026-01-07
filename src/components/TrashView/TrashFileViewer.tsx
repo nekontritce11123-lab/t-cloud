@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
-import { FileRecord, MediaType } from '../../api/client';
+import { FileRecord } from '../../api/client';
 import { MediaTypeIcons } from '../../shared/icons';
-import { formatFileSize, formatDuration } from '../../shared/formatters';
+import { formatFileSize, formatDuration, formatDate, getDaysRemaining, getMediaTypeLabel } from '../../shared/formatters';
 import { getEffectiveMediaType } from '../../shared/mediaType';
 import styles from './TrashFileViewer.module.css';
 
@@ -12,55 +12,6 @@ interface TrashFileViewerProps {
   onDelete: (file: FileRecord) => void;
   isRestoring?: boolean;
   isDeleting?: boolean;
-}
-
-// Вычисляет дни до автоудаления
-function getDaysRemaining(deletedAt: string): number {
-  const deleted = new Date(deletedAt);
-  const now = new Date();
-  const thirtyDays = 30 * 24 * 60 * 60 * 1000;
-  const deleteDate = new Date(deleted.getTime() + thirtyDays);
-  const remaining = Math.ceil((deleteDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  return Math.max(0, remaining);
-}
-
-function formatDeletedDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const fileDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
-  const time = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-
-  if (fileDate.getTime() === today.getTime()) {
-    return `Сегодня, ${time}`;
-  }
-  if (fileDate.getTime() === yesterday.getTime()) {
-    return `Вчера, ${time}`;
-  }
-
-  return date.toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'long',
-    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function getMediaTypeLabel(type: MediaType): string {
-  const labels: Record<MediaType, string> = {
-    photo: 'Фото',
-    video: 'Видео',
-    document: 'Документ',
-    audio: 'Аудио',
-    voice: 'Голосовое',
-    video_note: 'Кружок',
-    link: 'Ссылка',
-  };
-  return labels[type] || type;
 }
 
 export function TrashFileViewer({
@@ -197,7 +148,7 @@ export function TrashFileViewer({
             {file.deletedAt && (
               <div className={styles.metaItem}>
                 <span className={styles.metaLabel}>Удалено:</span>
-                <span>{formatDeletedDate(file.deletedAt)}</span>
+                <span>{formatDate(file.deletedAt)}</span>
               </div>
             )}
           </div>

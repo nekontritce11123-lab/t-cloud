@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
-import { FileRecord, MediaType } from '../../api/client';
+import { FileRecord } from '../../api/client';
 import { MediaTypeIcons } from '../../shared/icons';
-import { formatFileSize, formatDuration } from '../../shared/formatters';
+import { formatFileSize, formatDuration, formatDate, getMediaTypeLabel, highlightMatch } from '../../shared/formatters';
 import { getEffectiveMediaType } from '../../shared/mediaType';
 import styles from './FileViewer.module.css';
 
@@ -12,55 +12,6 @@ interface FileViewerProps {
   isOnCooldown?: boolean;
   isSending?: boolean;
   searchQuery?: string;
-}
-
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const fileDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
-  const time = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-
-  if (fileDate.getTime() === today.getTime()) {
-    return `Сегодня, ${time}`;
-  }
-  if (fileDate.getTime() === yesterday.getTime()) {
-    return `Вчера, ${time}`;
-  }
-
-  return date.toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'long',
-    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function getMediaTypeLabel(type: MediaType): string {
-  const labels: Record<MediaType, string> = {
-    photo: 'Фото',
-    video: 'Видео',
-    document: 'Документ',
-    audio: 'Аудио',
-    voice: 'Голосовое',
-    video_note: 'Кружок',
-    link: 'Ссылка',
-  };
-  return labels[type] || type;
-}
-
-/**
- * Подсветка всех вхождений поискового запроса в тексте
- */
-function highlightMatches(text: string, query?: string): string {
-  if (!query || query.length === 0) return text;
-  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const regex = new RegExp(`(${escaped})`, 'gi');
-  return text.replace(regex, '<mark>$1</mark>');
 }
 
 export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending, searchQuery }: FileViewerProps) {
@@ -144,7 +95,7 @@ export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending, sea
             <div
               className={styles.caption}
               dangerouslySetInnerHTML={{
-                __html: highlightMatches(
+                __html: highlightMatch(
                   file.caption.replace(/\n/g, '<br/>'),
                   searchQuery
                 )
@@ -159,7 +110,7 @@ export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending, sea
                 <span className={styles.metaLabel}>Название:</span>
                 <span
                   dangerouslySetInnerHTML={{
-                    __html: highlightMatches(file.fileName, searchQuery)
+                    __html: highlightMatch(file.fileName, searchQuery)
                   }}
                 />
               </div>
@@ -198,7 +149,7 @@ export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending, sea
                 <span className={styles.metaLabel}>От:</span>
                 <span
                   dangerouslySetInnerHTML={{
-                    __html: highlightMatches(
+                    __html: highlightMatch(
                       file.forwardFromName || file.forwardFromChatTitle || '',
                       searchQuery
                     )

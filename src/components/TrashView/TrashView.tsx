@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiClient, FileRecord } from '../../api/client';
+import { toggleInSet } from '../../shared/utils';
 import { TrashTimeline } from './TrashTimeline';
 import { TrashFileViewer } from './TrashFileViewer';
 import styles from './TrashView.module.css';
@@ -65,15 +66,7 @@ export function TrashView({ searchQuery, onRestore, hapticFeedback }: TrashViewP
 
     if (isSelectionMode) {
       // Toggle selection
-      setSelectedFiles(prev => {
-        const next = new Set(prev);
-        if (next.has(file.id)) {
-          next.delete(file.id);
-        } else {
-          next.add(file.id);
-        }
-        return next;
-      });
+      setSelectedFiles(prev => toggleInSet(prev, file.id));
     } else {
       // Open file viewer
       setViewingFile(file);
@@ -105,15 +98,7 @@ export function TrashView({ searchQuery, onRestore, hapticFeedback }: TrashViewP
 
   // Handle toggle file (for drag selection)
   const handleToggleFile = useCallback((file: FileRecord) => {
-    setSelectedFiles(prev => {
-      const next = new Set(prev);
-      if (next.has(file.id)) {
-        next.delete(file.id);
-      } else {
-        next.add(file.id);
-      }
-      return next;
-    });
+    setSelectedFiles(prev => toggleInSet(prev, file.id));
   }, []);
 
   // Restore single file (from viewer)

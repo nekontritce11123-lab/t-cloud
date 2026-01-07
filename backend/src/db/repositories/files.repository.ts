@@ -1,5 +1,5 @@
 import { eq, and, desc, sql, isNull, isNotNull, lt, or } from 'drizzle-orm';
-import { db, searchFiles as ftsSearch, searchFilesWithSnippets, SearchResult, FileSearchOptions } from '../index.js';
+import { db, searchFilesWithSnippets, SearchResult, FileSearchOptions } from '../index.js';
 import { files, NewFile, File } from '../schema.js';
 import { MediaType, CategoryStats } from '../../types/index.js';
 
@@ -128,13 +128,6 @@ export class FilesRepository {
     // TODO: Add date filtering if year/month provided
 
     return db.select().from(files).where(whereClause).orderBy(desc(files.createdAt));
-  }
-
-  /**
-   * Full-text search in files (basic)
-   */
-  search(userId: number, query: string, limit = 50): File[] {
-    return ftsSearch(userId, query, limit);
   }
 
   /**

@@ -136,22 +136,6 @@ export async function initDatabase(): Promise<void> {
 }
 
 /**
- * Full-text search in files (basic)
- */
-export function searchFiles(userId: number, query: string, limit = 50): schema.File[] {
-  const stmt = sqlite.prepare(`
-    SELECT f.*
-    FROM files f
-    JOIN files_fts ON f.id = files_fts.rowid
-    WHERE f.user_id = ? AND f.deleted_at IS NULL AND files_fts MATCH ?
-    ORDER BY rank
-    LIMIT ?
-  `);
-
-  return stmt.all(userId, query, limit) as schema.File[];
-}
-
-/**
  * Search result with match info
  */
 export interface SearchResult extends schema.File {

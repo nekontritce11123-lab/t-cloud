@@ -4,6 +4,8 @@ import { useFiles } from './hooks/useFiles';
 import { useSearchHistory } from './hooks/useSearchHistory';
 import { useAutocomplete } from './hooks/useAutocomplete';
 import { parseSearchInput, tagsToQueryParams, SearchTag } from './utils/searchTagParser';
+import { toggleInSet } from './shared/utils';
+import { COOLDOWN_MS } from './constants/config';
 import { apiClient, FileRecord, LinkRecord } from './api/client';
 import { CategoryChips } from './components/CategoryChips/CategoryChips';
 import { SearchBar } from './components/SearchBar/SearchBar';
@@ -55,8 +57,6 @@ function App() {
   const [sentFiles, setSentFiles] = useState<Record<number, number>>({});
   const [sendingFileId, setSendingFileId] = useState<number | null>(null); // Защита от двойного клика
   const [viewingFile, setViewingFile] = useState<FileRecord | null>(null); // Файл для просмотра
-
-  const COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 часа
 
   // Загрузка cooldown из localStorage
   useEffect(() => {
@@ -419,15 +419,7 @@ function App() {
 
     if (isSelectionMode && selectionType === 'files') {
       // В режиме выбора - toggle выбор
-      setSelectedFiles(prev => {
-        const next = new Set(prev);
-        if (next.has(file.id)) {
-          next.delete(file.id);
-        } else {
-          next.add(file.id);
-        }
-        return next;
-      });
+      setSelectedFiles(prev => toggleInSet(prev, file.id));
     } else {
       // Обычный режим - открываем просмотр файла
       setViewingFile(file);
@@ -487,15 +479,7 @@ function App() {
 
     if (isSelectionMode && selectionType === 'links') {
       // В режиме выбора - toggle выбор
-      setSelectedLinks(prev => {
-        const next = new Set(prev);
-        if (next.has(link.id)) {
-          next.delete(link.id);
-        } else {
-          next.add(link.id);
-        }
-        return next;
-      });
+      setSelectedLinks(prev => toggleInSet(prev, link.id));
     } else {
       // Обычный режим - открываем ссылку
       window.open(link.url, '_blank');
@@ -537,15 +521,7 @@ function App() {
 
   // Toggle одного файла (для drag selection)
   const handleToggleFile = useCallback((file: FileRecord) => {
-    setSelectedFiles(prev => {
-      const next = new Set(prev);
-      if (next.has(file.id)) {
-        next.delete(file.id);
-      } else {
-        next.add(file.id);
-      }
-      return next;
-    });
+    setSelectedFiles(prev => toggleInSet(prev, file.id));
   }, []);
 
   // Loading state
