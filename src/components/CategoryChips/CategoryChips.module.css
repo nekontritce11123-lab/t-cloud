@@ -83,3 +83,16 @@
   pointer-events: none;
   cursor: not-allowed;
 }
+
+/* Центрирование chips на широких экранах */
+@media (min-width: 1200px) {
+  .container {
+    max-width: 1800px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .scroll {
+    justify-content: center;
+  }
+}
