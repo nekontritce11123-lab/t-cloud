@@ -232,25 +232,62 @@ export function searchFilesWithSnippets(
     params.push(`%${options.fromChat}%`);
   }
 
-  // FTS query is optional - if no text query, skip FTS join
-  const hasFtsQuery = query && query.trim().length > 0;
+  // Text query handling - supports prefix search
+  const trimmedQuery = query?.trim().toLowerCase() || '';
+  const hasFtsQuery = trimmedQuery.length > 0;
 
-  // Escape FTS5 special characters to prevent syntax errors
-  // FTS5 treats : ( ) * " as special characters
-  function escapeFtsQuery(q: string): string {
-    // Wrap each word in quotes for literal matching
-    // This prevents : and other special chars from being interpreted as operators
+  // Для коротких запросов (1-2 символа) используем LIKE - FTS требует минимум 3 символа для prefix
+  const useSimpleLike = trimmedQuery.length > 0 && trimmedQuery.length < 3;
+
+  // Escape FTS5 special characters and add prefix matching
+  function escapeFtsQueryWithPrefix(q: string): string {
+    // Добавляем * для prefix-поиска: "мем" -> "мем*" найдёт "мемный"
     return q
       .split(/\s+/)
       .filter(Boolean)
-      .map(word => `"${word.replace(/"/g, '""')}"`)
+      .map(word => `"${word.replace(/"/g, '""')}"*`)
       .join(' ');
   }
 
   let sql: string;
-  if (hasFtsQuery) {
+  let rows: any[];
+
+  if (useSimpleLike) {
+    // LIKE поиск для коротких запросов (1-2 символа)
+    const likePattern = `%${trimmedQuery}%`;
+    const likeConditions = [...conditions];
+    const likeParams = [...params];
+
+    likeConditions.push(`(
+      LOWER(f.file_name) LIKE ?
+      OR LOWER(f.caption) LIKE ?
+      OR LOWER(f.forward_from_name) LIKE ?
+      OR LOWER(f.forward_from_chat_title) LIKE ?
+    )`);
+    likeParams.push(likePattern, likePattern, likePattern, likePattern);
+
+    const whereClause = likeConditions.join(' AND ');
+
+    sql = `
+      SELECT
+        f.*,
+        NULL as snippet_file_name,
+        NULL as snippet_caption,
+        NULL as snippet_forward,
+        NULL as snippet_chat_title
+      FROM files f
+      WHERE ${whereClause}
+      ORDER BY f.created_at DESC
+      LIMIT ?
+    `;
+
+    likeParams.push(limit);
+    const stmt = sqlite.prepare(sql);
+    rows = stmt.all(...likeParams) as any[];
+  } else if (hasFtsQuery) {
+    // FTS5 поиск с prefix matching для запросов 3+ символов
     conditions.push('files_fts MATCH ?');
-    params.push(escapeFtsQuery(query));
+    params.push(escapeFtsQueryWithPrefix(trimmedQuery));
 
     const whereClause = conditions.join(' AND ');
 
@@ -268,8 +305,12 @@ export function searchFilesWithSnippets(
       ORDER BY rank
       LIMIT ?
     `;
+
+    params.push(limit);
+    const stmt = sqlite.prepare(sql);
+    rows = stmt.all(...params) as any[];
   } else {
-    // No FTS query - just filter by conditions
+    // No text query - just filter by other conditions
     const whereClause = conditions.join(' AND ');
 
     sql = `
@@ -284,11 +325,11 @@ export function searchFilesWithSnippets(
       ORDER BY f.created_at DESC
       LIMIT ?
     `;
-  }
 
-  params.push(limit);
-  const stmt = sqlite.prepare(sql);
-  const rows = stmt.all(...params) as any[];
+    params.push(limit);
+    const stmt = sqlite.prepare(sql);
+    rows = stmt.all(...params) as any[];
+  }
 
   return rows.map(row => {
     // Determine which field matched (check if snippet contains **)
@@ -396,6 +437,46 @@ export function searchLinksWithSnippets(userId: number, query: string, limit = 5
       matchedSnippet,
     } as LinkSearchResult;
   });
+}
+
+/**
+ * Получить все уникальные слова из файлов пользователя для autocomplete
+ */
+export function getUserDictionary(userId: number): string[] {
+  const stmt = sqlite.prepare(`
+    SELECT
+      file_name,
+      caption,
+      forward_from_name,
+      forward_from_chat_title
+    FROM files
+    WHERE user_id = ? AND deleted_at IS NULL
+  `);
+
+  const rows = stmt.all(userId) as {
+    file_name: string | null;
+    caption: string | null;
+    forward_from_name: string | null;
+    forward_from_chat_title: string | null;
+  }[];
+
+  const wordSet = new Set<string>();
+
+  for (const row of rows) {
+    // Собираем слова из всех полей
+    const texts = [
+      row.file_name,
+      row.caption,
+      row.forward_from_name,
+      row.forward_from_chat_title
+    ].filter(Boolean).join(' ');
+
+    // Извлекаем слова (минимум 2 символа, буквы и цифры)
+    const words = texts.toLowerCase().match(/[\p{L}\d]{2,}/gu) || [];
+    words.forEach(w => wordSet.add(w));
+  }
+
+  return Array.from(wordSet).sort();
 }
 
 // sqlite instance is kept private, use db for queries

@@ -104,6 +104,10 @@ interface SearchBarProps {
   onCreateTag?: (type: 'from' | 'chat', value: string, cleanedText: string) => void;
   /** Available senders for autocomplete */
   senders?: { names: string[]; chats: string[] };
+  /** Word suggestions from Trie autocomplete */
+  suggestions?: string[];
+  /** Called when user selects a suggestion */
+  onSuggestionSelect?: (word: string) => void;
 }
 
 // Форматирование snippet
@@ -141,9 +145,12 @@ export function SearchBar({
   onTagRemove,
   onCreateTag,
   senders = { names: [], chats: [] },
+  suggestions = [],
+  onSuggestionSelect,
 }: SearchBarProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [selectedSuggestionIdx, setSelectedSuggestionIdx] = useState(-1);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   // Определяем режим автодополнения: 'from' | 'chat' | null
@@ -181,13 +188,21 @@ export function SearchBar({
       .slice(0, 10);
   }, [autocompleteMode, value, senders]);
 
-  // Показываем dropdown автодополнения
+  // Показываем dropdown автодополнения (от:/из:)
   const showAutocomplete = isFocused && autocompleteMode && autocompleteOptions.length > 0;
 
-  // Показываем историю когда фокус + пустое поле + нет тегов + есть история + нет автодополнения
+  // Показываем word suggestions когда есть текст и suggestions, но НЕ в режиме от:/из:
+  const showSuggestions = isFocused && !autocompleteMode && value.length > 0 && suggestions.length > 0;
+
+  // Сбрасываем выбор при изменении suggestions
   useEffect(() => {
-    setShowHistory(isFocused && !value && tags.length === 0 && history.length > 0 && !autocompleteMode);
-  }, [isFocused, value, tags.length, history.length, autocompleteMode]);
+    setSelectedSuggestionIdx(-1);
+  }, [suggestions]);
+
+  // Показываем историю когда фокус + пустое поле + нет тегов + есть история + нет автодополнения + нет suggestions
+  useEffect(() => {
+    setShowHistory(isFocused && !value && tags.length === 0 && history.length > 0 && !autocompleteMode && suggestions.length === 0);
+  }, [isFocused, value, tags.length, history.length, autocompleteMode, suggestions.length]);
 
   // Показываем крестик очистки если есть текст или теги
   const showClear = value || tags.length > 0;
@@ -238,6 +253,42 @@ export function SearchBar({
     }
   }, [value, autocompleteMode, onCreateTag]);
 
+  // Выбор word suggestion - заменяем последнее слово
+  const handleSuggestionSelect = useCallback((word: string) => {
+    const words = value.split(/\s+/);
+    words[words.length - 1] = word;
+    const newValue = words.join(' ');
+    onChange(newValue);
+    onSuggestionSelect?.(word);
+  }, [value, onChange, onSuggestionSelect]);
+
+  // Обработка клавиатуры для навигации по suggestions
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!showSuggestions || suggestions.length === 0) {
+      return;
+    }
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedSuggestionIdx(i => Math.min(i + 1, suggestions.length - 1));
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedSuggestionIdx(i => Math.max(i - 1, -1));
+        break;
+      case 'Enter':
+        if (selectedSuggestionIdx >= 0) {
+          e.preventDefault();
+          handleSuggestionSelect(suggestions[selectedSuggestionIdx]);
+        }
+        break;
+      case 'Escape':
+        setSelectedSuggestionIdx(-1);
+        break;
+    }
+  }, [showSuggestions, suggestions, selectedSuggestionIdx, handleSuggestionSelect]);
+
   return (
     <div className={styles.wrapper} ref={wrapperRef}>
       <div className={`${styles.container} ${isFocused ? styles.focused : ''}`}>
@@ -260,6 +311,7 @@ export function SearchBar({
             onChange={(e) => onChange(e.target.value)}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setTimeout(() => setIsFocused(false), 150)}
+            onKeyDown={handleKeyDown}
             placeholder={tags.length > 0 ? '' : placeholder}
           />
         </div>
@@ -274,6 +326,40 @@ export function SearchBar({
           </button>
         )}
       </div>
+
+      {/* Word suggestions (autocomplete из словаря) */}
+      {showSuggestions && (
+        <div className={styles.dropdown}>
+          {suggestions.map((word, i) => {
+            // Получаем последнее слово из ввода для подсветки
+            const inputWords = value.split(/\s+/);
+            const lastWord = inputWords[inputWords.length - 1].toLowerCase();
+            const matchIdx = word.toLowerCase().indexOf(lastWord);
+
+            return (
+              <button
+                key={word}
+                className={`${styles.dropdownItem} ${i === selectedSuggestionIdx ? styles.selected : ''}`}
+                onClick={() => handleSuggestionSelect(word)}
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                <SearchIcon />
+                <span className={styles.dropdownText}>
+                  {matchIdx >= 0 ? (
+                    <>
+                      {word.slice(0, matchIdx)}
+                      <strong>{word.slice(matchIdx, matchIdx + lastWord.length)}</strong>
+                      {word.slice(matchIdx + lastWord.length)}
+                    </>
+                  ) : (
+                    word
+                  )}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Автодополнение для от:/из: */}
       {showAutocomplete && (

@@ -249,3 +249,14 @@
 .tagClose:hover {
   opacity: 1;
 }
+
+/* Selected suggestion (keyboard navigation) */
+.dropdownItem.selected {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Highlight matched text in suggestions */
+.dropdownText strong {
+  color: var(--app-link-color);
+  font-weight: var(--font-weight-semibold);
+}

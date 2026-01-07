@@ -5,6 +5,7 @@ import { ThumbnailService } from '../../services/thumbnail.service.js';
 import { MediaType } from '../../types/index.js';
 import { bot } from '../../bot/index.js';
 import { config } from '../../config.js';
+import { getUserDictionary } from '../../db/index.js';
 
 const router = Router();
 const filesRepo = new FilesRepository();
@@ -365,6 +366,27 @@ router.post('/delete-many', async (req, res: Response) => {
     res.json({ success: true, deleted: deletedCount });
   } catch (error) {
     console.error('[API] Error deleting files:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/files/autocomplete/dictionary
+ * Get all unique words from user's files for autocomplete
+ * ВАЖНО: Этот роут должен быть ДО /:id, иначе Express матчит "autocomplete" как :id
+ */
+router.get('/autocomplete/dictionary', async (req, res: Response) => {
+  const { telegramUser } = req as AuthenticatedRequest;
+
+  try {
+    const words = getUserDictionary(telegramUser.id);
+
+    res.json({
+      words,
+      version: Date.now()
+    });
+  } catch (error) {
+    console.error('[API] Error fetching dictionary:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

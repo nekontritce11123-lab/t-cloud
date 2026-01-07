@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useTelegram } from './hooks/useTelegram';
 import { useFiles } from './hooks/useFiles';
 import { useSearchHistory } from './hooks/useSearchHistory';
+import { useAutocomplete } from './hooks/useAutocomplete';
 import { parseSearchInput, tagsToQueryParams, SearchTag } from './utils/searchTagParser';
 import { apiClient, FileRecord, LinkRecord } from './api/client';
 import { CategoryChips } from './components/CategoryChips/CategoryChips';
@@ -35,6 +36,9 @@ function App() {
 
   // История поиска
   const { history: searchHistory, addToHistory, removeFromHistory, clearHistory } = useSearchHistory();
+
+  // Autocomplete (мгновенные подсказки из словаря)
+  const { suggestions, search: autocompleteSearch, clear: clearSuggestions } = useAutocomplete();
 
   // Локальное состояние для инпута (для отзывчивости при вводе)
   const [searchInput, setSearchInput] = useState('');
@@ -185,12 +189,19 @@ function App() {
     // Обычный ввод без создания тегов
     setSearchInput(value);
 
+    // Мгновенный autocomplete (локально, <1ms)
+    if (value.trim()) {
+      autocompleteSearch(value);
+    } else {
+      clearSuggestions();
+    }
+
     // Очищаем предыдущий таймер
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
 
-    // Debounce для поиска с текущими тегами
+    // Debounce для поиска с текущими тегами (400ms)
     // Используем searchTagsRef.current чтобы избежать stale closure
     debounceTimerRef.current = setTimeout(() => {
       const currentTags = searchTagsRef.current;
@@ -200,8 +211,8 @@ function App() {
       } else {
         search(value, filters);
       }
-    }, 300);
-  }, [search, clearSearch, getFiltersFromTags]); // searchTags убран - используем ref
+    }, 400);
+  }, [search, clearSearch, getFiltersFromTags, autocompleteSearch, clearSuggestions]); // searchTags убран - используем ref
 
   // Удаление тега - перезапускаем поиск с оставшимися тегами
   const handleTagRemove = useCallback((tagId: string) => {
@@ -266,7 +277,25 @@ function App() {
     setSearchInput('');
     setSearchTags([]);
     clearSearch();
-  }, [clearSearch, searchInput, addToHistory]);
+    clearSuggestions();
+  }, [clearSearch, searchInput, addToHistory, clearSuggestions]);
+
+  // Обработчик выбора подсказки autocomplete
+  const handleSuggestionSelect = useCallback((word: string) => {
+    // Заменяем последнее слово и сразу ищем
+    const words = searchInput.split(/\s+/);
+    words[words.length - 1] = word;
+    const newQuery = words.join(' ');
+
+    setSearchInput(newQuery);
+    clearSuggestions();
+
+    // Сразу запускаем поиск
+    const currentTags = searchTagsRef.current;
+    const filters = getFiltersFromTags(currentTags);
+    search(newQuery, filters);
+    addToHistory(newQuery);
+  }, [searchInput, search, addToHistory, clearSuggestions, getFiltersFromTags]);
 
   // Управление главной кнопкой
   useEffect(() => {
@@ -562,6 +591,8 @@ function App() {
           onTagRemove={handleTagRemove}
           onCreateTag={handleCreateTag}
           senders={senders}
+          suggestions={suggestions}
+          onSuggestionSelect={handleSuggestionSelect}
         />
       </header>
 

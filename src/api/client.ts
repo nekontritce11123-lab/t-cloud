@@ -247,6 +247,20 @@ class ApiClient {
     return response.json();
   }
 
+  // Autocomplete Dictionary API
+
+  async getDictionary(): Promise<{ words: string[]; version: number }> {
+    const response = await fetch(`${API_URL}/api/files/autocomplete/dictionary`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch dictionary');
+    }
+
+    return response.json();
+  }
+
   // Links API
 
   async getLinks(options: {
