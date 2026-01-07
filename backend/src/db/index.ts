@@ -235,10 +235,22 @@ export function searchFilesWithSnippets(
   // FTS query is optional - if no text query, skip FTS join
   const hasFtsQuery = query && query.trim().length > 0;
 
+  // Escape FTS5 special characters to prevent syntax errors
+  // FTS5 treats : ( ) * " as special characters
+  function escapeFtsQuery(q: string): string {
+    // Wrap each word in quotes for literal matching
+    // This prevents : and other special chars from being interpreted as operators
+    return q
+      .split(/\s+/)
+      .filter(Boolean)
+      .map(word => `"${word.replace(/"/g, '""')}"`)
+      .join(' ');
+  }
+
   let sql: string;
   if (hasFtsQuery) {
     conditions.push('files_fts MATCH ?');
-    params.push(query);
+    params.push(escapeFtsQuery(query));
 
     const whereClause = conditions.join(' AND ');
 

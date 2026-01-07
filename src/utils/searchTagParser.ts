@@ -99,10 +99,11 @@ function tryParseTag(word: string): SearchTag | null {
     }
   }
 
-  // Размеры: >1MB, <500KB, 5MB
-  const sizeMatch = word.match(/^([><])?(\d+)(kb|mb|gb|b)?$/i);
+  // Размеры: >1MB, <500KB, 5MB (единица измерения ОБЯЗАТЕЛЬНА!)
+  // Просто "1" или "5" НЕ создаёт тег - нужно "1mb" или "5kb"
+  const sizeMatch = word.match(/^([><])?(\d+)(kb|mb|gb)$/i);
   if (sizeMatch) {
-    const [, operator, numStr, unit = 'mb'] = sizeMatch;
+    const [, operator, numStr, unit] = sizeMatch;
     const num = parseInt(numStr, 10);
     const bytes = parseSize(num, unit);
 

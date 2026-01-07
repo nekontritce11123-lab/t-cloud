@@ -210,7 +210,14 @@ function App() {
   }, [searchInput, search, clearSearch, getFiltersFromTags]);
 
   // Создание тега напрямую (для автодополнения с пробелами в имени)
-  const handleCreateTag = useCallback((type: 'from' | 'chat', value: string) => {
+  // cleanedText - текст БЕЗ "от:/из:" префикса, переданный из SearchBar
+  const handleCreateTag = useCallback((type: 'from' | 'chat', value: string, cleanedText: string) => {
+    // Отменяем pending debounce чтобы избежать race condition
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+
     const newTag: SearchTag = {
       id: `tag-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       type,
@@ -218,14 +225,18 @@ function App() {
       value,
       raw: `${type === 'from' ? 'от' : 'из'}:${value}`,
     };
+
+    // Очищаем инпут от "от:..." или "из:..."
+    setSearchInput(cleanedText);
+
     setSearchTags(prev => {
       const newTags = [...prev, newTag];
-      // Запускаем поиск с новыми тегами
+      // Запускаем поиск с очищенным текстом и новыми тегами
       const filters = getFiltersFromTags(newTags);
-      search(searchInput, filters);
+      search(cleanedText, filters);
       return newTags;
     });
-  }, [searchInput, search, getFiltersFromTags]);
+  }, [search, getFiltersFromTags]);
 
   // Мгновенная очистка поиска по крестику (сохраняем в историю)
   const handleClearSearch = useCallback(() => {

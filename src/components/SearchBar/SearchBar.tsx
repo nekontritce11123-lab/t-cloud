@@ -100,8 +100,8 @@ interface SearchBarProps {
   /** Smart tags extracted from search input */
   tags?: SearchTag[];
   onTagRemove?: (tagId: string) => void;
-  /** Create a tag directly (for autocomplete) */
-  onCreateTag?: (type: 'from' | 'chat', value: string) => void;
+  /** Create a tag directly (for autocomplete). cleanedText is the input without the "от:/из:" prefix */
+  onCreateTag?: (type: 'from' | 'chat', value: string, cleanedText: string) => void;
   /** Available senders for autocomplete */
   senders?: { names: string[]; chats: string[] };
 }
@@ -226,14 +226,17 @@ export function SearchBar({
   // Выбор из автодополнения - создаём тег напрямую
   const handleAutocompleteSelect = useCallback((item: string) => {
     if (onCreateTag && autocompleteMode) {
-      // Создаём тег напрямую
-      onCreateTag(autocompleteMode, item);
-      // Убираем "от:" или "из:" из инпута
+      // Убираем "от:" или "из:" из инпута ПЕРЕД созданием тега
       const words = value.split(/\s+/);
       words.pop(); // Убираем неполное слово (от:... или из:...)
-      onChange(words.join(' '));
+      const cleanedText = words.join(' ');
+
+      // Создаём тег с очищенным текстом
+      // НЕ вызываем onChange - handleCreateTag уже делает setSearchInput(cleanedText)
+      // Двойной вызов создаёт race condition с debounce
+      onCreateTag(autocompleteMode, item, cleanedText);
     }
-  }, [value, autocompleteMode, onChange, onCreateTag]);
+  }, [value, autocompleteMode, onCreateTag]);
 
   return (
     <div className={styles.wrapper} ref={wrapperRef}>

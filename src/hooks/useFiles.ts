@@ -88,7 +88,11 @@ export function useFiles(apiReady = true) {
       if (requestId !== currentRequestId.current) return;
       console.error('[useFiles] Error:', err);
       setError('Не удалось загрузить файлы');
+      // Очищаем данные при ошибке чтобы не показывать старые
+      setFiles([]);
+      setLinks([]);
     } finally {
+      // ВСЕГДА сбрасываем isLoading, иначе он может застрять
       if (requestId === currentRequestId.current) {
         setIsLoading(false);
       }
@@ -175,7 +179,10 @@ export function useFiles(apiReady = true) {
       if (requestId !== currentRequestId.current) return;
       console.error('[useFiles] clearSearch error:', err);
       setError('Не удалось загрузить файлы');
+      setFiles([]);
+      setLinks([]);
     } finally {
+      // ВСЕГДА сбрасываем isLoading для актуального запроса
       if (requestId === currentRequestId.current) {
         setIsLoading(false);
       }
