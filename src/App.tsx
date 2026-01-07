@@ -41,6 +41,8 @@ function App() {
   const [searchTags, setSearchTags] = useState<SearchTag[]>([]);
   const [senders, setSenders] = useState<{ names: string[]; chats: string[] }>({ names: [], chats: [] });
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Ref для актуального значения searchTags - избегаем stale closure в debounce
+  const searchTagsRef = useRef<SearchTag[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<Set<number>>(new Set());
   const [selectedLinks, setSelectedLinks] = useState<Set<number>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -125,6 +127,11 @@ function App() {
     }
   }, [apiReady]);
 
+  // Синхронизируем ref с state для использования в debounce (избегаем stale closure)
+  useEffect(() => {
+    searchTagsRef.current = searchTags;
+  }, [searchTags]);
+
   // Конвертирует теги в фильтры для API
   const getFiltersFromTags = useCallback((tags: SearchTag[]) => {
     if (tags.length === 0) return undefined;
@@ -184,30 +191,38 @@ function App() {
     }
 
     // Debounce для поиска с текущими тегами
+    // Используем searchTagsRef.current чтобы избежать stale closure
     debounceTimerRef.current = setTimeout(() => {
-      const filters = getFiltersFromTags(searchTags);
-      if (value.trim() === '' && searchTags.length === 0) {
+      const currentTags = searchTagsRef.current;
+      const filters = getFiltersFromTags(currentTags);
+      if (value.trim() === '' && currentTags.length === 0) {
         clearSearch();
       } else {
         search(value, filters);
       }
     }, 300);
-  }, [search, clearSearch, searchTags, getFiltersFromTags]);
+  }, [search, clearSearch, getFiltersFromTags]); // searchTags убран - используем ref
 
   // Удаление тега - перезапускаем поиск с оставшимися тегами
   const handleTagRemove = useCallback((tagId: string) => {
-    setSearchTags(prev => {
-      const newTags = prev.filter(t => t.id !== tagId);
-      // Запускаем поиск с обновлёнными тегами
-      const filters = getFiltersFromTags(newTags);
-      if (searchInput.trim() === '' && newTags.length === 0) {
-        clearSearch();
-      } else {
-        search(searchInput, filters);
-      }
-      return newTags;
-    });
-  }, [searchInput, search, clearSearch, getFiltersFromTags]);
+    // Отменяем pending debounce чтобы старый поиск не перезатёр результат
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+
+    // Вычисляем новые теги
+    const newTags = searchTags.filter(t => t.id !== tagId);
+    setSearchTags(newTags);
+
+    // Запускаем поиск ПОСЛЕ setState (не внутри callback)
+    const filters = getFiltersFromTags(newTags);
+    if (searchInput.trim() === '' && newTags.length === 0) {
+      clearSearch();
+    } else {
+      search(searchInput, filters);
+    }
+  }, [searchInput, searchTags, search, clearSearch, getFiltersFromTags]);
 
   // Создание тега напрямую (для автодополнения с пробелами в имени)
   // cleanedText - текст БЕЗ "от:/из:" префикса, переданный из SearchBar
@@ -229,14 +244,14 @@ function App() {
     // Очищаем инпут от "от:..." или "из:..."
     setSearchInput(cleanedText);
 
-    setSearchTags(prev => {
-      const newTags = [...prev, newTag];
-      // Запускаем поиск с очищенным текстом и новыми тегами
-      const filters = getFiltersFromTags(newTags);
-      search(cleanedText, filters);
-      return newTags;
-    });
-  }, [search, getFiltersFromTags]);
+    // Вычисляем новые теги
+    const newTags = [...searchTags, newTag];
+    setSearchTags(newTags);
+
+    // Запускаем поиск ПОСЛЕ setState (не внутри callback)
+    const filters = getFiltersFromTags(newTags);
+    search(cleanedText, filters);
+  }, [search, searchTags, getFiltersFromTags]);
 
   // Мгновенная очистка поиска по крестику (сохраняем в историю)
   const handleClearSearch = useCallback(() => {

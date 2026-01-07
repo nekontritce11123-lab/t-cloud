@@ -148,7 +148,7 @@ export function useFiles(apiReady = true) {
   // Мгновенная очистка поиска (для кнопки X)
   // ВАЖНО: Сначала загружаем данные, потом очищаем query
   const clearSearch = useCallback(async () => {
-    console.log('[useFiles] clearSearch called');
+    console.log('[useFiles] clearSearch called, selectedType:', selectedType);
 
     // Отменяем любые pending запросы
     const requestId = ++currentRequestId.current;
@@ -160,20 +160,30 @@ export function useFiles(apiReady = true) {
     setError(null);
 
     try {
-      // Загружаем данные ДО очистки searchQuery
-      const typeForApi = selectedType === 'trash' ? undefined : selectedType;
-      const result = await apiClient.getFiles({
-        type: typeForApi || undefined,
-        page: 1,
-        limit: 50,
-      });
+      // Загружаем данные в зависимости от текущей категории
+      if (selectedType === 'link') {
+        // Для категории "ссылки" загружаем links
+        const result = await apiClient.getLinks({ page: 1, limit: 50 });
+        if (requestId !== currentRequestId.current) return;
+        setLinks(result.items || []);
+        setFiles([]);
+      } else if (selectedType === 'trash') {
+        // Trash обрабатывается отдельно в TrashView
+        if (requestId !== currentRequestId.current) return;
+        setFiles([]);
+        setLinks([]);
+      } else {
+        // Для остальных категорий загружаем files
+        const result = await apiClient.getFiles({
+          type: selectedType || undefined,
+          page: 1,
+          limit: 50,
+        });
+        if (requestId !== currentRequestId.current) return;
+        setFiles(result.items || []);
+        setLinks([]);
+      }
 
-      // Проверяем актуальность
-      if (requestId !== currentRequestId.current) return;
-
-      // Данные пришли - теперь безопасно очищать query и обновлять files
-      setFiles(result.items || []);
-      setLinks([]);
       setSearchQuery(''); // Очищаем ПОСЛЕ того как данные готовы
     } catch (err) {
       if (requestId !== currentRequestId.current) return;
