@@ -116,8 +116,29 @@ class ApiClient {
     }
   }
 
-  async searchFiles(query: string, limit = 50): Promise<{ items: FileRecord[]; total: number }> {
-    const params = new URLSearchParams({ q: query, limit: String(limit) });
+  async searchFiles(
+    query: string,
+    options?: {
+      type?: string;
+      deleted?: boolean;
+      limit?: number;
+    }
+  ): Promise<{ items: FileRecord[]; total: number }> {
+    const params = new URLSearchParams({ q: query });
+
+    if (options?.limit !== undefined) {
+      params.set('limit', String(options.limit));
+    } else {
+      params.set('limit', '50');
+    }
+
+    if (options?.type) {
+      params.set('type', options.type);
+    }
+
+    if (options?.deleted !== undefined) {
+      params.set('deleted', String(options.deleted));
+    }
 
     const response = await fetch(`${API_URL}/api/files/search?${params}`, {
       headers: this.getHeaders(),

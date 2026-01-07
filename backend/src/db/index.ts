@@ -162,7 +162,37 @@ export interface SearchResult extends schema.File {
 /**
  * Full-text search with snippets showing where match occurred
  */
-export function searchFilesWithSnippets(userId: number, query: string, limit = 50): SearchResult[] {
+export function searchFilesWithSnippets(
+  userId: number,
+  query: string,
+  limit = 50,
+  options?: {
+    mediaType?: string;
+    includeDeleted?: boolean;
+  }
+): SearchResult[] {
+  // Build dynamic WHERE clause
+  const conditions = ['f.user_id = ?'];
+  const params: any[] = [userId];
+
+  // Handle deleted_at condition
+  if (options?.includeDeleted) {
+    conditions.push('f.deleted_at IS NOT NULL');
+  } else {
+    conditions.push('f.deleted_at IS NULL');
+  }
+
+  // Add mediaType filter if specified
+  if (options?.mediaType) {
+    conditions.push('f.media_type = ?');
+    params.push(options.mediaType);
+  }
+
+  conditions.push('files_fts MATCH ?');
+  params.push(query);
+
+  const whereClause = conditions.join(' AND ');
+
   // FTS5 snippet function: snippet(table, col_idx, start_mark, end_mark, ellipsis, max_tokens)
   const stmt = sqlite.prepare(`
     SELECT
@@ -173,12 +203,13 @@ export function searchFilesWithSnippets(userId: number, query: string, limit = 5
       snippet(files_fts, 3, '**', '**', '...', 10) as snippet_chat_title
     FROM files f
     JOIN files_fts ON f.id = files_fts.rowid
-    WHERE f.user_id = ? AND f.deleted_at IS NULL AND files_fts MATCH ?
+    WHERE ${whereClause}
     ORDER BY rank
     LIMIT ?
   `);
 
-  const rows = stmt.all(userId, query, limit) as any[];
+  params.push(limit);
+  const rows = stmt.all(...params) as any[];
 
   return rows.map(row => {
     // Determine which field matched (check if snippet contains **)

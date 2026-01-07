@@ -5,6 +5,7 @@ import { TrashFileViewer } from './TrashFileViewer';
 import styles from './TrashView.module.css';
 
 interface TrashViewProps {
+  searchQuery: string;
   onRestore: () => void;
   hapticFeedback: {
     light: () => void;
@@ -15,7 +16,7 @@ interface TrashViewProps {
   };
 }
 
-export function TrashView({ onRestore, hapticFeedback }: TrashViewProps) {
+export function TrashView({ searchQuery, onRestore, hapticFeedback }: TrashViewProps) {
   const [files, setFiles] = useState<FileRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -32,14 +33,21 @@ export function TrashView({ onRestore, hapticFeedback }: TrashViewProps) {
   const loadTrash = useCallback(async () => {
     setIsLoading(true);
     try {
-      const result = await apiClient.getTrashFiles();
-      setFiles(result.items);
+      if (searchQuery) {
+        // Search in trash
+        const result = await apiClient.searchFiles(searchQuery, { deleted: true });
+        setFiles(result.items);
+      } else {
+        // All trash files
+        const result = await apiClient.getTrashFiles();
+        setFiles(result.items);
+      }
     } catch (error) {
       console.error('Error loading trash:', error);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [searchQuery]);
 
   useEffect(() => {
     loadTrash();

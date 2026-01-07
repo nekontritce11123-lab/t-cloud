@@ -392,24 +392,25 @@ function App() {
     <div className={styles.app}>
       {/* Header */}
       <header className={styles.header}>
-        {isSelectionMode ? (
-          <div className={styles.selectionHeader}>
-            <button onClick={exitSelectionMode} className={styles.cancelBtn}>✕</button>
-            <span>Выбрано: {selectionType === 'files' ? selectedFiles.size : selectedLinks.size}</span>
-            {selectionType === 'files' && selectedFiles.size > 0 && (
-              <button onClick={handleDeleteSelected} className={styles.deleteBtn}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 6h18" />
-                  <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-                  <line x1="10" y1="11" x2="10" y2="17" />
-                  <line x1="14" y1="11" x2="14" y2="17" />
-                </svg>
-              </button>
-            )}
-          </div>
-        ) : (
-          <>
+        {/* Верхняя строка: заголовок ИЛИ selection info */}
+        <div className={styles.headerTop}>
+          {isSelectionMode ? (
+            <div className={styles.selectionInfo}>
+              <button onClick={exitSelectionMode} className={styles.cancelBtn}>✕</button>
+              <span>Выбрано: {selectionType === 'files' ? selectedFiles.size : selectedLinks.size}</span>
+              {selectionType === 'files' && selectedFiles.size > 0 && (
+                <button onClick={handleDeleteSelected} className={styles.deleteBtn}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 6h18" />
+                    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                    <line x1="10" y1="11" x2="10" y2="17" />
+                    <line x1="14" y1="11" x2="14" y2="17" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          ) : (
             <h1
               className={styles.title}
               onDoubleClick={clearCooldown}
@@ -417,29 +418,29 @@ function App() {
             >
               T-Cloud
             </h1>
-            <SearchBar
-              value={searchInput}
-              onChange={handleSearchChange}
-              onClear={handleClearSearch}
-              placeholder="Искать по имени, подписи..."
-              hint={searchHint}
-            />
-          </>
-        )}
+          )}
+        </div>
+
+        {/* SearchBar ВСЕГДА виден */}
+        <SearchBar
+          value={searchInput}
+          onChange={handleSearchChange}
+          onClear={handleClearSearch}
+          placeholder="Искать по имени, подписи..."
+          hint={searchHint}
+        />
       </header>
 
-      {/* Category chips */}
-      {!isSelectionMode && (
-        <CategoryChips
-          stats={stats}
-          selectedType={selectedType}
-          onSelect={(type) => {
-            hapticFeedback.selection();
-            filterByType(type);
-          }}
-          trashCount={trashCount}
-        />
-      )}
+      {/* CategoryChips ВСЕГДА видны */}
+      <CategoryChips
+        stats={stats}
+        selectedType={selectedType}
+        onSelect={(type) => {
+          hapticFeedback.selection();
+          filterByType(type);
+        }}
+        trashCount={trashCount}
+      />
 
       {/* Content */}
       <main className={styles.content}>
@@ -457,6 +458,7 @@ function App() {
           </div>
         ) : selectedType === 'trash' ? (
           <TrashView
+            searchQuery={searchQuery}
             onRestore={refresh}
             hapticFeedback={hapticFeedback}
           />

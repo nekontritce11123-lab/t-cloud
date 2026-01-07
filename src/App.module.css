@@ -69,13 +69,21 @@
   font-size: var(--font-size-sm);
 }
 
-/* Selection mode header */
-.selectionHeader {
+/* Header top row: title or selection info */
+.headerTop {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+}
+
+/* Selection mode info */
+.selectionInfo {
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-medium);
+  width: 100%;
 }
 
 .cancelBtn {

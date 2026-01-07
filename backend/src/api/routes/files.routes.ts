@@ -148,10 +148,15 @@ router.get('/by-date', async (req, res: Response) => {
 /**
  * GET /api/files/search
  * Full-text search in files with match info
+ * Query params:
+ *   - q: search query (required)
+ *   - limit: max results (optional, default: 50, max: 100)
+ *   - type: filter by mediaType (optional)
+ *   - deleted: if "true", search in trash (optional)
  */
 router.get('/search', async (req, res: Response) => {
   const { telegramUser } = req as AuthenticatedRequest;
-  const { q, limit = '50' } = req.query;
+  const { q, limit = '50', type, deleted } = req.query;
 
   if (!q || typeof q !== 'string') {
     res.status(400).json({ error: 'Query parameter "q" is required' });
@@ -160,8 +165,25 @@ router.get('/search', async (req, res: Response) => {
 
   try {
     const limitNum = Math.min(parseInt(limit as string, 10), 100);
+
+    // Build search options
+    const searchOptions: { mediaType?: string; includeDeleted?: boolean } = {};
+
+    if (type && typeof type === 'string') {
+      searchOptions.mediaType = type;
+    }
+
+    if (deleted === 'true') {
+      searchOptions.includeDeleted = true;
+    }
+
     // Use search with snippets to show where match occurred
-    const files = filesRepo.searchWithSnippets(telegramUser.id, q, limitNum);
+    const files = filesRepo.searchWithSnippets(
+      telegramUser.id,
+      q,
+      limitNum,
+      searchOptions
+    );
 
     // Add thumbnail URLs
     const service = getThumbnailService();

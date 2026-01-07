@@ -140,8 +140,13 @@ export class FilesRepository {
   /**
    * Full-text search with match info (where found, snippet)
    */
-  searchWithSnippets(userId: number, query: string, limit = 50): SearchResult[] {
-    return searchFilesWithSnippets(userId, query, limit);
+  searchWithSnippets(
+    userId: number,
+    query: string,
+    limit = 50,
+    options?: { mediaType?: string; includeDeleted?: boolean }
+  ): SearchResult[] {
+    return searchFilesWithSnippets(userId, query, limit, options);
   }
 
   /**

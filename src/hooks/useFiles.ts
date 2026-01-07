@@ -27,11 +27,21 @@ export function useFiles(apiReady = true) {
 
     try {
       if (query && query.trim()) {
-        // Search both files and links in parallel
-        const [filesResult, linksResult] = await Promise.all([
-          apiClient.searchFiles(query),
-          apiClient.searchLinks(query),
-        ]);
+        // Определяем параметры поиска в зависимости от категории
+        const isTrash = type === 'trash';
+        const searchType = (type === 'trash' || type === 'link' || type === null) ? undefined : type;
+
+        // Search files
+        const filesResult = await apiClient.searchFiles(query, {
+          type: searchType,
+          deleted: isTrash,
+        });
+
+        // Search links only if not trash
+        const linksResult = type !== 'trash'
+          ? await apiClient.searchLinks(query)
+          : { items: [] };
+
         // Проверяем что это актуальный запрос
         if (requestId !== currentRequestId.current) {
           console.log('[useFiles] Ignoring stale response', requestId);
@@ -103,17 +113,16 @@ export function useFiles(apiReady = true) {
   const filterByType = useCallback((type: CategoryType) => {
     console.log('[useFiles] filterByType:', type);
     setSelectedType(type);
-    setSearchQuery('');
-    loadDataForQuery('', type);
-  }, [loadDataForQuery]);
+    // НЕ очищаем searchQuery - сохраняем поиск при переключении категории
+    loadDataForQuery(searchQuery, type);
+  }, [loadDataForQuery, searchQuery]);
 
   // Search - для debounced ввода
   const search = useCallback((query: string) => {
     console.log('[useFiles] search called with:', query);
     setSearchQuery(query);
-    // При пустом query - загружаем по текущему типу
-    // При непустом query - ищем по всем типам
-    loadDataForQuery(query, query ? null : selectedType);
+    // Передаём текущую категорию вместо null
+    loadDataForQuery(query, selectedType);
   }, [loadDataForQuery, selectedType]);
 
   // Мгновенная очистка поиска (для кнопки X)
