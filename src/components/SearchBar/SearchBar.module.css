@@ -206,3 +206,46 @@
 .dropdownRemove:hover {
   color: var(--app-text-color);
 }
+
+/* Smart Tags */
+.inputWrapper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: var(--app-link-color, #3390ec);
+  color: #fff;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity var(--animation-fast) var(--easing-smooth);
+  white-space: nowrap;
+}
+
+.tag:hover {
+  opacity: 0.85;
+}
+
+.tag:active {
+  opacity: 0.7;
+}
+
+.tagClose {
+  font-size: 10px;
+  opacity: 0.8;
+  margin-left: 2px;
+}
+
+.tagClose:hover {
+  opacity: 1;
+}

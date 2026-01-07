@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useTelegram } from './hooks/useTelegram';
 import { useFiles } from './hooks/useFiles';
 import { useSearchHistory } from './hooks/useSearchHistory';
+import { parseSearchInput, SearchTag } from './utils/searchTagParser';
 import { apiClient, FileRecord, LinkRecord } from './api/client';
 import { CategoryChips } from './components/CategoryChips/CategoryChips';
 import { SearchBar } from './components/SearchBar/SearchBar';
@@ -37,6 +38,8 @@ function App() {
 
   // Локальное состояние для инпута (для отзывчивости при вводе)
   const [searchInput, setSearchInput] = useState('');
+  const [searchTags, setSearchTags] = useState<SearchTag[]>([]);
+  const [senders, setSenders] = useState<{ names: string[]; chats: string[] }>({ names: [], chats: [] });
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<Set<number>>(new Set());
   const [selectedLinks, setSelectedLinks] = useState<Set<number>>(new Set());
@@ -113,8 +116,49 @@ function App() {
     }
   }, [isReady, getInitData]);
 
-  // Обработчик ввода с debounce
+  // Загрузка списка отправителей для автодополнения
+  useEffect(() => {
+    if (apiReady) {
+      apiClient.getSenders()
+        .then(setSenders)
+        .catch(err => console.error('Failed to load senders:', err));
+    }
+  }, [apiReady]);
+
+  // Обработчик ввода с debounce и парсингом тегов
   const handleSearchChange = useCallback((value: string) => {
+    // Парсим теги только из завершённых слов (заканчивающихся пробелом)
+    // Это предотвращает преждевременное создание тегов при вводе "1" -> "1MB"
+    const endsWithSpace = value.endsWith(' ');
+
+    if (endsWithSpace && value.trim()) {
+      // Парсим только если ввод заканчивается пробелом
+      const parsed = parseSearchInput(value.trim());
+
+      if (parsed.tags.length > 0) {
+        // Добавляем найденные теги
+        setSearchTags(prev => [...prev, ...parsed.tags]);
+        // Оставляем только текст (без пробела в конце)
+        setSearchInput(parsed.text);
+
+        // Очищаем предыдущий таймер
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
+        }
+
+        // Сразу ищем
+        debounceTimerRef.current = setTimeout(() => {
+          if (parsed.text.trim() === '' && parsed.tags.length === 0) {
+            clearSearch();
+          } else {
+            search(parsed.text);
+          }
+        }, 300);
+        return;
+      }
+    }
+
+    // Обычный ввод без создания тегов
     setSearchInput(value);
 
     // Очищаем предыдущий таймер
@@ -124,13 +168,18 @@ function App() {
 
     // Debounce для поиска
     debounceTimerRef.current = setTimeout(() => {
-      if (value.trim() === '') {
+      if (value.trim() === '' && searchTags.length === 0) {
         clearSearch();
       } else {
         search(value);
       }
     }, 300);
-  }, [search, clearSearch]);
+  }, [search, clearSearch, searchTags.length]);
+
+  // Удаление тега
+  const handleTagRemove = useCallback((tagId: string) => {
+    setSearchTags(prev => prev.filter(t => t.id !== tagId));
+  }, []);
 
   // Мгновенная очистка поиска по крестику (сохраняем в историю)
   const handleClearSearch = useCallback(() => {
@@ -143,6 +192,7 @@ function App() {
       clearTimeout(debounceTimerRef.current);
     }
     setSearchInput('');
+    setSearchTags([]);
     clearSearch();
   }, [clearSearch, searchInput, addToHistory]);
 
@@ -436,6 +486,9 @@ function App() {
           onHistorySelect={addToHistory}
           onHistoryRemove={removeFromHistory}
           onHistoryClear={clearHistory}
+          tags={searchTags}
+          onTagRemove={handleTagRemove}
+          senders={senders}
         />
       </header>
 

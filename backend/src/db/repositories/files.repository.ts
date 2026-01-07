@@ -266,4 +266,40 @@ export class FilesRepository {
 
     return result.changes;
   }
+
+  /**
+   * Get unique senders (forward_from_name and forward_from_chat_title) for a user
+   */
+  async getUniqueSenders(userId: number): Promise<{ names: string[]; chats: string[] }> {
+    // Уникальные forward_from_name
+    const namesResult = await db
+      .selectDistinct({ name: files.forwardFromName })
+      .from(files)
+      .where(
+        and(
+          eq(files.userId, userId),
+          isNull(files.deletedAt),
+          isNotNull(files.forwardFromName)
+        )
+      )
+      .orderBy(files.forwardFromName);
+
+    // Уникальные forward_from_chat_title
+    const chatsResult = await db
+      .selectDistinct({ chat: files.forwardFromChatTitle })
+      .from(files)
+      .where(
+        and(
+          eq(files.userId, userId),
+          isNull(files.deletedAt),
+          isNotNull(files.forwardFromChatTitle)
+        )
+      )
+      .orderBy(files.forwardFromChatTitle);
+
+    return {
+      names: namesResult.map(r => r.name!).filter(Boolean),
+      chats: chatsResult.map(r => r.chat!).filter(Boolean),
+    };
+  }
 }

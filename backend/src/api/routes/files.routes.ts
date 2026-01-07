@@ -222,6 +222,22 @@ router.get('/stats', async (req, res: Response) => {
 });
 
 /**
+ * GET /api/files/senders
+ * Get unique senders (forward_from_name and forward_from_chat_title)
+ */
+router.get('/senders', async (req, res: Response) => {
+  const { telegramUser } = req as AuthenticatedRequest;
+
+  try {
+    const senders = await filesRepo.getUniqueSenders(telegramUser.id);
+    res.json(senders);
+  } catch (error) {
+    console.error('[API] Error fetching senders:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * GET /api/files/trash
  * Get deleted files (trash) for the authenticated user
  */

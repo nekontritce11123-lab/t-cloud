@@ -236,6 +236,20 @@ class ApiClient {
     return response.json();
   }
 
+  // Senders API (for autocomplete)
+
+  async getSenders(): Promise<{ names: string[]; chats: string[] }> {
+    const response = await fetch(`${API_URL}/api/files/senders`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch senders');
+    }
+
+    return response.json();
+  }
+
   // Trash API - Files
 
   async getTrashFiles(): Promise<{ items: FileRecord[]; total: number }> {
