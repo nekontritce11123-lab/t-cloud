@@ -19,6 +19,23 @@ interface FileCardProps {
   disableActiveScale?: boolean;
   /** Include data-file-id attribute (for drag selection) */
   includeDataFileId?: boolean;
+  /** Search match info for highlighting */
+  searchMatch?: { field: string; snippet: string };
+}
+
+// Хелперы для подсветки совпадений
+function getFieldLabel(field: string): string {
+  const labels: Record<string, string> = {
+    caption: 'В подписи',
+    file_name: 'В имени',
+    forward_from_name: 'От',
+    forward_from_chat_title: 'Из чата',
+  };
+  return labels[field] || 'Найдено';
+}
+
+function formatSnippet(snippet: string): string {
+  return snippet.replace(/\*\*([^*]+)\*\*/g, '<mark>$1</mark>');
 }
 
 export function FileCard({
@@ -31,6 +48,7 @@ export function FileCard({
   badge,
   disableActiveScale,
   includeDataFileId,
+  searchMatch,
 }: FileCardProps) {
   const longPress = useLongPress(file, onFileLongPress, onFileClick);
 
@@ -137,6 +155,17 @@ export function FileCard({
           <span className={cardStyles.forwardName}>
             {file.forwardFromName || file.forwardFromChatTitle}
           </span>
+        </div>
+      )}
+
+      {/* Search match badge */}
+      {searchMatch && (
+        <div className={cardStyles.matchBadge}>
+          <span className={cardStyles.matchWhere}>{getFieldLabel(searchMatch.field)}</span>
+          <span
+            className={cardStyles.matchText}
+            dangerouslySetInnerHTML={{ __html: formatSnippet(searchMatch.snippet) }}
+          />
         </div>
       )}
     </button>

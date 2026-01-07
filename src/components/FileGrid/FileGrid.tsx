@@ -73,6 +73,10 @@ export function FileGrid({ files, onFileClick, onFileLongPress, selectedFiles, i
             isSelected={selectedFiles?.has(file.id)}
             isSelectionMode={isSelectionMode}
             isOnCooldown={isOnCooldown?.(file.id)}
+            searchMatch={file.matchedField && file.matchedSnippet ? {
+              field: file.matchedField,
+              snippet: file.matchedSnippet,
+            } : undefined}
           />
         ))}
       </div>
