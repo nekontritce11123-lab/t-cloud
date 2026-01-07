@@ -69,50 +69,85 @@
   font-size: var(--font-size-sm);
 }
 
-/* Header top row: title or selection info */
-.headerTop {
+/* Selection header - как в TrashView */
+.selectionHeader {
+  position: sticky;
+  top: 0;
+  z-index: 30;
   display: flex;
   align-items: center;
-  min-height: 40px;
-}
-
-/* Selection mode info */
-.selectionInfo {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-medium);
-  width: 100%;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: var(--app-bg-color);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .cancelBtn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--app-secondary-bg-color);
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  background: transparent;
+  border: none;
+  color: var(--app-link-color);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: background var(--animation-fast) ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cancelBtn:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.cancelBtn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.selectionCount {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
   color: var(--app-text-color);
 }
 
+.selectionActions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
 .deleteBtn {
-  margin-left: auto;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--app-destructive-text-color, #ff3b30);
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--app-destructive-text-color, #ff3b30);
+  cursor: pointer;
+  transition: all var(--animation-fast) ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.deleteBtn:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(0.95);
+}
+
+.deleteBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 .deleteBtn svg {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
 }
 
 /* Empty state for search */

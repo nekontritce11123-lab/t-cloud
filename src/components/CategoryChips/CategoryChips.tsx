@@ -9,6 +9,7 @@ interface CategoryChipsProps {
   selectedType: CategoryType;
   onSelect: (type: CategoryType) => void;
   trashCount?: number;
+  disabledTypes?: 'trash' | 'not-trash';
 }
 
 // SF Symbols style icons (inline SVG)
@@ -113,7 +114,7 @@ const CATEGORIES: Category[] = [
   { type: 'trash', label: 'Корзина', icon: 'trash', color: 'var(--app-destructive-text-color, #ff3b30)' },
 ];
 
-export function CategoryChips({ stats, selectedType, onSelect, trashCount = 0 }: CategoryChipsProps) {
+export function CategoryChips({ stats, selectedType, onSelect, trashCount = 0, disabledTypes }: CategoryChipsProps) {
   const getCount = (type: CategoryType): number => {
     if (type === null) {
       return stats.reduce((sum, s) => sum + s.count, 0);
@@ -122,6 +123,13 @@ export function CategoryChips({ stats, selectedType, onSelect, trashCount = 0 }:
       return trashCount;
     }
     return stats.find(s => s.mediaType === type)?.count || 0;
+  };
+
+  const isDisabled = (type: CategoryType): boolean => {
+    if (!disabledTypes) return false;
+    if (disabledTypes === 'trash') return type === 'trash';
+    if (disabledTypes === 'not-trash') return type !== 'trash';
+    return false;
   };
 
   return (
@@ -134,14 +142,16 @@ export function CategoryChips({ stats, selectedType, onSelect, trashCount = 0 }:
           return (
             <button
               key={category.type || 'all'}
-              className={`${styles.chip} ${isSelected ? styles.selected : ''}`}
+              className={`${styles.chip} ${isSelected ? styles.selected : ''} ${isDisabled(category.type) ? styles.disabled : ''}`}
               style={{
                 '--chip-color': category.color,
               } as React.CSSProperties}
               onClick={(e) => {
+                if (isDisabled(category.type)) return;
                 e.stopPropagation();
                 onSelect(category.type);
               }}
+              disabled={isDisabled(category.type)}
             >
               <span className={styles.icon}>{Icons[category.icon]}</span>
               <span className={styles.label}>{category.label}</span>

@@ -75,3 +75,11 @@
   background: var(--chip-color);
   color: white;
 }
+
+/* Disabled state for chips */
+.chip:disabled,
+.chip.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+  cursor: not-allowed;
+}
