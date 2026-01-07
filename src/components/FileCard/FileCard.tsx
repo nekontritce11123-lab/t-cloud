@@ -23,19 +23,25 @@ interface FileCardProps {
   searchMatch?: { field: string; snippet: string };
 }
 
-// Хелперы для подсветки совпадений
-function getFieldLabel(field: string): string {
-  const labels: Record<string, string> = {
-    caption: 'В подписи',
-    file_name: 'В имени',
-    forward_from_name: 'От',
-    forward_from_chat_title: 'Из чата',
-  };
-  return labels[field] || 'Найдено';
-}
+// Inline подсветка совпадений в тексте
+function highlightText(
+  text: string,
+  targetField: string | string[],
+  searchMatch?: { field: string; snippet: string }
+): string {
+  if (!searchMatch) return text;
 
-function formatSnippet(snippet: string): string {
-  return snippet.replace(/\*\*([^*]+)\*\*/g, '<mark>$1</mark>');
+  const fields = Array.isArray(targetField) ? targetField : [targetField];
+  if (!fields.includes(searchMatch.field)) return text;
+
+  // Извлекаем слово из snippet (между **)
+  const match = searchMatch.snippet.match(/\*\*([^*]+)\*\*/);
+  if (!match) return text;
+
+  const word = match[1];
+  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${escaped})`, 'gi');
+  return text.replace(regex, '<mark>$1</mark>');
 }
 
 export function FileCard({
@@ -108,7 +114,12 @@ export function FileCard({
             <div className={cardStyles.info}>
               {file.caption ? (
                 <>
-                  <span className={cardStyles.caption}>{file.caption}</span>
+                  <span
+                    className={cardStyles.caption}
+                    dangerouslySetInnerHTML={{
+                      __html: highlightText(file.caption, 'caption', searchMatch)
+                    }}
+                  />
                   {file.fileName && (
                     <span className={cardStyles.fileName}>{file.fileName}</span>
                   )}
@@ -116,7 +127,12 @@ export function FileCard({
               ) : (
                 <>
                   {file.fileName && (
-                    <span className={cardStyles.name}>{file.fileName}</span>
+                    <span
+                      className={cardStyles.name}
+                      dangerouslySetInnerHTML={{
+                        __html: highlightText(file.fileName, 'file_name', searchMatch)
+                      }}
+                    />
                   )}
                 </>
               )}
@@ -141,7 +157,12 @@ export function FileCard({
             {MediaTypeIcons[getEffectiveMediaType(file.mediaType, file.mimeType)] || FolderIcon}
           </span>
           {file.fileName && (
-            <span className={cardStyles.fileNameCenter}>{file.fileName}</span>
+            <span
+              className={cardStyles.fileNameCenter}
+              dangerouslySetInnerHTML={{
+                __html: highlightText(file.fileName, 'file_name', searchMatch)
+              }}
+            />
           )}
           {file.fileSize && (
             <span className={cardStyles.fileSizeCenter}>{formatFileSize(file.fileSize)}</span>
@@ -149,22 +170,19 @@ export function FileCard({
         </div>
       )}
 
+      {/* Forward badge с inline подсветкой */}
       {(file.forwardFromName || file.forwardFromChatTitle) && (
         <div className={cardStyles.forward}>
           <ForwardIcon className={cardStyles.forwardIcon} />
-          <span className={cardStyles.forwardName}>
-            {file.forwardFromName || file.forwardFromChatTitle}
-          </span>
-        </div>
-      )}
-
-      {/* Search match badge */}
-      {searchMatch && (
-        <div className={cardStyles.matchBadge}>
-          <span className={cardStyles.matchWhere}>{getFieldLabel(searchMatch.field)}</span>
           <span
-            className={cardStyles.matchText}
-            dangerouslySetInnerHTML={{ __html: formatSnippet(searchMatch.snippet) }}
+            className={cardStyles.forwardName}
+            dangerouslySetInnerHTML={{
+              __html: highlightText(
+                file.forwardFromName || file.forwardFromChatTitle || '',
+                ['forward_from_name', 'forward_from_chat_title'],
+                searchMatch
+              )
+            }}
           />
         </div>
       )}

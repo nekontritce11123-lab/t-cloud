@@ -732,6 +732,7 @@ function App() {
           onSend={handleSendFromViewer}
           isOnCooldown={isOnCooldown(viewingFile.id)}
           isSending={sendingFileId === viewingFile.id}
+          searchQuery={searchQuery}
         />
       )}
     </div>

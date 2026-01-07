@@ -494,44 +494,14 @@
   transform: none;
 }
 
-/* Search match badge - правый верхний угол */
-.matchBadge {
-  position: absolute;
-  top: var(--spacing-xs);
-  right: var(--spacing-xs);
-  max-width: calc(100% - 16px);
-  padding: 4px 8px;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-radius: 6px;
-  z-index: 8;
-}
-
-.matchWhere {
-  display: block;
-  font-size: 8px;
-  color: var(--app-link-color, #3390ec);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  margin-bottom: 1px;
-}
-
-.matchText {
-  display: block;
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.9);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.2;
-}
-
-.matchText mark {
+/* Inline подсветка совпадений поиска */
+.caption mark,
+.name mark,
+.forwardName mark,
+.fileNameCenter mark {
   background: var(--app-link-color, #3390ec);
   color: #fff;
-  padding: 0px 3px;
-  border-radius: 2px;
+  padding: 0 3px;
+  border-radius: 3px;
   font-weight: 600;
 }

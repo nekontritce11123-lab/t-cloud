@@ -25,7 +25,7 @@
   margin: 0 auto;
   width: 100%;
   padding: var(--safe-area-top) 0 var(--safe-area-bottom);
-  overflow: hidden;
+  overflow-y: auto;
   background: #000;
 }
 
@@ -187,6 +187,15 @@
   word-break: break-word;
 }
 
+/* Подсветка совпадений в caption */
+.caption mark {
+  background: var(--app-link-color);
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
 .fileName {
   font-size: var(--font-size-sm);
   color: var(--app-hint-color);
@@ -214,6 +223,15 @@
 
 .metaItem span:last-child {
   color: var(--app-text-color);
+}
+
+/* Подсветка совпадений в meta */
+.metaItem mark {
+  background: var(--app-link-color);
+  color: #fff;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 600;
 }
 
 /* Actions */

@@ -11,6 +11,7 @@ interface FileViewerProps {
   onSend: (file: FileRecord) => void;
   isOnCooldown?: boolean;
   isSending?: boolean;
+  searchQuery?: string;
 }
 
 function formatDate(dateStr: string): string {
@@ -52,7 +53,17 @@ function getMediaTypeLabel(type: MediaType): string {
   return labels[type] || type;
 }
 
-export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending }: FileViewerProps) {
+/**
+ * Подсветка всех вхождений поискового запроса в тексте
+ */
+function highlightMatches(text: string, query?: string): string {
+  if (!query || query.length === 0) return text;
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${escaped})`, 'gi');
+  return text.replace(regex, '<mark>$1</mark>');
+}
+
+export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending, searchQuery }: FileViewerProps) {
   const handleSend = useCallback(() => {
     if (!isOnCooldown && !isSending) {
       onSend(file);
@@ -128,14 +139,17 @@ export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending }: F
 
         {/* Info */}
         <div className={styles.info}>
-          {/* Caption or filename - сохраняем переносы строк */}
+          {/* Caption с подсветкой совпадений */}
           {file.caption && (
-            <div className={styles.caption}>{file.caption.split('\n').map((line, i) => (
-              <span key={i}>
-                {line}
-                {i < file.caption!.split('\n').length - 1 && <br />}
-              </span>
-            ))}</div>
+            <div
+              className={styles.caption}
+              dangerouslySetInnerHTML={{
+                __html: highlightMatches(
+                  file.caption.replace(/\n/g, '<br/>'),
+                  searchQuery
+                )
+              }}
+            />
           )}
 
           {/* Meta info */}
@@ -143,7 +157,11 @@ export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending }: F
             {file.fileName && (
               <div className={styles.metaItem}>
                 <span className={styles.metaLabel}>Название:</span>
-                <span>{file.fileName}</span>
+                <span
+                  dangerouslySetInnerHTML={{
+                    __html: highlightMatches(file.fileName, searchQuery)
+                  }}
+                />
               </div>
             )}
 
@@ -178,7 +196,14 @@ export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending }: F
             {(file.forwardFromName || file.forwardFromChatTitle) && (
               <div className={styles.metaItem}>
                 <span className={styles.metaLabel}>От:</span>
-                <span>{file.forwardFromName || file.forwardFromChatTitle}</span>
+                <span
+                  dangerouslySetInnerHTML={{
+                    __html: highlightMatches(
+                      file.forwardFromName || file.forwardFromChatTitle || '',
+                      searchQuery
+                    )
+                  }}
+                />
               </div>
             )}
 
