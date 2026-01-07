@@ -139,7 +139,7 @@
 .info {
   flex-shrink: 0;
   max-height: 40vh;
-  overflow-y: auto;
+  overflow: hidden auto;
   padding: var(--spacing-lg);
   background: var(--app-bg-color);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
@@ -275,21 +275,24 @@
   }
 
   .info {
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   }
 
   .actions {
     border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-    margin-top: 0;
   }
 
   .meta {
     flex-direction: row;
     flex-wrap: wrap;
-    gap: var(--spacing-lg);
+    gap: var(--spacing-md) var(--spacing-lg);
   }
 
   .metaItem {
     flex: 0 0 auto;
+  }
+
+  .metaLabel {
+    min-width: auto;
   }
 }

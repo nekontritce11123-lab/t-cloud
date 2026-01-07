@@ -41,7 +41,7 @@
 .checkbox {
   position: absolute;
   top: var(--spacing-xs);
-  left: var(--spacing-xs);
+  right: var(--spacing-xs);
   width: 24px;
   height: 24px;
   border-radius: 50%;

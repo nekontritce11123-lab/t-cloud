@@ -2,7 +2,7 @@ import { useMemo, useState, useRef, useCallback } from 'react';
 import { FileRecord } from '../../api/client';
 import { FileCard } from '../FileCard';
 import { DayCheckbox } from '../DayCheckbox';
-import { getDaysRemaining, formatDateHeader } from '../../shared/formatters';
+import { formatDateHeader } from '../../shared/formatters';
 import gridStyles from '../../styles/Grid.module.css';
 import dateHeaderStyles from '../../styles/DateHeader.module.css';
 import cardStyles from '../../styles/Card.module.css';
@@ -36,16 +36,6 @@ function groupFilesByDeletedDate(files: FileRecord[]): Map<string, FileRecord[]>
   }
 
   return groups;
-}
-
-// Бейдж с количеством дней до удаления
-function DaysRemainingBadge({ deletedAt }: { deletedAt: string }) {
-  const daysRemaining = getDaysRemaining(deletedAt);
-  return (
-    <div className={styles.daysRemainingBadge}>
-      {daysRemaining === 0 ? 'Сегодня' : `${daysRemaining} дн.`}
-    </div>
-  );
 }
 
 export function TrashTimeline({
@@ -162,7 +152,6 @@ export function TrashTimeline({
                 onFileLongPress={onFileLongPress}
                 isSelected={selectedFiles.has(file.id)}
                 isSelectionMode={isSelectionMode}
-                badge={<DaysRemainingBadge deletedAt={file.deletedAt!} />}
                 disableActiveScale
                 includeDataFileId
               />

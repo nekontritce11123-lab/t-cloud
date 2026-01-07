@@ -13,20 +13,6 @@
   flex-direction: column;
 }
 
-/* Days remaining badge - red */
-.daysRemainingBadge {
-  position: absolute;
-  top: var(--spacing-xs);
-  right: var(--spacing-xs);
-  padding: 2px 6px;
-  background: var(--app-destructive-text-color, #ff3b30);
-  border-radius: var(--radius-sm);
-  font-size: 9px;
-  font-weight: var(--font-weight-semibold);
-  color: white;
-  z-index: 10;
-}
-
 /* Large desktop: max-width for timeline container */
 @media (min-width: 1200px) {
   .timeline {
