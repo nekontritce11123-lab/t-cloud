@@ -87,20 +87,6 @@
   overflow: hidden;
 }
 
-/* Градиент поверх картинки - плавный переход */
-.preview::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to top,
-    rgba(0, 0, 0, 0.8) 0%,
-    rgba(0, 0, 0, 0.4) 30%,
-    rgba(0, 0, 0, 0) 60%
-  );
-  z-index: 1;
-  pointer-events: none;
-}
 
 .thumbnail {
   width: 100%;
@@ -170,10 +156,13 @@
   bottom: var(--spacing-xs);
   right: var(--spacing-xs);
   padding: 2px 6px;
-  background: var(--overlay-dark);
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 /* Mini badge для карточек без caption/fileName */
@@ -221,21 +210,25 @@
 
 .info {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 6px 8px 8px;
-  background: transparent;
+  bottom: 6px;
+  left: 6px;
+  max-width: calc(100% - 12px);
+  width: fit-content;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 6px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   z-index: 5;
 }
 
 .name {
   font-size: 10px;
   font-weight: var(--font-weight-medium);
-  line-height: 1.2;
+  line-height: 1.15;
   color: rgba(255, 255, 255, 0.95);
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -243,13 +236,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: left;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .caption {
   font-size: 10px;
-  font-weight: var(--font-weight-semibold);
-  line-height: 1.2;
+  font-weight: normal;
+  line-height: 1.15;
   color: #fff;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -257,7 +249,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: left;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .fileName {
@@ -277,24 +268,14 @@
 
 .forward {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  padding: 6px 8px;
-  padding-bottom: 20px;
-  background: rgba(0, 0, 0, 0.7);
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    black 0%,
-    black 40%,
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    black 0%,
-    black 40%,
-    transparent 100%
-  );
+  top: 6px;
+  left: 6px;
+  max-width: calc(100% - 40px);
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 6px;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -432,7 +413,10 @@
   }
 
   .info {
-    padding: 8px;
+    padding: 5px 10px;
+    bottom: 8px;
+    left: 8px;
+    max-width: calc(100% - 16px);
   }
 
   .icon {
@@ -466,8 +450,11 @@
   }
 
   .info {
-    padding: 10px;
-    gap: 4px;
+    padding: 6px 12px;
+    gap: 2px;
+    bottom: 10px;
+    left: 10px;
+    max-width: calc(100% - 20px);
   }
 
   .icon {
