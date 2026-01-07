@@ -2,6 +2,15 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiClient, FileRecord, LinkRecord, CategoryStats } from '../api/client';
 import { CategoryType } from '../components/CategoryChips/CategoryChips';
 
+export interface SearchFilters {
+  dateFrom?: string;
+  dateTo?: string;
+  sizeMin?: number;
+  sizeMax?: number;
+  from?: string;
+  chat?: string;
+}
+
 export function useFiles(apiReady = true) {
   const [files, setFiles] = useState<FileRecord[]>([]);
   const [links, setLinks] = useState<LinkRecord[]>([]);
@@ -16,29 +25,32 @@ export function useFiles(apiReady = true) {
   const currentRequestId = useRef(0);
 
   // Универсальная функция загрузки данных
-  const loadDataForQuery = useCallback(async (query: string, type: CategoryType) => {
+  const loadDataForQuery = useCallback(async (query: string, type: CategoryType, filters?: SearchFilters) => {
     if (!apiReady) return;
 
     const requestId = ++currentRequestId.current;
-    console.log('[useFiles] loadDataForQuery called, query:', query, 'type:', type, 'requestId:', requestId);
+    console.log('[useFiles] loadDataForQuery called, query:', query, 'type:', type, 'filters:', filters, 'requestId:', requestId);
 
     setIsLoading(true);
     setError(null);
 
     try {
-      if (query && query.trim()) {
+      const hasFilters = filters && (filters.dateFrom || filters.dateTo || filters.sizeMin || filters.sizeMax || filters.from || filters.chat);
+
+      if ((query && query.trim()) || hasFilters) {
         // Определяем параметры поиска в зависимости от категории
         const isTrash = type === 'trash';
         const searchType = (type === 'trash' || type === 'link' || type === null) ? undefined : type;
 
-        // Search files
-        const filesResult = await apiClient.searchFiles(query, {
+        // Search files with filters
+        const filesResult = await apiClient.searchFiles(query || '', {
           type: searchType,
           deleted: isTrash,
+          ...filters,
         });
 
-        // Search links only if not trash
-        const linksResult = type !== 'trash'
+        // Search links only if not trash and no tag filters (tags don't apply to links)
+        const linksResult = type !== 'trash' && !hasFilters && query && query.trim()
           ? await apiClient.searchLinks(query)
           : { items: [] };
 
@@ -109,20 +121,24 @@ export function useFiles(apiReady = true) {
     }
   }, [apiReady]); // Только при изменении apiReady!
 
+  // Current filters ref (for filterByType to use)
+  const currentFiltersRef = useRef<SearchFilters | undefined>(undefined);
+
   // Filter by type - сразу загружает данные
   const filterByType = useCallback((type: CategoryType) => {
     console.log('[useFiles] filterByType:', type);
     setSelectedType(type);
     // НЕ очищаем searchQuery - сохраняем поиск при переключении категории
-    loadDataForQuery(searchQuery, type);
+    loadDataForQuery(searchQuery, type, currentFiltersRef.current);
   }, [loadDataForQuery, searchQuery]);
 
-  // Search - для debounced ввода
-  const search = useCallback((query: string) => {
-    console.log('[useFiles] search called with:', query);
+  // Search - для debounced ввода с опциональными фильтрами
+  const search = useCallback((query: string, filters?: SearchFilters) => {
+    console.log('[useFiles] search called with:', query, 'filters:', filters);
     setSearchQuery(query);
+    currentFiltersRef.current = filters;
     // Передаём текущую категорию вместо null
-    loadDataForQuery(query, selectedType);
+    loadDataForQuery(query, selectedType, filters);
   }, [loadDataForQuery, selectedType]);
 
   // Мгновенная очистка поиска (для кнопки X)
@@ -132,6 +148,9 @@ export function useFiles(apiReady = true) {
 
     // Отменяем любые pending запросы
     const requestId = ++currentRequestId.current;
+
+    // Очищаем фильтры
+    currentFiltersRef.current = undefined;
 
     setIsLoading(true);
     setError(null);

@@ -160,16 +160,30 @@ export interface SearchResult extends schema.File {
 }
 
 /**
+ * Search options for files
+ */
+export interface FileSearchOptions {
+  mediaType?: string;
+  includeDeleted?: boolean;
+  // Date filters (unix timestamps)
+  dateFrom?: number;
+  dateTo?: number;
+  // Size filters (bytes)
+  sizeMin?: number;
+  sizeMax?: number;
+  // Sender filters
+  fromName?: string;
+  fromChat?: string;
+}
+
+/**
  * Full-text search with snippets showing where match occurred
  */
 export function searchFilesWithSnippets(
   userId: number,
   query: string,
   limit = 50,
-  options?: {
-    mediaType?: string;
-    includeDeleted?: boolean;
-  }
+  options?: FileSearchOptions
 ): SearchResult[] {
   // Build dynamic WHERE clause
   const conditions = ['f.user_id = ?'];
@@ -188,27 +202,80 @@ export function searchFilesWithSnippets(
     params.push(options.mediaType);
   }
 
-  conditions.push('files_fts MATCH ?');
-  params.push(query);
+  // Date filters
+  if (options?.dateFrom !== undefined) {
+    conditions.push('f.created_at >= ?');
+    params.push(options.dateFrom);
+  }
+  if (options?.dateTo !== undefined) {
+    conditions.push('f.created_at < ?');
+    params.push(options.dateTo);
+  }
 
-  const whereClause = conditions.join(' AND ');
+  // Size filters
+  if (options?.sizeMin !== undefined) {
+    conditions.push('f.file_size >= ?');
+    params.push(options.sizeMin);
+  }
+  if (options?.sizeMax !== undefined) {
+    conditions.push('f.file_size <= ?');
+    params.push(options.sizeMax);
+  }
 
-  // FTS5 snippet function: snippet(table, col_idx, start_mark, end_mark, ellipsis, max_tokens)
-  const stmt = sqlite.prepare(`
-    SELECT
-      f.*,
-      snippet(files_fts, 0, '**', '**', '...', 10) as snippet_file_name,
-      snippet(files_fts, 1, '**', '**', '...', 10) as snippet_caption,
-      snippet(files_fts, 2, '**', '**', '...', 10) as snippet_forward,
-      snippet(files_fts, 3, '**', '**', '...', 10) as snippet_chat_title
-    FROM files f
-    JOIN files_fts ON f.id = files_fts.rowid
-    WHERE ${whereClause}
-    ORDER BY rank
-    LIMIT ?
-  `);
+  // Sender filters (case-insensitive LIKE)
+  if (options?.fromName) {
+    conditions.push('LOWER(f.forward_from_name) LIKE LOWER(?)');
+    params.push(`%${options.fromName}%`);
+  }
+  if (options?.fromChat) {
+    conditions.push('LOWER(f.forward_from_chat_title) LIKE LOWER(?)');
+    params.push(`%${options.fromChat}%`);
+  }
+
+  // FTS query is optional - if no text query, skip FTS join
+  const hasFtsQuery = query && query.trim().length > 0;
+
+  let sql: string;
+  if (hasFtsQuery) {
+    conditions.push('files_fts MATCH ?');
+    params.push(query);
+
+    const whereClause = conditions.join(' AND ');
+
+    // FTS5 snippet function: snippet(table, col_idx, start_mark, end_mark, ellipsis, max_tokens)
+    sql = `
+      SELECT
+        f.*,
+        snippet(files_fts, 0, '**', '**', '...', 10) as snippet_file_name,
+        snippet(files_fts, 1, '**', '**', '...', 10) as snippet_caption,
+        snippet(files_fts, 2, '**', '**', '...', 10) as snippet_forward,
+        snippet(files_fts, 3, '**', '**', '...', 10) as snippet_chat_title
+      FROM files f
+      JOIN files_fts ON f.id = files_fts.rowid
+      WHERE ${whereClause}
+      ORDER BY rank
+      LIMIT ?
+    `;
+  } else {
+    // No FTS query - just filter by conditions
+    const whereClause = conditions.join(' AND ');
+
+    sql = `
+      SELECT
+        f.*,
+        NULL as snippet_file_name,
+        NULL as snippet_caption,
+        NULL as snippet_forward,
+        NULL as snippet_chat_title
+      FROM files f
+      WHERE ${whereClause}
+      ORDER BY f.created_at DESC
+      LIMIT ?
+    `;
+  }
 
   params.push(limit);
+  const stmt = sqlite.prepare(sql);
   const rows = stmt.all(...params) as any[];
 
   return rows.map(row => {

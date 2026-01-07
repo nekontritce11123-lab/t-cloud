@@ -1,5 +1,5 @@
 import { eq, and, desc, sql, isNull, isNotNull, lt, or } from 'drizzle-orm';
-import { db, searchFiles as ftsSearch, searchFilesWithSnippets, SearchResult } from '../index.js';
+import { db, searchFiles as ftsSearch, searchFilesWithSnippets, SearchResult, FileSearchOptions } from '../index.js';
 import { files, NewFile, File } from '../schema.js';
 import { MediaType, CategoryStats } from '../../types/index.js';
 
@@ -144,7 +144,7 @@ export class FilesRepository {
     userId: number,
     query: string,
     limit = 50,
-    options?: { mediaType?: string; includeDeleted?: boolean }
+    options?: FileSearchOptions
   ): SearchResult[] {
     return searchFilesWithSnippets(userId, query, limit, options);
   }

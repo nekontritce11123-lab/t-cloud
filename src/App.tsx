@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useTelegram } from './hooks/useTelegram';
 import { useFiles } from './hooks/useFiles';
 import { useSearchHistory } from './hooks/useSearchHistory';
-import { parseSearchInput, SearchTag } from './utils/searchTagParser';
+import { parseSearchInput, tagsToQueryParams, SearchTag } from './utils/searchTagParser';
 import { apiClient, FileRecord, LinkRecord } from './api/client';
 import { CategoryChips } from './components/CategoryChips/CategoryChips';
 import { SearchBar } from './components/SearchBar/SearchBar';
@@ -125,6 +125,21 @@ function App() {
     }
   }, [apiReady]);
 
+  // Конвертирует теги в фильтры для API
+  const getFiltersFromTags = useCallback((tags: SearchTag[]) => {
+    if (tags.length === 0) return undefined;
+    const params = tagsToQueryParams(tags);
+    // Конвертируем строковые значения в нужные типы
+    return {
+      dateFrom: params.dateFrom,
+      dateTo: params.dateTo,
+      sizeMin: params.sizeMin ? parseInt(params.sizeMin, 10) : undefined,
+      sizeMax: params.sizeMax ? parseInt(params.sizeMax, 10) : undefined,
+      from: params.from,
+      chat: params.chat,
+    };
+  }, []);
+
   // Обработчик ввода с debounce и парсингом тегов
   const handleSearchChange = useCallback((value: string) => {
     // Парсим теги только из завершённых слов (заканчивающихся пробелом)
@@ -137,7 +152,8 @@ function App() {
 
       if (parsed.tags.length > 0) {
         // Добавляем найденные теги
-        setSearchTags(prev => [...prev, ...parsed.tags]);
+        const newTags = [...searchTags, ...parsed.tags];
+        setSearchTags(newTags);
         // Оставляем только текст (без пробела в конце)
         setSearchInput(parsed.text);
 
@@ -146,12 +162,13 @@ function App() {
           clearTimeout(debounceTimerRef.current);
         }
 
-        // Сразу ищем
+        // Сразу ищем с фильтрами
         debounceTimerRef.current = setTimeout(() => {
-          if (parsed.text.trim() === '' && parsed.tags.length === 0) {
+          const filters = getFiltersFromTags(newTags);
+          if (parsed.text.trim() === '' && newTags.length === 0) {
             clearSearch();
           } else {
-            search(parsed.text);
+            search(parsed.text, filters);
           }
         }, 300);
         return;
@@ -166,20 +183,31 @@ function App() {
       clearTimeout(debounceTimerRef.current);
     }
 
-    // Debounce для поиска
+    // Debounce для поиска с текущими тегами
     debounceTimerRef.current = setTimeout(() => {
+      const filters = getFiltersFromTags(searchTags);
       if (value.trim() === '' && searchTags.length === 0) {
         clearSearch();
       } else {
-        search(value);
+        search(value, filters);
       }
     }, 300);
-  }, [search, clearSearch, searchTags.length]);
+  }, [search, clearSearch, searchTags, getFiltersFromTags]);
 
-  // Удаление тега
+  // Удаление тега - перезапускаем поиск с оставшимися тегами
   const handleTagRemove = useCallback((tagId: string) => {
-    setSearchTags(prev => prev.filter(t => t.id !== tagId));
-  }, []);
+    setSearchTags(prev => {
+      const newTags = prev.filter(t => t.id !== tagId);
+      // Запускаем поиск с обновлёнными тегами
+      const filters = getFiltersFromTags(newTags);
+      if (searchInput.trim() === '' && newTags.length === 0) {
+        clearSearch();
+      } else {
+        search(searchInput, filters);
+      }
+      return newTags;
+    });
+  }, [searchInput, search, clearSearch, getFiltersFromTags]);
 
   // Создание тега напрямую (для автодополнения с пробелами в имени)
   const handleCreateTag = useCallback((type: 'from' | 'chat', value: string) => {
@@ -190,8 +218,14 @@ function App() {
       value,
       raw: `${type === 'from' ? 'от' : 'из'}:${value}`,
     };
-    setSearchTags(prev => [...prev, newTag]);
-  }, []);
+    setSearchTags(prev => {
+      const newTags = [...prev, newTag];
+      // Запускаем поиск с новыми тегами
+      const filters = getFiltersFromTags(newTags);
+      search(searchInput, filters);
+      return newTags;
+    });
+  }, [searchInput, search, getFiltersFromTags]);
 
   // Мгновенная очистка поиска по крестику (сохраняем в историю)
   const handleClearSearch = useCallback(() => {

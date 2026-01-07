@@ -147,19 +147,29 @@ router.get('/by-date', async (req, res: Response) => {
 
 /**
  * GET /api/files/search
- * Full-text search in files with match info
+ * Full-text search in files with match info and filters
  * Query params:
- *   - q: search query (required)
+ *   - q: search query (optional if filters provided)
  *   - limit: max results (optional, default: 50, max: 100)
  *   - type: filter by mediaType (optional)
  *   - deleted: if "true", search in trash (optional)
+ *   - dateFrom: ISO date string (optional)
+ *   - dateTo: ISO date string (optional)
+ *   - sizeMin: min file size in bytes (optional)
+ *   - sizeMax: max file size in bytes (optional)
+ *   - from: filter by forward_from_name (optional)
+ *   - chat: filter by forward_from_chat_title (optional)
  */
 router.get('/search', async (req, res: Response) => {
   const { telegramUser } = req as AuthenticatedRequest;
-  const { q, limit = '50', type, deleted } = req.query;
+  const { q, limit = '50', type, deleted, dateFrom, dateTo, sizeMin, sizeMax, from, chat } = req.query;
 
-  if (!q || typeof q !== 'string') {
-    res.status(400).json({ error: 'Query parameter "q" is required' });
+  // At least q or one filter is required
+  const hasQuery = q && typeof q === 'string' && q.trim().length > 0;
+  const hasFilters = dateFrom || dateTo || sizeMin || sizeMax || from || chat;
+
+  if (!hasQuery && !hasFilters) {
+    res.status(400).json({ error: 'Query parameter "q" or at least one filter is required' });
     return;
   }
 
@@ -167,7 +177,16 @@ router.get('/search', async (req, res: Response) => {
     const limitNum = Math.min(parseInt(limit as string, 10), 100);
 
     // Build search options
-    const searchOptions: { mediaType?: string; includeDeleted?: boolean } = {};
+    const searchOptions: {
+      mediaType?: string;
+      includeDeleted?: boolean;
+      dateFrom?: number;
+      dateTo?: number;
+      sizeMin?: number;
+      sizeMax?: number;
+      fromName?: string;
+      fromChat?: string;
+    } = {};
 
     if (type && typeof type === 'string') {
       searchOptions.mediaType = type;
@@ -177,10 +196,46 @@ router.get('/search', async (req, res: Response) => {
       searchOptions.includeDeleted = true;
     }
 
+    // Date filters - convert ISO strings to unix timestamps
+    if (dateFrom && typeof dateFrom === 'string') {
+      const d = new Date(dateFrom);
+      if (!isNaN(d.getTime())) {
+        searchOptions.dateFrom = Math.floor(d.getTime() / 1000);
+      }
+    }
+    if (dateTo && typeof dateTo === 'string') {
+      const d = new Date(dateTo);
+      if (!isNaN(d.getTime())) {
+        searchOptions.dateTo = Math.floor(d.getTime() / 1000);
+      }
+    }
+
+    // Size filters
+    if (sizeMin && typeof sizeMin === 'string') {
+      const s = parseInt(sizeMin, 10);
+      if (!isNaN(s)) {
+        searchOptions.sizeMin = s;
+      }
+    }
+    if (sizeMax && typeof sizeMax === 'string') {
+      const s = parseInt(sizeMax, 10);
+      if (!isNaN(s)) {
+        searchOptions.sizeMax = s;
+      }
+    }
+
+    // Sender filters
+    if (from && typeof from === 'string') {
+      searchOptions.fromName = from;
+    }
+    if (chat && typeof chat === 'string') {
+      searchOptions.fromChat = chat;
+    }
+
     // Use search with snippets to show where match occurred
     const files = filesRepo.searchWithSnippets(
       telegramUser.id,
-      q,
+      hasQuery ? (q as string) : '',
       limitNum,
       searchOptions
     );

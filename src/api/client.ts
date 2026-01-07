@@ -122,9 +122,21 @@ class ApiClient {
       type?: string;
       deleted?: boolean;
       limit?: number;
+      // Tag filters
+      dateFrom?: string;
+      dateTo?: string;
+      sizeMin?: number;
+      sizeMax?: number;
+      from?: string;
+      chat?: string;
     }
   ): Promise<{ items: FileRecord[]; total: number }> {
-    const params = new URLSearchParams({ q: query });
+    const params = new URLSearchParams();
+
+    // Query is optional if filters are provided
+    if (query && query.trim()) {
+      params.set('q', query);
+    }
 
     if (options?.limit !== undefined) {
       params.set('limit', String(options.limit));
@@ -138,6 +150,26 @@ class ApiClient {
 
     if (options?.deleted !== undefined) {
       params.set('deleted', String(options.deleted));
+    }
+
+    // Tag filters
+    if (options?.dateFrom) {
+      params.set('dateFrom', options.dateFrom);
+    }
+    if (options?.dateTo) {
+      params.set('dateTo', options.dateTo);
+    }
+    if (options?.sizeMin !== undefined) {
+      params.set('sizeMin', String(options.sizeMin));
+    }
+    if (options?.sizeMax !== undefined) {
+      params.set('sizeMax', String(options.sizeMax));
+    }
+    if (options?.from) {
+      params.set('from', options.from);
+    }
+    if (options?.chat) {
+      params.set('chat', options.chat);
     }
 
     const response = await fetch(`${API_URL}/api/files/search?${params}`, {
