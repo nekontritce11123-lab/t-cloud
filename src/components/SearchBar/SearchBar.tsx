@@ -81,18 +81,12 @@ function ChatIcon() {
   );
 }
 
-interface SearchHint {
-  field: string;
-  snippet: string;
-}
-
 interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
   onClear?: () => void;
   onSearch?: (query: string) => void;
   placeholder?: string;
-  hint?: SearchHint | null;
   history?: string[];
   onHistorySelect?: (query: string) => void;
   onHistoryRemove?: (query: string) => void;
@@ -110,25 +104,6 @@ interface SearchBarProps {
   onSuggestionSelect?: (word: string) => void;
 }
 
-// Форматирование snippet
-function formatSnippet(snippet: string): string {
-  return snippet.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
-}
-
-// Описание поля
-function getFieldLabel(field: string): string {
-  switch (field) {
-    case 'caption': return 'в подписи';
-    case 'file_name': return 'в имени';
-    case 'forward_from_name': return 'от';
-    case 'forward_from_chat_title': return 'из чата';
-    case 'url': return 'в URL';
-    case 'title': return 'в заголовке';
-    case 'description': return 'в описании';
-    case 'site_name': return 'на сайте';
-    default: return '';
-  }
-}
 
 export function SearchBar({
   value,
@@ -136,7 +111,6 @@ export function SearchBar({
   onClear,
   onSearch,
   placeholder = 'Поиск...',
-  hint,
   history = [],
   onHistorySelect,
   onHistoryRemove,
@@ -420,15 +394,6 @@ export function SearchBar({
         </div>
       )}
 
-      {hint && value && !showAutocomplete && (
-        <div className={styles.hint}>
-          <span className={styles.hintLabel}>{getFieldLabel(hint.field)}:</span>
-          <span
-            className={styles.hintText}
-            dangerouslySetInnerHTML={{ __html: formatSnippet(hint.snippet) }}
-          />
-        </div>
-      )}
     </div>
   );
 }

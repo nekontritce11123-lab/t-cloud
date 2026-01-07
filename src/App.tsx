@@ -37,8 +37,8 @@ function App() {
   // История поиска
   const { history: searchHistory, addToHistory, removeFromHistory, clearHistory } = useSearchHistory();
 
-  // Autocomplete (мгновенные подсказки из словаря)
-  const { suggestions, search: autocompleteSearch, clear: clearSuggestions } = useAutocomplete();
+  // Autocomplete (мгновенные подсказки из словаря) - загружается ПОСЛЕ авторизации
+  const { suggestions, search: autocompleteSearch, clear: clearSuggestions } = useAutocomplete(apiReady);
 
   // Локальное состояние для инпута (для отзывчивости при вводе)
   const [searchInput, setSearchInput] = useState('');
@@ -548,13 +548,6 @@ function App() {
     });
   }, []);
 
-  // Подсказка для поиска (из первого результата)
-  const searchHint = searchQuery && files.length > 0 && files[0].matchedField && files[0].matchedSnippet
-    ? { field: files[0].matchedField, snippet: files[0].matchedSnippet }
-    : searchQuery && links.length > 0 && links[0].matchedField && links[0].matchedSnippet
-    ? { field: links[0].matchedField, snippet: links[0].matchedSnippet }
-    : null;
-
   // Loading state
   if (!isReady) {
     return (
@@ -582,7 +575,6 @@ function App() {
           onClear={handleClearSearch}
           onSearch={addToHistory}
           placeholder="Искать по имени, подписи..."
-          hint={searchHint}
           history={searchHistory}
           onHistorySelect={addToHistory}
           onHistoryRemove={removeFromHistory}

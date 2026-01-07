@@ -5,16 +5,18 @@ import { PrefixTrie } from '../utils/trie';
 /**
  * Hook для мгновенного autocomplete
  *
- * Загружает словарь один раз при монтировании,
+ * Загружает словарь после авторизации (apiReady),
  * строит Trie индекс и выполняет локальный поиск <1ms
  */
-export function useAutocomplete() {
+export function useAutocomplete(apiReady: boolean) {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const trieRef = useRef<PrefixTrie | null>(null);
 
-  // Загрузка словаря при монтировании
+  // Загрузка словаря ПОСЛЕ авторизации
   useEffect(() => {
+    if (!apiReady) return; // Ждём пока API будет готов (initData установлен)
+
     let cancelled = false;
 
     async function loadDictionary() {
@@ -37,12 +39,14 @@ export function useAutocomplete() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [apiReady]);
 
   /**
    * Мгновенный поиск по последнему слову ввода
    */
   const search = useCallback((input: string) => {
+    console.log('[Autocomplete] search called:', input, 'trie ready:', !!trieRef.current);
+
     if (!trieRef.current || input.length < 1) {
       setSuggestions([]);
       return;
@@ -54,6 +58,7 @@ export function useAutocomplete() {
 
     if (lastWord.length >= 1) {
       const results = trieRef.current.search(lastWord, 8);
+      console.log('[Autocomplete] search results for', lastWord, ':', results);
       setSuggestions(results);
     } else {
       setSuggestions([]);
