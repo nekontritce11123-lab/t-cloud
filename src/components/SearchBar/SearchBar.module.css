@@ -107,3 +107,102 @@
   color: var(--app-text-color);
   font-weight: var(--font-weight-bold);
 }
+
+/* История поиска - dropdown */
+.wrapper {
+  position: relative;
+}
+
+.dropdown {
+  position: absolute;
+  top: 100%;
+  left: var(--spacing-lg);
+  right: var(--spacing-lg);
+  margin-top: var(--spacing-xs);
+  background: var(--app-secondary-bg-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  z-index: 100;
+}
+
+.dropdownHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dropdownTitle {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--app-hint-color);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dropdownClear {
+  font-size: var(--font-size-xs);
+  color: var(--app-link-color);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.dropdownClear:hover {
+  text-decoration: underline;
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--animation-fast) var(--easing-smooth);
+}
+
+.dropdownItem:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dropdownItem:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.historyIcon {
+  flex-shrink: 0;
+  color: var(--app-hint-color);
+  opacity: 0.6;
+}
+
+.dropdownText {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: var(--app-text-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdownRemove {
+  font-size: 10px;
+  color: var(--app-hint-color);
+  opacity: 0;
+  padding: 4px;
+  transition: opacity var(--animation-fast) var(--easing-smooth);
+}
+
+.dropdownItem:hover .dropdownRemove {
+  opacity: 1;
+}
+
+.dropdownRemove:hover {
+  color: var(--app-text-color);
+}

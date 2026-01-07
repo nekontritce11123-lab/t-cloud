@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useTelegram } from './hooks/useTelegram';
 import { useFiles } from './hooks/useFiles';
+import { useSearchHistory } from './hooks/useSearchHistory';
 import { apiClient, FileRecord, LinkRecord } from './api/client';
 import { CategoryChips } from './components/CategoryChips/CategoryChips';
 import { SearchBar } from './components/SearchBar/SearchBar';
@@ -30,6 +31,9 @@ function App() {
     clearSearch,
     refresh,
   } = useFiles(apiReady);
+
+  // История поиска
+  const { history: searchHistory, addToHistory, removeFromHistory, clearHistory } = useSearchHistory();
 
   // Локальное состояние для инпута (для отзывчивости при вводе)
   const [searchInput, setSearchInput] = useState('');
@@ -121,7 +125,6 @@ function App() {
     // Debounce для поиска
     debounceTimerRef.current = setTimeout(() => {
       if (value.trim() === '') {
-        // При пустом значении используем clearSearch чтобы избежать race condition
         clearSearch();
       } else {
         search(value);
@@ -129,15 +132,19 @@ function App() {
     }, 300);
   }, [search, clearSearch]);
 
-  // Мгновенная очистка поиска
+  // Мгновенная очистка поиска по крестику (сохраняем в историю)
   const handleClearSearch = useCallback(() => {
+    // Сохраняем текущий запрос в историю перед очисткой
+    if (searchInput.trim().length >= 2) {
+      addToHistory(searchInput.trim());
+    }
     // Очищаем таймер debounce
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
     setSearchInput('');
     clearSearch();
-  }, [clearSearch]);
+  }, [clearSearch, searchInput, addToHistory]);
 
   // Управление главной кнопкой
   useEffect(() => {
@@ -422,8 +429,13 @@ function App() {
           value={searchInput}
           onChange={handleSearchChange}
           onClear={handleClearSearch}
+          onSearch={addToHistory}
           placeholder="Искать по имени, подписи..."
           hint={searchHint}
+          history={searchHistory}
+          onHistorySelect={addToHistory}
+          onHistoryRemove={removeFromHistory}
+          onHistoryClear={clearHistory}
         />
       </header>
 
