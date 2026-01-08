@@ -35,9 +35,11 @@ export function useLongPress<T>(
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
+      // Timer не сработал (был отменён) - сбрасываем для следующего взаимодействия
+      isLongPress.current = false;
     }
-    // Сбрасываем флаг чтобы следующий click сработал корректно
-    isLongPress.current = false;
+    // Если timer уже сработал (isLongPress = true), НЕ сбрасываем здесь
+    // handleClick проверит флаг и сбросит его после
   }, []);
 
   const handleClick = useCallback(() => {
