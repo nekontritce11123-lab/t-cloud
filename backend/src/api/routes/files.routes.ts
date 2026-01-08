@@ -508,6 +508,53 @@ router.get('/:id', async (req, res: Response) => {
   }
 });
 
+/**
+ * GET /api/files/:id/video-url
+ * Get streaming URL for video files (video and video_note)
+ * URL is valid for ~1 hour from Telegram CDN
+ */
+router.get('/:id/video-url', async (req, res: Response) => {
+  const { telegramUser } = req as unknown as AuthenticatedRequest;
+  const fileId = parseInt(req.params.id, 10);
+
+  if (isNaN(fileId)) {
+    res.status(400).json({ error: 'Invalid file ID' });
+    return;
+  }
+
+  try {
+    const file = await filesRepo.findById(fileId);
+
+    if (!file || file.userId !== telegramUser.id) {
+      res.status(404).json({ error: 'File not found' });
+      return;
+    }
+
+    // Only allow video and video_note types
+    if (!['video', 'video_note'].includes(file.mediaType)) {
+      res.status(400).json({ error: 'File is not a video' });
+      return;
+    }
+
+    const service = getThumbnailService();
+    const videoUrl = await service.getFileUrl(file.fileId);
+
+    if (!videoUrl) {
+      res.status(410).json({ error: 'VIDEO_UNAVAILABLE' });
+      return;
+    }
+
+    res.json({
+      videoUrl,
+      expiresIn: 3600,
+      mimeType: file.mimeType || 'video/mp4',
+    });
+  } catch (error) {
+    console.error('[API] Error getting video URL:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Лимиты для предотвращения бана от Telegram
 const MAX_FILES_PER_REQUEST = 20;
 const DELAY_BETWEEN_SENDS_MS = 300; // 300ms между отправками

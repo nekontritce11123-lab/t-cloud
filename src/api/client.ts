@@ -271,6 +271,30 @@ class ApiClient {
     return response.json();
   }
 
+  // Video streaming API
+
+  async getVideoUrl(fileId: number): Promise<{
+    videoUrl: string;
+    expiresIn: number;
+    mimeType: string;
+  }> {
+    const response = await fetch(`${API_URL}/api/files/${fileId}/video-url`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      if (response.status === 410) {
+        throw new Error('VIDEO_UNAVAILABLE');
+      }
+      if (response.status === 400) {
+        throw new Error('NOT_A_VIDEO');
+      }
+      throw new Error('Failed to get video URL');
+    }
+
+    return response.json();
+  }
+
   // Autocomplete Dictionary API
 
   async getDictionary(mediaType?: string): Promise<{ words: string[]; version: number }> {

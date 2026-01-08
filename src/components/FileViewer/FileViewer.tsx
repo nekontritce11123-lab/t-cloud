@@ -4,7 +4,13 @@ import { MediaTypeIcons, ShareIcon } from '../../shared/icons';
 import { formatFileSize, formatDuration, formatDate, getMediaTypeLabel, highlightMatch } from '../../shared/formatters';
 import { getEffectiveMediaType } from '../../shared/mediaType';
 import { ShareSection } from '../ShareSection';
+import { VideoPlayer } from '../VideoPlayer';
 import styles from './FileViewer.module.css';
+
+// Helper to check if file is a video
+function isVideoFile(mediaType: string): boolean {
+  return mediaType === 'video' || mediaType === 'video_note';
+}
 
 // Preset options for share creation
 const RECIPIENT_PRESETS = [1, 5, 10] as const;
@@ -185,7 +191,9 @@ export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending, sea
 
         {/* Preview */}
         <div className={styles.previewContainer}>
-          {file.thumbnailUrl ? (
+          {isVideoFile(file.mediaType) ? (
+            <VideoPlayer file={file} thumbnailUrl={file.thumbnailUrl} />
+          ) : file.thumbnailUrl ? (
             <img
               src={file.thumbnailUrl}
               alt=""
