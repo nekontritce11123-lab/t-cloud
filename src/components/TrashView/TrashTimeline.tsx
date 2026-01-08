@@ -3,6 +3,7 @@ import { FileRecord } from '../../api/client';
 import { FileCard } from '../FileCard';
 import { DayCheckbox } from '../DayCheckbox';
 import { formatDateHeader } from '../../shared/formatters';
+import { groupByDateField } from '../../shared/utils';
 import gridStyles from '../../styles/Grid.module.css';
 import dateHeaderStyles from '../../styles/DateHeader.module.css';
 import cardStyles from '../../styles/Card.module.css';
@@ -22,25 +23,6 @@ interface TrashTimelineProps {
   hapticFeedback: { light: () => void };
 }
 
-// Группировка файлов по дате удаления (в локальной timezone пользователя)
-function groupFilesByDeletedDate(files: FileRecord[]): Map<string, FileRecord[]> {
-  const groups = new Map<string, FileRecord[]>();
-
-  for (const file of files) {
-    if (!file.deletedAt) continue;
-    // Parse ISO string and use LOCAL date components for grouping
-    // (not UTC date from string split, which causes timezone issues)
-    const date = new Date(file.deletedAt);
-    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    if (!groups.has(dateKey)) {
-      groups.set(dateKey, []);
-    }
-    groups.get(dateKey)!.push(file);
-  }
-
-  return groups;
-}
-
 export function TrashTimeline({
   files,
   onFileClick,
@@ -51,7 +33,7 @@ export function TrashTimeline({
   onToggleFile,
   hapticFeedback
 }: TrashTimelineProps) {
-  const groupedFiles = useMemo(() => groupFilesByDeletedDate(files), [files]);
+  const groupedFiles = useMemo(() => groupByDateField(files, 'deletedAt'), [files]);
 
   // Drag selection state
   const [isDragging, setIsDragging] = useState(false);

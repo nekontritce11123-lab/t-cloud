@@ -125,3 +125,34 @@ export function highlightMatch(text: string, query?: string): string {
   const regex = new RegExp(`(${escaped})`, 'gi');
   return text.replace(regex, '<mark>$1</mark>');
 }
+
+// Короткие названия месяцев
+const MONTHS_SHORT_RU = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+
+/**
+ * Форматирование относительной даты (Сегодня, Вчера, X дн. назад, дата)
+ * Используется для карточек ссылок
+ */
+export function formatRelativeDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+
+  // Сброс времени для сравнения дней
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dateDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+  const diffDays = Math.floor((today.getTime() - dateDay.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return 'Сегодня';
+  if (diffDays === 1) return 'Вчера';
+  if (diffDays < 7) return `${diffDays} дн. назад`;
+
+  // Форматируем как "5 янв" или "5 янв 2024"
+  const day = date.getDate();
+  const month = MONTHS_SHORT_RU[date.getMonth()];
+
+  if (date.getFullYear() === now.getFullYear()) {
+    return `${day} ${month}`;
+  }
+  return `${day} ${month} ${date.getFullYear()}`;
+}

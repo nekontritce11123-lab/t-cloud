@@ -3,6 +3,7 @@ import { FileRecord } from '../../api/client';
 import { FileCard } from '../FileCard';
 import { DayCheckbox } from '../DayCheckbox';
 import { formatDateHeader } from '../../shared/formatters';
+import { groupByDateField } from '../../shared/utils';
 import { useAutoScroll } from '../../hooks/useAutoScroll';
 import gridStyles from '../../styles/Grid.module.css';
 import dateHeaderStyles from '../../styles/DateHeader.module.css';
@@ -24,24 +25,6 @@ interface TimelineProps {
   scrollContainerRef?: RefObject<HTMLElement | null>;
 }
 
-// Группировка файлов по датам (в локальной timezone пользователя)
-function groupFilesByDate(files: FileRecord[]): Map<string, FileRecord[]> {
-  const groups = new Map<string, FileRecord[]>();
-
-  for (const file of files) {
-    // Parse ISO string and use LOCAL date components for grouping
-    // (not UTC date from string split, which causes timezone issues)
-    const date = new Date(file.createdAt);
-    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    if (!groups.has(dateKey)) {
-      groups.set(dateKey, []);
-    }
-    groups.get(dateKey)!.push(file);
-  }
-
-  return groups;
-}
-
 export function Timeline({
   files,
   onFileClick,
@@ -54,7 +37,7 @@ export function Timeline({
   hapticFeedback,
   scrollContainerRef
 }: TimelineProps) {
-  const groupedFiles = useMemo(() => groupFilesByDate(files), [files]);
+  const groupedFiles = useMemo(() => groupByDateField(files, 'createdAt'), [files]);
 
   // Drag selection state
   const [isDragging, setIsDragging] = useState(false);

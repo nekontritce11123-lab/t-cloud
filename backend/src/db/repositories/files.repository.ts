@@ -119,14 +119,8 @@ export class FilesRepository {
   /**
    * Get files grouped by date (for Timeline) - excludes deleted
    */
-  async findByDate(
-    userId: number,
-    options: { year?: number; month?: number } = {}
-  ): Promise<File[]> {
+  async findByDate(userId: number): Promise<File[]> {
     const whereClause = and(eq(files.userId, userId), isNull(files.deletedAt));
-
-    // TODO: Add date filtering if year/month provided
-
     return db.select().from(files).where(whereClause).orderBy(desc(files.createdAt));
   }
 
