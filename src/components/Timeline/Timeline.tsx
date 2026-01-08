@@ -24,12 +24,15 @@ interface TimelineProps {
   scrollContainerRef?: RefObject<HTMLElement | null>;
 }
 
-// Группировка файлов по датам
+// Группировка файлов по датам (в локальной timezone пользователя)
 function groupFilesByDate(files: FileRecord[]): Map<string, FileRecord[]> {
   const groups = new Map<string, FileRecord[]>();
 
   for (const file of files) {
-    const dateKey = file.createdAt.split('T')[0]; // "2025-01-05"
+    // Parse ISO string and use LOCAL date components for grouping
+    // (not UTC date from string split, which causes timezone issues)
+    const date = new Date(file.createdAt);
+    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     if (!groups.has(dateKey)) {
       groups.set(dateKey, []);
     }

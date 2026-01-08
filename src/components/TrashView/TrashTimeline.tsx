@@ -22,13 +22,16 @@ interface TrashTimelineProps {
   hapticFeedback: { light: () => void };
 }
 
-// Группировка файлов по дате удаления
+// Группировка файлов по дате удаления (в локальной timezone пользователя)
 function groupFilesByDeletedDate(files: FileRecord[]): Map<string, FileRecord[]> {
   const groups = new Map<string, FileRecord[]>();
 
   for (const file of files) {
     if (!file.deletedAt) continue;
-    const dateKey = file.deletedAt.split('T')[0];
+    // Parse ISO string and use LOCAL date components for grouping
+    // (not UTC date from string split, which causes timezone issues)
+    const date = new Date(file.deletedAt);
+    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     if (!groups.has(dateKey)) {
       groups.set(dateKey, []);
     }
