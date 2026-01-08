@@ -71,6 +71,16 @@ function getThumbnailService(): ThumbnailService {
   return thumbnailService;
 }
 
+// Add hasShare flag to files array
+function addShareStatus<T extends { id: number }>(
+  files: T[],
+  userId: number
+): (T & { hasShare: boolean })[] {
+  const fileIds = files.map(f => f.id);
+  const shareSet = filesRepo.getShareStatusBatch(userId, fileIds);
+  return files.map(f => ({ ...f, hasShare: shareSet.has(f.id) }));
+}
+
 /**
  * GET /api/files
  * Get files for the authenticated user with optional filtering
@@ -111,8 +121,11 @@ router.get('/', async (req, res: Response) => {
       }))
     );
 
+    // Add hasShare flag for instant UI
+    const itemsWithShareStatus = addShareStatus(itemsWithThumbnails, telegramUser.id);
+
     res.json({
-      items: itemsWithThumbnails,
+      items: itemsWithShareStatus,
       total: result.total,
       page: pageNum,
       totalPages: Math.ceil(result.total / limitNum),
@@ -258,7 +271,10 @@ router.get('/search', async (req, res: Response) => {
       }))
     );
 
-    res.json({ items: itemsWithThumbnails, total: itemsWithThumbnails.length });
+    // Add hasShare flag for instant UI
+    const itemsWithShareStatus = addShareStatus(itemsWithThumbnails, telegramUser.id);
+
+    res.json({ items: itemsWithShareStatus, total: itemsWithShareStatus.length });
   } catch (error) {
     console.error('[API] Error searching files:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -419,7 +435,10 @@ router.get('/shared', async (req, res: Response) => {
       }))
     );
 
-    res.json({ items: itemsWithThumbnails, total: itemsWithThumbnails.length });
+    // All shared files have hasShare=true by definition
+    const itemsWithShareStatus = itemsWithThumbnails.map(f => ({ ...f, hasShare: true }));
+
+    res.json({ items: itemsWithShareStatus, total: itemsWithShareStatus.length });
   } catch (error) {
     console.error('[API] Error fetching shared files:', error);
     res.status(500).json({ error: 'Internal server error' });

@@ -47,14 +47,22 @@ export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending, sea
   const recipientsInputRef = useRef<HTMLInputElement>(null);
   const expiresInputRef = useRef<HTMLInputElement>(null);
 
-  // Load share info on mount
+  // Load share info on mount (optimized: skip if no share exists)
   useEffect(() => {
+    // If file has no share, show button immediately
+    if (!file.hasShare) {
+      setShareLoading(false);
+      setShareData(null);
+      return;
+    }
+
+    // File has share, load details
     setShareLoading(true);
     apiClient.getShareInfo(file.id)
       .then(setShareData)
       .catch(() => setShareData(null))
       .finally(() => setShareLoading(false));
-  }, [file.id]);
+  }, [file.id, file.hasShare]);
 
   // Auto-focus when switching to custom mode
   useEffect(() => {

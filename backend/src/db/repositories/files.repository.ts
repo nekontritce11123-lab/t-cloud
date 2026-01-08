@@ -354,4 +354,25 @@ export class FilesRepository {
     const result = stmt.get(userId) as { count: number } | undefined;
     return result?.count || 0;
   }
+
+  /**
+   * Get share status for a batch of file IDs
+   * Returns a Set of file IDs that have active shares
+   */
+  getShareStatusBatch(userId: number, fileIds: number[]): Set<number> {
+    if (fileIds.length === 0) return new Set();
+
+    const placeholders = fileIds.map(() => '?').join(',');
+    const stmt = sqlite.prepare(`
+      SELECT DISTINCT file_id
+      FROM file_shares
+      WHERE owner_id = ?
+        AND file_id IN (${placeholders})
+        AND is_active = 1
+        AND (expires_at IS NULL OR expires_at > unixepoch())
+    `);
+
+    const rows = stmt.all(userId, ...fileIds) as { file_id: number }[];
+    return new Set(rows.map(r => r.file_id));
+  }
 }

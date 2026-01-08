@@ -65,6 +65,12 @@ export function FileCard({
     disableActiveScale ? cardStyles.noActiveScale : '',
   ].filter(Boolean).join(' ');
 
+  // Не показывать размер файла на миниатюрах изображений (photo, video_note, PNG и др.)
+  const isImageType = file.mediaType === 'photo' ||
+    file.mediaType === 'video_note' ||
+    file.mimeType?.startsWith('image/');
+  const showFileSize = !isImageType;
+
   return (
     <button
       className={cardClassName}
@@ -138,19 +144,19 @@ export function FileCard({
                   )}
                 </>
               )}
-              {file.fileSize && (
+              {showFileSize && file.fileSize && (
                 <span className={cardStyles.size}>{formatFileSize(file.fileSize)}</span>
               )}
             </div>
-          ) : (
-            /* Компактный бейдж для фото/видео без текста */
+          ) : file.mediaType !== 'photo' ? (
+            /* Компактный бейдж для видео/документов без текста (не для фото) */
             <div className={cardStyles.miniBadge}>
               <span className={cardStyles.miniBadgeIcon}>
                 {MediaTypeIcons[getEffectiveMediaType(file.mediaType, file.mimeType)]}
               </span>
-              {file.fileSize && <span>{formatFileSize(file.fileSize)}</span>}
+              {showFileSize && file.fileSize && <span>{formatFileSize(file.fileSize)}</span>}
             </div>
-          )}
+          ) : null}
         </>
       ) : (
         /* === КАРТОЧКА БЕЗ ПРЕВЬЮ (документы) === */
@@ -166,7 +172,7 @@ export function FileCard({
               }}
             />
           )}
-          {file.fileSize && (
+          {showFileSize && file.fileSize && (
             <span className={cardStyles.fileSizeCenter}>{formatFileSize(file.fileSize)}</span>
           )}
         </div>

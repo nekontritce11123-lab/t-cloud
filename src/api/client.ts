@@ -27,6 +27,8 @@ export interface FileRecord {
   forwardFromChatTitle?: string | null;
   createdAt: string;
   deletedAt?: string | null;
+  // Share status (for instant UI without extra API call)
+  hasShare?: boolean;
   // Search result fields (only present in search results)
   matchedField?: 'file_name' | 'caption' | 'forward_from_name' | 'forward_from_chat_title';
   matchedSnippet?: string;
