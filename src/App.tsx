@@ -526,9 +526,15 @@ function App() {
     });
   }, [hapticFeedback]);
 
-  // Выбрать range файлов (для drag selection)
+  // Выбрать range файлов (для drag selection) - ДОБАВЛЯЕТ к существующему выделению
   const handleSelectRange = useCallback((fileIds: number[]) => {
-    setSelectedFiles(new Set(fileIds));
+    setSelectedFiles(prev => {
+      const next = new Set(prev);
+      for (const id of fileIds) {
+        next.add(id);
+      }
+      return next;
+    });
   }, []);
 
   // Loading state

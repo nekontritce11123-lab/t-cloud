@@ -52,6 +52,9 @@ export function Timeline({
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const capturedPointerId = useRef<number | null>(null);
 
+  // Block click events after drag to prevent anchor toggle
+  const blockClickUntil = useRef<number>(0);
+
   // Fallback ref если scrollContainerRef не передан
   const fallbackRef = useRef<HTMLElement>(null);
 
@@ -141,7 +144,9 @@ export function Timeline({
       setIsDragging(true);
       dragAnchorId.current = fileId;
       dragThresholdMet.current = false;
-      lastSelectedRange.current = new Set([fileId]);
+      // Сохраняем текущее выделение чтобы новый drag добавлял к нему
+      lastSelectedRange.current = new Set(selectedFiles || []);
+      lastSelectedRange.current.add(fileId);
       // НЕ выделяем anchor сразу - пусть click handler в FileCard занимается toggle
     } else {
       // НЕ в selection mode → запускаем long press timer
@@ -230,6 +235,11 @@ export function Timeline({
       longPressTimer.current = null;
     }
 
+    // Блокируем click events после drag чтобы предотвратить toggle anchor файла
+    if (isDragging) {
+      blockClickUntil.current = Date.now() + 100;
+    }
+
     // Сбрасываем drag state
     if (isDragging) {
       setIsDragging(false);
@@ -249,6 +259,14 @@ export function Timeline({
       capturedPointerId.current = null;
     }
   }, [isDragging]);
+
+  // Capture handler для блокировки click после drag
+  const handleClickCapture = useCallback((e: React.MouseEvent) => {
+    if (Date.now() < blockClickUntil.current) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  }, []);
 
 
   if (files.length === 0) {
@@ -274,6 +292,7 @@ export function Timeline({
     <div
       className={styles.timeline}
       style={isDragging ? { touchAction: 'none' } : undefined}
+      onClickCapture={handleClickCapture}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
