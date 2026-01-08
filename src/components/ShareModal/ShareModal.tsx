@@ -93,33 +93,65 @@ export function ShareModal({ file, onClose, onCreated }: ShareModalProps) {
           </button>
         </div>
 
-        {/* Settings for new share */}
-        <div className={styles.settingsSection}>
-          <div className={styles.settingLabel}>Лимит получателей</div>
-          <div className={styles.chips}>
-            {!isCustomRecipients ? (
-              <>
-                {RECIPIENT_PRESETS.map((value) => (
-                  <button
-                    key={value}
-                    className={`${styles.chip} ${maxRecipients === value ? styles.active : ''}`}
-                    onClick={() => {
-                      setMaxRecipients(value);
-                      setCustomRecipientsValue('');
-                    }}
-                  >
-                    {value}
-                  </button>
-                ))}
+        {/* Settings Block - compact layout */}
+        <div className={styles.settingsBlock}>
+          {/* Recipients Row */}
+          <div className={styles.settingRow}>
+            <div className={styles.settingLabel}>Получатели</div>
+            <div className={styles.chips}>
+              {RECIPIENT_PRESETS.map((value) => (
                 <button
-                  className={`${styles.chip} ${maxRecipients === null && !isCustomRecipients ? styles.active : ''}`}
+                  key={value}
+                  className={`${styles.chip} ${maxRecipients === value && !isCustomRecipients ? styles.active : ''}`}
                   onClick={() => {
-                    setMaxRecipients(null);
+                    setMaxRecipients(value);
                     setCustomRecipientsValue('');
+                    setIsCustomRecipients(false);
                   }}
                 >
-                  ∞
+                  {value}
                 </button>
+              ))}
+              <button
+                className={`${styles.chip} ${maxRecipients === null && !isCustomRecipients ? styles.active : ''}`}
+                onClick={() => {
+                  setMaxRecipients(null);
+                  setCustomRecipientsValue('');
+                  setIsCustomRecipients(false);
+                }}
+              >
+                ∞
+              </button>
+              {isCustomRecipients ? (
+                <div className={styles.inlineInput}>
+                  <input
+                    ref={recipientsInputRef}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={customRecipientsValue}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      if (val === '' || (parseInt(val) > 0 && parseInt(val) <= 10000)) {
+                        setCustomRecipientsValue(val);
+                        setMaxRecipients(val ? parseInt(val) : null);
+                      }
+                    }}
+                    placeholder="..."
+                    className={styles.inlineInputField}
+                  />
+                  <button
+                    className={styles.inlineCancel}
+                    onClick={() => {
+                      setIsCustomRecipients(false);
+                      setCustomRecipientsValue('');
+                      setMaxRecipients(null);
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : (
                 <button
                   className={styles.chip}
                   onClick={() => setIsCustomRecipients(true)}
@@ -127,71 +159,99 @@ export function ShareModal({ file, onClose, onCreated }: ShareModalProps) {
                   <svg className={styles.chipIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
                   </svg>
-                  Другое
                 </button>
-              </>
-            ) : (
-              <div className={styles.customInputChip}>
-                <input
-                  ref={recipientsInputRef}
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={customRecipientsValue}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, '');
-                    if (val === '' || (parseInt(val) > 0 && parseInt(val) <= 10000)) {
-                      setCustomRecipientsValue(val);
-                      setMaxRecipients(val ? parseInt(val) : null);
-                    }
-                  }}
-                  placeholder="Число"
-                  className={styles.customInput}
-                />
+              )}
+            </div>
+          </div>
+
+          <div className={styles.divider} />
+
+          {/* Expires Row */}
+          <div className={styles.settingRow}>
+            <div className={styles.settingLabel}>Срок</div>
+            <div className={styles.chips}>
+              {EXPIRES_PRESETS.map((option) => (
                 <button
-                  className={styles.cancelBtn}
+                  key={option.value}
+                  className={`${styles.chip} ${expiresIn === option.value && !isCustomExpires ? styles.active : ''}`}
                   onClick={() => {
-                    setIsCustomRecipients(false);
-                    setCustomRecipientsValue('');
-                    setMaxRecipients(null);
+                    setExpiresIn(option.value);
+                    setCustomExpiresValue('');
+                    setIsCustomExpires(false);
                   }}
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
+                  {option.label}
                 </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className={styles.settingsSection}>
-          <div className={styles.settingLabel}>Срок действия</div>
-          <div className={styles.chips}>
-            {!isCustomExpires ? (
-              <>
-                {EXPIRES_PRESETS.map((option) => (
+              ))}
+              <button
+                className={`${styles.chip} ${expiresIn === null && !isCustomExpires ? styles.active : ''}`}
+                onClick={() => {
+                  setExpiresIn(null);
+                  setCustomExpiresValue('');
+                  setIsCustomExpires(false);
+                }}
+              >
+                ∞
+              </button>
+              {isCustomExpires ? (
+                <div className={styles.inlineInputWithToggle}>
+                  <input
+                    ref={expiresInputRef}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={customExpiresValue}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      if (val === '' || (parseInt(val) > 0 && parseInt(val) <= 365)) {
+                        setCustomExpiresValue(val);
+                        if (val) {
+                          const hours = expiresUnit === 'days' ? parseInt(val) * 24 : parseInt(val);
+                          setExpiresIn(hours);
+                        } else {
+                          setExpiresIn(null);
+                        }
+                      }
+                    }}
+                    placeholder="..."
+                    className={styles.inlineInputField}
+                  />
+                  <div className={styles.unitToggle}>
+                    <button
+                      className={`${styles.unitBtn} ${expiresUnit === 'hours' ? styles.active : ''}`}
+                      onClick={() => {
+                        setExpiresUnit('hours');
+                        if (customExpiresValue) {
+                          setExpiresIn(parseInt(customExpiresValue));
+                        }
+                      }}
+                    >
+                      ч
+                    </button>
+                    <button
+                      className={`${styles.unitBtn} ${expiresUnit === 'days' ? styles.active : ''}`}
+                      onClick={() => {
+                        setExpiresUnit('days');
+                        if (customExpiresValue) {
+                          setExpiresIn(parseInt(customExpiresValue) * 24);
+                        }
+                      }}
+                    >
+                      дн
+                    </button>
+                  </div>
                   <button
-                    key={option.value}
-                    className={`${styles.chip} ${expiresIn === option.value ? styles.active : ''}`}
+                    className={styles.inlineCancel}
                     onClick={() => {
-                      setExpiresIn(option.value);
+                      setIsCustomExpires(false);
                       setCustomExpiresValue('');
+                      setExpiresIn(null);
                     }}
                   >
-                    {option.label}
+                    ×
                   </button>
-                ))}
-                <button
-                  className={`${styles.chip} ${expiresIn === null && !isCustomExpires ? styles.active : ''}`}
-                  onClick={() => {
-                    setExpiresIn(null);
-                    setCustomExpiresValue('');
-                  }}
-                >
-                  ∞
-                </button>
+                </div>
+              ) : (
                 <button
                   className={styles.chip}
                   onClick={() => setIsCustomExpires(true)}
@@ -199,71 +259,9 @@ export function ShareModal({ file, onClose, onCreated }: ShareModalProps) {
                   <svg className={styles.chipIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
                   </svg>
-                  Другое
                 </button>
-              </>
-            ) : (
-              <div className={styles.customInputChip}>
-                <input
-                  ref={expiresInputRef}
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={customExpiresValue}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, '');
-                    if (val === '' || (parseInt(val) > 0 && parseInt(val) <= 365)) {
-                      setCustomExpiresValue(val);
-                      if (val) {
-                        const hours = expiresUnit === 'days' ? parseInt(val) * 24 : parseInt(val);
-                        setExpiresIn(hours);
-                      } else {
-                        setExpiresIn(null);
-                      }
-                    }
-                  }}
-                  placeholder="Число"
-                  className={styles.customInput}
-                />
-                <div className={styles.unitToggle}>
-                  <button
-                    className={`${styles.unitBtn} ${expiresUnit === 'hours' ? styles.active : ''}`}
-                    onClick={() => {
-                      setExpiresUnit('hours');
-                      if (customExpiresValue) {
-                        setExpiresIn(parseInt(customExpiresValue));
-                      }
-                    }}
-                  >
-                    ч
-                  </button>
-                  <button
-                    className={`${styles.unitBtn} ${expiresUnit === 'days' ? styles.active : ''}`}
-                    onClick={() => {
-                      setExpiresUnit('days');
-                      if (customExpiresValue) {
-                        setExpiresIn(parseInt(customExpiresValue) * 24);
-                      }
-                    }}
-                  >
-                    дн
-                  </button>
-                </div>
-                <button
-                  className={styles.cancelBtn}
-                  onClick={() => {
-                    setIsCustomExpires(false);
-                    setCustomExpiresValue('');
-                    setExpiresIn(null);
-                  }}
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
 

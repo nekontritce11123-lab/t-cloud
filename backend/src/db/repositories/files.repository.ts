@@ -332,8 +332,8 @@ export class FilesRepository {
       caption: row.caption,
       forwardFromName: row.forward_from_name,
       forwardFromChatTitle: row.forward_from_chat_title,
-      createdAt: row.created_at,
-      deletedAt: row.deleted_at,
+      createdAt: new Date(row.created_at * 1000),
+      deletedAt: row.deleted_at ? new Date(row.deleted_at * 1000) : null,
     })) as File[];
   }
 

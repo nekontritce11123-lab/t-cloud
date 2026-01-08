@@ -141,30 +141,51 @@
   height: 20px;
 }
 
-/* Settings Section */
-.settingsSection {
-  margin-bottom: 20px;
+/* Settings Block - compact grouped layout */
+.settingsBlock {
+  background: var(--app-secondary-bg-color);
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.settingRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
 }
 
 .settingLabel {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--app-hint-color);
-  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 0 14px;
 }
 
 .chips {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
+  flex: 1;
 }
 
 .chip {
-  padding: 8px 16px;
-  background: var(--app-secondary-bg-color);
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  background: var(--app-bg-color);
   color: var(--app-text-color);
-  border-radius: 20px;
-  font-size: 14px;
+  border-radius: 16px;
+  font-size: 13px;
   font-weight: 500;
   transition: all var(--animation-fast) var(--easing-smooth);
 }
@@ -178,68 +199,89 @@
   color: #fff;
 }
 
-/* Chip with icon */
+/* Chip with icon (edit pencil) */
 .chipIcon {
-  width: 14px;
-  height: 14px;
-  margin-right: 4px;
+  width: 12px;
+  height: 12px;
   flex-shrink: 0;
 }
 
-.chip {
-  display: flex;
+/* Inline Input - replaces "Другое" chip */
+.inlineInput {
+  display: inline-flex;
   align-items: center;
-}
-
-/* Custom Input Chip */
-.customInputChip {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  gap: 4px;
   padding: 4px 8px;
-  background: var(--app-secondary-bg-color);
+  background: var(--app-bg-color);
   border: 2px solid var(--app-link-color);
-  border-radius: 20px;
-  flex: 1;
-  max-width: 220px;
+  border-radius: 16px;
 }
 
-.customInput {
-  flex: 1;
-  min-width: 40px;
-  max-width: 60px;
+.inlineInputWithToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  background: var(--app-bg-color);
+  border: 2px solid var(--app-link-color);
+  border-radius: 16px;
+}
+
+.inlineInputField {
+  width: 36px;
   background: none;
   border: none;
   color: var(--app-text-color);
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
   text-align: center;
-  padding: 4px 0;
+  padding: 2px 0;
 }
 
-.customInput::placeholder {
+.inlineInputField::placeholder {
   color: var(--app-hint-color);
+  font-weight: 400;
 }
 
-.customInput:focus {
+.inlineInputField:focus {
   outline: none;
 }
 
-/* Unit Toggle (часы/дни) */
+.inlineCancel {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  color: var(--app-hint-color);
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+  transition: all var(--animation-fast) var(--easing-smooth);
+}
+
+.inlineCancel:active {
+  transform: scale(0.9);
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Unit Toggle (ч/дн) - compact */
 .unitToggle {
   display: flex;
-  background: var(--app-bg-color);
-  border-radius: 12px;
+  background: var(--app-secondary-bg-color);
+  border-radius: 10px;
   padding: 2px;
 }
 
 .unitBtn {
-  padding: 4px 8px;
-  font-size: 12px;
-  font-weight: 500;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 600;
   color: var(--app-hint-color);
   background: transparent;
-  border-radius: 10px;
+  border-radius: 8px;
   transition: all var(--animation-fast) var(--easing-smooth);
 }
 
@@ -248,27 +290,21 @@
   color: #fff;
 }
 
-/* Cancel button */
+/* Legacy styles for backwards compat */
+.settingsSection {
+  margin-bottom: 20px;
+}
+
+.customInputChip {
+  display: none;
+}
+
+.customInput {
+  display: none;
+}
+
 .cancelBtn {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 50%;
-  color: var(--app-hint-color);
-  transition: all var(--animation-fast) var(--easing-smooth);
-  flex-shrink: 0;
-}
-
-.cancelBtn:active {
-  transform: scale(0.9);
-}
-
-.cancelBtn svg {
-  width: 12px;
-  height: 12px;
+  display: none;
 }
 
 /* Stats Section */
