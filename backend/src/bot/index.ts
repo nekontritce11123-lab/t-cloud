@@ -133,37 +133,23 @@ export function setupBot(): void {
       return;
     }
 
-    const { file } = validation;
-    if (!file) {
+    const { share, file } = validation;
+    if (!share || !file) {
       await ctx.reply('❌ Файл не найден');
       return;
     }
 
-    // Build preview message
-    const fileName = file.file_name || 'Файл';
-    const captionText = file.caption ? `\n${file.caption}` : '';
-    const previewText = `📎 ${fileName}${captionText}\n\nНажмите кнопку чтобы получить файл`;
-
-    const keyboard = {
-      inline_keyboard: [[
-        { text: '📥 Получить файл', callback_data: `claim_${token}` }
-      ]]
-    };
-
-    // Send preview with thumbnail if available
+    // Send file directly (no preview button)
     try {
-      if (file.thumbnail_file_id && ['photo', 'video'].includes(file.media_type)) {
-        await ctx.replyWithPhoto(file.thumbnail_file_id, {
-          caption: previewText,
-          reply_markup: keyboard
-        });
-      } else {
-        await ctx.reply(previewText, { reply_markup: keyboard });
-      }
+      await sendFileToUser(ctx, file, file.caption || undefined);
+
+      // Record recipient and increment use_count
+      recordShareRecipient(share.id, recipientId);
+
+      console.log(`[Bot] File shared successfully: file=${file.id}, recipient=${recipientId}`);
     } catch (error) {
-      console.error('[Bot] Error sending share preview:', error);
-      // Fallback to text-only
-      await ctx.reply(previewText, { reply_markup: keyboard });
+      console.error('[Bot] Error sending shared file:', error);
+      await ctx.reply('❌ Ошибка при отправке файла. Попробуйте позже.');
     }
   });
 

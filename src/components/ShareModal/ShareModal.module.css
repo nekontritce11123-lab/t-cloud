@@ -1,9 +1,7 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(0, 0, 0, 0.7);
   z-index: 150;
   display: flex;
   align-items: flex-end;
@@ -31,7 +29,6 @@
 
 .modal {
   width: 100%;
-  max-width: 500px;
   max-height: 80vh;
   background: var(--app-bg-color);
   border-radius: 16px 16px 0 0;
@@ -40,12 +37,14 @@
   animation: slideUp var(--animation-normal) var(--easing-smooth);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 600px) {
   .overlay {
     align-items: center;
+    padding: 20px;
   }
 
   .modal {
+    max-width: 400px;
     border-radius: 16px;
     animation: fadeIn var(--animation-normal) var(--easing-smooth);
   }
