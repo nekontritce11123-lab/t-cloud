@@ -61,17 +61,12 @@ export function useFiles(apiReady = true) {
             ...filters,
           });
         } else {
-          // В остальных секциях ищем файлы с опциональным типом
+          // В остальных секциях ищем ТОЛЬКО файлы (ссылки НЕ ищем)
           const searchType = type || undefined;
           filesResult = await apiClient.searchFiles(query || '', {
             type: searchType,
             ...filters,
           });
-
-          // Ссылки тоже ищем если нет тег-фильтров и есть текст запроса
-          if (!hasFilters && query && query.trim()) {
-            linksResult = await apiClient.searchLinks(query);
-          }
         }
 
         // Проверяем что это актуальный запрос
