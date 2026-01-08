@@ -563,6 +563,7 @@ export function hasRecipientReceivedShare(shareId: number, recipientId: number):
 
 /**
  * Record that recipient received the share and increment use_count
+ * Auto-deactivates the share if max_recipients limit is reached
  */
 export function recordShareRecipient(shareId: number, recipientId: number): void {
   const insertStmt = sqlite.prepare(`
@@ -574,7 +575,28 @@ export function recordShareRecipient(shareId: number, recipientId: number): void
     SET use_count = use_count + 1, updated_at = unixepoch()
     WHERE id = ?
   `);
+  // Auto-deactivate if limit reached
+  const deactivateIfLimitReached = sqlite.prepare(`
+    UPDATE file_shares
+    SET is_active = 0, updated_at = unixepoch()
+    WHERE id = ? AND max_recipients IS NOT NULL AND use_count >= max_recipients
+  `);
 
   insertStmt.run(shareId, recipientId);
   updateStmt.run(shareId);
+  deactivateIfLimitReached.run(shareId);
+}
+
+/**
+ * Deactivate all expired shares
+ * Should be called periodically (e.g., on API requests)
+ */
+export function deactivateExpiredShares(): number {
+  const stmt = sqlite.prepare(`
+    UPDATE file_shares
+    SET is_active = 0, updated_at = unixepoch()
+    WHERE is_active = 1 AND expires_at IS NOT NULL AND expires_at <= unixepoch()
+  `);
+  const result = stmt.run();
+  return result.changes;
 }

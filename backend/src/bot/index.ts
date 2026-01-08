@@ -10,6 +10,7 @@ import {
   getFileForShare,
   hasRecipientReceivedShare,
   recordShareRecipient,
+  deactivateExpiredShares,
   type FileShare,
   type FileForShare,
 } from '../db/index.js';
@@ -28,6 +29,9 @@ interface ShareValidationResult {
 }
 
 function validateShare(token: string, recipientId: number): ShareValidationResult {
+  // Cleanup expired shares first
+  deactivateExpiredShares();
+
   // Get share by token
   const share = getShareByToken(token);
   if (!share) {

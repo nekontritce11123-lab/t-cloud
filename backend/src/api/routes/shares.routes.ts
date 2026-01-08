@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import crypto from 'crypto';
 import { AuthenticatedRequest } from '../middleware/auth.js';
 import { FilesRepository } from '../../db/repositories/files.repository.js';
-import { sqlite } from '../../db/index.js';
+import { sqlite, deactivateExpiredShares } from '../../db/index.js';
 
 const router = Router();
 const filesRepo = new FilesRepository();
@@ -162,6 +162,9 @@ router.get('/:id/share', async (req, res: Response) => {
     res.status(400).json({ error: 'Invalid file ID' });
     return;
   }
+
+  // Cleanup expired shares before fetching
+  deactivateExpiredShares();
 
   try {
     // Check if file exists and belongs to user
