@@ -222,10 +222,20 @@ export function searchFilesWithSnippets(
     conditions.push('f.deleted_at IS NULL');
   }
 
-  // Add mediaType filter if specified
+  // Add mediaType filter if specified (with effective type classification)
+  // photo includes document+image/*, video includes document+video/*
+  // document EXCLUDES image/* and video/*
   if (options?.mediaType) {
-    conditions.push('f.media_type = ?');
-    params.push(options.mediaType);
+    if (options.mediaType === 'photo') {
+      conditions.push(`(f.media_type = 'photo' OR (f.media_type = 'document' AND f.mime_type LIKE 'image/%'))`);
+    } else if (options.mediaType === 'video') {
+      conditions.push(`(f.media_type = 'video' OR (f.media_type = 'document' AND f.mime_type LIKE 'video/%'))`);
+    } else if (options.mediaType === 'document') {
+      conditions.push(`f.media_type = 'document' AND (f.mime_type IS NULL OR (f.mime_type NOT LIKE 'image/%' AND f.mime_type NOT LIKE 'video/%'))`);
+    } else {
+      conditions.push('f.media_type = ?');
+      params.push(options.mediaType);
+    }
   }
 
   // Date filters
@@ -605,10 +615,20 @@ export interface ShareRecipient {
 export interface FileForShare {
   id: number;
   file_id: string;
+  file_unique_id: string;
+  original_message_id: number;
+  chat_id: number;
   file_name: string | null;
+  file_size: number | null;
   caption: string | null;
   media_type: string;
+  mime_type: string | null;
+  duration: number | null;
+  width: number | null;
+  height: number | null;
   thumbnail_file_id: string | null;
+  forward_from_name: string | null;
+  forward_from_chat_title: string | null;
   deleted_at: number | null;
 }
 
@@ -628,7 +648,11 @@ export function getShareByToken(token: string): FileShare | null {
  */
 export function getFileForShare(fileId: number): FileForShare | null {
   const stmt = sqlite.prepare(`
-    SELECT id, file_id, file_name, caption, media_type, thumbnail_file_id, deleted_at
+    SELECT
+      id, file_id, file_unique_id, original_message_id, chat_id,
+      file_name, file_size, caption, media_type, mime_type,
+      duration, width, height, thumbnail_file_id,
+      forward_from_name, forward_from_chat_title, deleted_at
     FROM files
     WHERE id = ?
   `);
@@ -670,6 +694,68 @@ export function recordShareRecipient(shareId: number, recipientId: number): void
   insertStmt.run(shareId, recipientId);
   updateStmt.run(shareId);
   deactivateIfLimitReached.run(shareId);
+}
+
+/**
+ * Copy a file to another user's cloud (for share recipients)
+ * - If file already exists (by file_unique_id) - do nothing
+ * - If file is in trash - restore it
+ * - Otherwise create a new copy
+ */
+export function copyFileToUser(
+  sourceFile: FileForShare,
+  recipientId: number
+): { created: boolean; restored: boolean; fileId?: number } {
+  // Check if user already has this file (including deleted ones)
+  const existingStmt = sqlite.prepare(`
+    SELECT id, deleted_at FROM files
+    WHERE user_id = ? AND file_unique_id = ?
+  `);
+  const existing = existingStmt.get(recipientId, sourceFile.file_unique_id) as
+    { id: number; deleted_at: number | null } | undefined;
+
+  if (existing) {
+    if (existing.deleted_at) {
+      // File is in trash - restore it
+      const restoreStmt = sqlite.prepare(`
+        UPDATE files SET deleted_at = NULL WHERE id = ?
+      `);
+      restoreStmt.run(existing.id);
+      return { created: false, restored: true, fileId: existing.id };
+    }
+    // Active file already exists
+    return { created: false, restored: false };
+  }
+
+  // Create a copy for the recipient
+  const insertStmt = sqlite.prepare(`
+    INSERT INTO files (
+      user_id, file_id, file_unique_id, original_message_id, chat_id,
+      media_type, mime_type, file_name, file_size, duration, width, height,
+      caption, thumbnail_file_id, forward_from_name, forward_from_chat_title
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const result = insertStmt.run(
+    recipientId,
+    sourceFile.file_id,
+    sourceFile.file_unique_id,
+    sourceFile.original_message_id,
+    sourceFile.chat_id,
+    sourceFile.media_type,
+    sourceFile.mime_type,
+    sourceFile.file_name,
+    sourceFile.file_size,
+    sourceFile.duration,
+    sourceFile.width,
+    sourceFile.height,
+    sourceFile.caption,
+    sourceFile.thumbnail_file_id,
+    sourceFile.forward_from_name,
+    sourceFile.forward_from_chat_title
+  );
+
+  return { created: true, restored: false, fileId: result.lastInsertRowid as number };
 }
 
 /**

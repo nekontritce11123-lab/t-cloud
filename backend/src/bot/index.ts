@@ -11,6 +11,7 @@ import {
   hasRecipientReceivedShare,
   recordShareRecipient,
   deactivateExpiredShares,
+  copyFileToUser,
   type FileShare,
   type FileForShare,
 } from '../db/index.js';
@@ -175,6 +176,13 @@ export function setupBot(): void {
     try {
       await sendFileToUser(ctx, file, file.caption || undefined);
 
+      // Add file to recipient's cloud (if not already there)
+      const { created, restored } = copyFileToUser(file, recipientId);
+      if (created || restored) {
+        await ctx.reply('📁 Файл добавлен в ваше облако');
+        console.log(`[Bot] File ${file.id} ${created ? 'copied' : 'restored'} to user ${recipientId}'s cloud`);
+      }
+
       // Record recipient and increment use_count
       recordShareRecipient(share.id, recipientId);
 
@@ -213,6 +221,13 @@ export function setupBot(): void {
     try {
       // Send the file
       await sendFileToUser(ctx, file, file.caption || undefined);
+
+      // Add file to recipient's cloud (if not already there)
+      const { created, restored } = copyFileToUser(file, recipientId);
+      if (created || restored) {
+        await ctx.reply('📁 Файл добавлен в ваше облако');
+        console.log(`[Bot] File ${file.id} ${created ? 'copied' : 'restored'} to user ${recipientId}'s cloud`);
+      }
 
       // Record recipient and increment use_count
       recordShareRecipient(share.id, recipientId);
