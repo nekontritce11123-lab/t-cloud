@@ -2,14 +2,15 @@ import { useRef, useCallback } from 'react';
 import { MediaType, CategoryStats } from '../../api/client';
 import styles from './CategoryChips.module.css';
 
-// Extended type to include 'trash' as a special category
-export type CategoryType = MediaType | 'trash' | null;
+// Extended type to include 'trash' and 'shared' as special categories
+export type CategoryType = MediaType | 'trash' | 'shared' | null;
 
 interface CategoryChipsProps {
   stats: CategoryStats[];
   selectedType: CategoryType;
   onSelect: (type: CategoryType) => void;
   trashCount?: number;
+  sharedCount?: number;
   disabledTypes?: 'trash' | 'not-trash';
 }
 
@@ -79,6 +80,15 @@ const Icons = {
       <line x1="14" y1="11" x2="14" y2="17" />
     </svg>
   ),
+  shared: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+    </svg>
+  ),
 };
 
 interface Category {
@@ -97,10 +107,11 @@ const CATEGORIES: Category[] = [
   { type: 'audio', label: 'Аудио', icon: 'audio', color: 'var(--color-audio)' },
   { type: 'voice', label: 'Голос', icon: 'voice', color: 'var(--color-voice)' },
   { type: 'video_note', label: 'Кружки', icon: 'video_note', color: 'var(--color-video-note, #5856d6)' },
+  { type: 'shared', label: 'Общие', icon: 'shared', color: 'var(--color-shared, #22c55e)' },
   { type: 'trash', label: 'Корзина', icon: 'trash', color: 'var(--app-destructive-text-color, #ff3b30)' },
 ];
 
-export function CategoryChips({ stats, selectedType, onSelect, trashCount = 0, disabledTypes }: CategoryChipsProps) {
+export function CategoryChips({ stats, selectedType, onSelect, trashCount = 0, sharedCount = 0, disabledTypes }: CategoryChipsProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Простая конвертация вертикального скролла в горизонтальный
@@ -118,6 +129,9 @@ export function CategoryChips({ stats, selectedType, onSelect, trashCount = 0, d
     }
     if (type === 'trash') {
       return trashCount;
+    }
+    if (type === 'shared') {
+      return sharedCount;
     }
     return stats.find(s => s.mediaType === type)?.count || 0;
   };

@@ -396,6 +396,54 @@ router.get('/autocomplete/dictionary', async (req, res: Response) => {
 });
 
 /**
+ * GET /api/files/shared
+ * Get files that have active share links
+ * ВАЖНО: Этот роут должен быть ДО /:id
+ */
+router.get('/shared', async (req, res: Response) => {
+  const { telegramUser } = req as AuthenticatedRequest;
+
+  try {
+    const files = await filesRepo.findShared(telegramUser.id);
+
+    // Add thumbnail URLs
+    const service = getThumbnailService();
+    const itemsWithThumbnails = await Promise.all(
+      files.map(async (file) => ({
+        ...file,
+        thumbnailUrl: await service.getThumbnailUrl(
+          file.thumbnailFileId,
+          file.fileId,
+          file.mediaType as MediaType
+        ),
+      }))
+    );
+
+    res.json({ items: itemsWithThumbnails, total: itemsWithThumbnails.length });
+  } catch (error) {
+    console.error('[API] Error fetching shared files:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/files/shared/count
+ * Get count of files with active share links
+ * ВАЖНО: Этот роут должен быть ДО /:id
+ */
+router.get('/shared/count', async (req, res: Response) => {
+  const { telegramUser } = req as AuthenticatedRequest;
+
+  try {
+    const count = await filesRepo.getSharedCount(telegramUser.id);
+    res.json({ count });
+  } catch (error) {
+    console.error('[API] Error fetching shared count:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * GET /api/files/:id
  * Get a single file by ID
  */

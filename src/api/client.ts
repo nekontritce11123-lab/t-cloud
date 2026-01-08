@@ -340,6 +340,32 @@ class ApiClient {
     return response.json();
   }
 
+  // Shared files API
+
+  async getSharedFiles(): Promise<{ items: FileRecord[]; total: number }> {
+    const response = await fetch(`${API_URL}/api/files/shared`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch shared files');
+    }
+
+    return response.json();
+  }
+
+  async getSharedFilesCount(): Promise<{ count: number }> {
+    const response = await fetch(`${API_URL}/api/files/shared/count`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch shared files count');
+    }
+
+    return response.json();
+  }
+
   async deleteFiles(fileIds: number[]): Promise<{ success: boolean; deleted: number }> {
     const response = await fetch(`${API_URL}/api/files/delete-many`, {
       method: 'POST',

@@ -26,6 +26,7 @@ function App() {
     links,
     stats,
     trashCount,
+    sharedCount,
     isLoading,
     error,
     selectedType,
@@ -588,6 +589,7 @@ function App() {
           filterByType(type);
         }}
         trashCount={trashCount}
+        sharedCount={sharedCount}
         disabledTypes={isSelectionMode ? (selectedType === 'trash' ? 'not-trash' : 'trash') : undefined}
       />
 

@@ -16,6 +16,7 @@ export function useFiles(apiReady = true) {
   const [links, setLinks] = useState<LinkRecord[]>([]);
   const [stats, setStats] = useState<CategoryStats[]>([]);
   const [trashCount, setTrashCount] = useState(0);
+  const [sharedCount, setSharedCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<CategoryType>(null);
@@ -73,6 +74,12 @@ export function useFiles(apiReady = true) {
         console.log('[useFiles] Links result:', result);
         setLinks(result.items || []);
         setFiles([]);
+      } else if (type === 'shared') {
+        const result = await apiClient.getSharedFiles();
+        if (requestId !== currentRequestId.current) return;
+        console.log('[useFiles] Shared files result:', result);
+        setFiles(result.items || []);
+        setLinks([]);
       } else {
         const result = await apiClient.getFiles({
           type: type || undefined,
@@ -103,14 +110,16 @@ export function useFiles(apiReady = true) {
   const loadStats = useCallback(async () => {
     if (!apiReady) return;
     try {
-      const [statsResult, trashFilesCount, trashLinksCount] = await Promise.all([
+      const [statsResult, trashFilesCount, trashLinksCount, sharedFilesCount] = await Promise.all([
         apiClient.getFileStats(),
         apiClient.getTrashFilesCount(),
         apiClient.getTrashLinksCount(),
+        apiClient.getSharedFilesCount(),
       ]);
       console.log('[useFiles] Stats:', statsResult);
       setStats(statsResult || []);
       setTrashCount(trashFilesCount.count + trashLinksCount.count);
+      setSharedCount(sharedFilesCount.count);
     } catch (err) {
       console.error('[useFiles] Stats error:', err);
     }
@@ -172,6 +181,12 @@ export function useFiles(apiReady = true) {
         if (requestId !== currentRequestId.current) return;
         setFiles([]);
         setLinks([]);
+      } else if (selectedType === 'shared') {
+        // Для категории "Общие" загружаем файлы с активными share-ссылками
+        const result = await apiClient.getSharedFiles();
+        if (requestId !== currentRequestId.current) return;
+        setFiles(result.items || []);
+        setLinks([]);
       } else {
         // Для остальных категорий загружаем files
         const result = await apiClient.getFiles({
@@ -210,6 +225,7 @@ export function useFiles(apiReady = true) {
     links,
     stats,
     trashCount,
+    sharedCount,
     isLoading,
     error,
     selectedType,

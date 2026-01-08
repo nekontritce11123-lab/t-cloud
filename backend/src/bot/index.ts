@@ -70,16 +70,43 @@ function validateShare(token: string, recipientId: number): ShareValidationResul
 }
 
 /**
- * Send file to user based on media type
+ * Get send method by file_id prefix
+ * Telegram file_id prefixes indicate the actual file type:
+ * - AgAC = photo (compressed)
+ * - BQA = document
+ * - BAA = video
+ * - CQA = audio
+ * - AwA = voice
+ * - DQA = video_note
+ */
+function getSendMethodByFileId(fileId: string, fallbackMediaType: string): string {
+  const prefix = fileId.substring(0, 2);
+
+  if (prefix === 'Ag') return 'photo';
+  if (prefix === 'BA') return 'video';
+  if (prefix === 'BQ') return 'document';
+  if (prefix === 'CQ') return 'audio';
+  if (prefix === 'Aw') return 'voice';
+  if (prefix === 'DQ') return 'video_note';
+
+  // Fallback to saved media_type
+  return fallbackMediaType;
+}
+
+/**
+ * Send file to user based on file_id prefix (not media_type)
+ * This fixes the issue where files sent as documents (e.g., PNG without compression)
+ * have media_type='photo' but file_id is for document
  */
 async function sendFileToUser(
   ctx: any,
   file: FileForShare,
   caption?: string
 ): Promise<void> {
-  const mediaType = file.media_type as MediaType;
+  // Determine send method by file_id prefix, not by media_type
+  const sendMethod = getSendMethodByFileId(file.file_id, file.media_type);
 
-  switch (mediaType) {
+  switch (sendMethod) {
     case 'photo':
       await ctx.replyWithPhoto(file.file_id, { caption });
       break;
@@ -99,6 +126,7 @@ async function sendFileToUser(
       await ctx.replyWithVideoNote(file.file_id);
       break;
     default:
+      // Safe fallback - document works for all types
       await ctx.replyWithDocument(file.file_id, { caption });
   }
 }

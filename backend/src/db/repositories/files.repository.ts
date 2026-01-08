@@ -1,5 +1,5 @@
 import { eq, and, desc, sql, isNull, isNotNull, lt, or } from 'drizzle-orm';
-import { db, searchFilesWithSnippets, SearchResult, FileSearchOptions } from '../index.js';
+import { db, sqlite, searchFilesWithSnippets, SearchResult, FileSearchOptions } from '../index.js';
 import { files, NewFile, File } from '../schema.js';
 import { MediaType, CategoryStats } from '../../types/index.js';
 
@@ -294,5 +294,64 @@ export class FilesRepository {
       names: namesResult.map(r => r.name!).filter(Boolean),
       chats: chatsResult.map(r => r.chat!).filter(Boolean),
     };
+  }
+
+  /**
+   * Get files with active share links (excludes deleted)
+   */
+  async findShared(userId: number): Promise<File[]> {
+    const stmt = sqlite.prepare(`
+      SELECT DISTINCT f.*
+      FROM files f
+      INNER JOIN file_shares fs ON f.id = fs.file_id
+      WHERE f.user_id = ?
+        AND f.deleted_at IS NULL
+        AND fs.is_active = 1
+        AND (fs.expires_at IS NULL OR fs.expires_at > unixepoch())
+      ORDER BY f.created_at DESC
+    `);
+
+    const rows = stmt.all(userId) as any[];
+
+    // Convert snake_case to camelCase
+    return rows.map(row => ({
+      id: row.id,
+      userId: row.user_id,
+      fileId: row.file_id,
+      fileUniqueId: row.file_unique_id,
+      originalMessageId: row.original_message_id,
+      chatId: row.chat_id,
+      mediaType: row.media_type,
+      mimeType: row.mime_type,
+      fileName: row.file_name,
+      fileSize: row.file_size,
+      duration: row.duration,
+      width: row.width,
+      height: row.height,
+      thumbnailFileId: row.thumbnail_file_id,
+      caption: row.caption,
+      forwardFromName: row.forward_from_name,
+      forwardFromChatTitle: row.forward_from_chat_title,
+      createdAt: row.created_at,
+      deletedAt: row.deleted_at,
+    })) as File[];
+  }
+
+  /**
+   * Get count of files with active share links
+   */
+  async getSharedCount(userId: number): Promise<number> {
+    const stmt = sqlite.prepare(`
+      SELECT COUNT(DISTINCT f.id) as count
+      FROM files f
+      INNER JOIN file_shares fs ON f.id = fs.file_id
+      WHERE f.user_id = ?
+        AND f.deleted_at IS NULL
+        AND fs.is_active = 1
+        AND (fs.expires_at IS NULL OR fs.expires_at > unixepoch())
+    `);
+
+    const result = stmt.get(userId) as { count: number } | undefined;
+    return result?.count || 0;
   }
 }
