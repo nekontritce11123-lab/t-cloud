@@ -7,13 +7,16 @@ import { PrefixTrie } from '../utils/trie';
  *
  * Загружает словарь после авторизации (apiReady),
  * строит Trie индекс и выполняет локальный поиск <1ms
+ *
+ * @param apiReady - API готов к использованию
+ * @param selectedType - текущая секция (photo, video, link, etc.) для фильтрации словаря
  */
-export function useAutocomplete(apiReady: boolean) {
+export function useAutocomplete(apiReady: boolean, selectedType?: string | null) {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const trieRef = useRef<PrefixTrie | null>(null);
 
-  // Загрузка словаря ПОСЛЕ авторизации
+  // Загрузка словаря ПОСЛЕ авторизации и при смене секции
   useEffect(() => {
     if (!apiReady) return; // Ждём пока API будет готов (initData установлен)
 
@@ -21,11 +24,14 @@ export function useAutocomplete(apiReady: boolean) {
 
     async function loadDictionary() {
       try {
-        const { words } = await apiClient.getDictionary();
+        // Передаём тип секции для фильтрации словаря
+        // null/undefined = все слова, 'photo' = только из фото, 'link' = только из ссылок
+        const mediaType = selectedType === 'trash' ? undefined : (selectedType || undefined);
+        const { words } = await apiClient.getDictionary(mediaType);
         if (!cancelled) {
           trieRef.current = new PrefixTrie(words);
           setIsLoading(false);
-          console.log(`[Autocomplete] Loaded ${words.length} words into Trie`);
+          console.log(`[Autocomplete] Loaded ${words.length} words for type=${mediaType || 'all'}`);
         }
       } catch (e) {
         console.error('[Autocomplete] Failed to load dictionary', e);
@@ -39,7 +45,7 @@ export function useAutocomplete(apiReady: boolean) {
     return () => {
       cancelled = true;
     };
-  }, [apiReady]);
+  }, [apiReady, selectedType]);
 
   /**
    * Мгновенный поиск по последнему слову ввода
@@ -79,15 +85,16 @@ export function useAutocomplete(apiReady: boolean) {
   const reload = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { words } = await apiClient.getDictionary();
+      const mediaType = selectedType === 'trash' ? undefined : (selectedType || undefined);
+      const { words } = await apiClient.getDictionary(mediaType);
       trieRef.current = new PrefixTrie(words);
-      console.log(`[Autocomplete] Reloaded ${words.length} words`);
+      console.log(`[Autocomplete] Reloaded ${words.length} words for type=${mediaType || 'all'}`);
     } catch (e) {
       console.error('[Autocomplete] Failed to reload dictionary', e);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [selectedType]);
 
   return {
     suggestions,

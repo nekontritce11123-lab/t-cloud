@@ -42,21 +42,37 @@ export function useFiles(apiReady = true) {
       const hasFilters = filters && (filters.dateFrom || filters.dateTo || filters.sizeMin || filters.sizeMax || filters.from || filters.chat);
 
       if ((query && query.trim()) || hasFilters) {
-        // Определяем параметры поиска в зависимости от категории
         const isTrash = type === 'trash';
-        const searchType = (type === 'trash' || type === 'link' || type === null) ? undefined : type;
+        const isLinks = type === 'link';
 
-        // Search files with filters
-        const filesResult = await apiClient.searchFiles(query || '', {
-          type: searchType,
-          deleted: isTrash,
-          ...filters,
-        });
+        // Определяем что искать в зависимости от секции
+        let filesResult = { items: [] as FileRecord[] };
+        let linksResult = { items: [] as LinkRecord[] };
 
-        // Search links only if not trash and no tag filters (tags don't apply to links)
-        const linksResult = type !== 'trash' && !hasFilters && query && query.trim()
-          ? await apiClient.searchLinks(query)
-          : { items: [] };
+        if (isLinks) {
+          // В секции "Ссылки" ищем ТОЛЬКО ссылки
+          if (query && query.trim()) {
+            linksResult = await apiClient.searchLinks(query);
+          }
+        } else if (isTrash) {
+          // В корзине ищем удалённые файлы
+          filesResult = await apiClient.searchFiles(query || '', {
+            deleted: true,
+            ...filters,
+          });
+        } else {
+          // В остальных секциях ищем файлы с опциональным типом
+          const searchType = type || undefined;
+          filesResult = await apiClient.searchFiles(query || '', {
+            type: searchType,
+            ...filters,
+          });
+
+          // Ссылки тоже ищем если нет тег-фильтров и есть текст запроса
+          if (!hasFilters && query && query.trim()) {
+            linksResult = await apiClient.searchLinks(query);
+          }
+        }
 
         // Проверяем что это актуальный запрос
         if (requestId !== currentRequestId.current) {

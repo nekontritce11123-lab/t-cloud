@@ -177,14 +177,15 @@ router.get('/by-date', async (req, res: Response) => {
  *   - sizeMax: max file size in bytes (optional)
  *   - from: filter by forward_from_name (optional)
  *   - chat: filter by forward_from_chat_title (optional)
+ *   - mimeType: filter by MIME type (optional, e.g., "image/jpeg" for .jpg files)
  */
 router.get('/search', async (req, res: Response) => {
   const { telegramUser } = req as AuthenticatedRequest;
-  const { q, limit = String(DEFAULT_SEARCH_LIMIT), type, deleted, dateFrom, dateTo, sizeMin, sizeMax, from, chat } = req.query;
+  const { q, limit = String(DEFAULT_SEARCH_LIMIT), type, deleted, dateFrom, dateTo, sizeMin, sizeMax, from, chat, mimeType } = req.query;
 
   // At least q or one filter is required
   const hasQuery = q && typeof q === 'string' && q.trim().length > 0;
-  const hasFilters = dateFrom || dateTo || sizeMin || sizeMax || from || chat;
+  const hasFilters = dateFrom || dateTo || sizeMin || sizeMax || from || chat || mimeType;
 
   if (!hasQuery && !hasFilters) {
     res.status(400).json({ error: 'Query parameter "q" or at least one filter is required' });
@@ -204,6 +205,7 @@ router.get('/search', async (req, res: Response) => {
       sizeMax?: number;
       fromName?: string;
       fromChat?: string;
+      mimeType?: string;
     } = {};
 
     if (type && typeof type === 'string') {
@@ -248,6 +250,11 @@ router.get('/search', async (req, res: Response) => {
     }
     if (chat && typeof chat === 'string') {
       searchOptions.fromChat = chat;
+    }
+
+    // MIME type filter (for file extension search, e.g., .jpg -> image/jpeg)
+    if (mimeType && typeof mimeType === 'string') {
+      searchOptions.mimeType = mimeType;
     }
 
     // Use search with snippets to show where match occurred
@@ -397,9 +404,13 @@ router.post('/delete-many', async (req, res: Response) => {
  */
 router.get('/autocomplete/dictionary', async (req, res: Response) => {
   const { telegramUser } = req as AuthenticatedRequest;
+  const { type } = req.query;
 
   try {
-    const words = getUserDictionary(telegramUser.id);
+    const words = getUserDictionary(telegramUser.id, {
+      mediaType: type as string | undefined,
+      includeLinks: !type || type === 'link'
+    });
 
     res.json({
       words,

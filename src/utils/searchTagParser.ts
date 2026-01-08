@@ -2,11 +2,58 @@
 
 export interface SearchTag {
   id: string;
-  type: 'date' | 'size' | 'from' | 'chat';
+  type: 'date' | 'size' | 'from' | 'chat' | 'extension';
   label: string;
   value: unknown;
   raw: string;
 }
+
+// Маппинг расширений на MIME типы
+const EXTENSION_TO_MIME: Record<string, string> = {
+  // Изображения
+  'jpg': 'image/jpeg',
+  'jpeg': 'image/jpeg',
+  'png': 'image/png',
+  'gif': 'image/gif',
+  'webp': 'image/webp',
+  'svg': 'image/svg+xml',
+  'bmp': 'image/bmp',
+  'ico': 'image/x-icon',
+  // Видео
+  'mp4': 'video/mp4',
+  'mov': 'video/quicktime',
+  'avi': 'video/x-msvideo',
+  'mkv': 'video/x-matroska',
+  'webm': 'video/webm',
+  // Аудио
+  'mp3': 'audio/mpeg',
+  'wav': 'audio/wav',
+  'ogg': 'audio/ogg',
+  'flac': 'audio/flac',
+  'm4a': 'audio/mp4',
+  // Документы
+  'pdf': 'application/pdf',
+  'doc': 'application/msword',
+  'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'xls': 'application/vnd.ms-excel',
+  'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'ppt': 'application/vnd.ms-powerpoint',
+  'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'txt': 'text/plain',
+  'csv': 'text/csv',
+  // Архивы
+  'zip': 'application/zip',
+  'rar': 'application/vnd.rar',
+  '7z': 'application/x-7z-compressed',
+  'tar': 'application/x-tar',
+  'gz': 'application/gzip',
+  // Код
+  'json': 'application/json',
+  'xml': 'application/xml',
+  'html': 'text/html',
+  'css': 'text/css',
+  'js': 'application/javascript',
+};
 
 export interface ParsedSearch {
   text: string;      // Текст для FTS
@@ -155,6 +202,22 @@ function tryParseTag(word: string): SearchTag | null {
     };
   }
 
+  // Расширения файлов: .jpg, .pdf, jpg, pdf
+  const extMatch = word.match(/^\.?([a-z0-9]{2,5})$/i);
+  if (extMatch) {
+    const ext = extMatch[1].toLowerCase();
+    const mimeType = EXTENSION_TO_MIME[ext];
+    if (mimeType) {
+      return {
+        id: generateTagId(),
+        type: 'extension',
+        label: `.${ext.toUpperCase()}`,
+        value: mimeType,
+        raw: word,
+      };
+    }
+  }
+
   return null;
 }
 
@@ -240,6 +303,10 @@ export function tagsToQueryParams(tags: SearchTag[]): Record<string, string> {
 
       case 'chat':
         params.chat = String(tag.value);
+        break;
+
+      case 'extension':
+        params.mimeType = String(tag.value);
         break;
     }
   }

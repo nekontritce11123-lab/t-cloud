@@ -149,6 +149,7 @@ class ApiClient {
       sizeMax?: number;
       from?: string;
       chat?: string;
+      mimeType?: string; // File extension filter (e.g., "image/jpeg" for .jpg)
     }
   ): Promise<{ items: FileRecord[]; total: number }> {
     const params = new URLSearchParams();
@@ -190,6 +191,9 @@ class ApiClient {
     }
     if (options?.chat) {
       params.set('chat', options.chat);
+    }
+    if (options?.mimeType) {
+      params.set('mimeType', options.mimeType);
     }
 
     const response = await fetch(`${API_URL}/api/files/search?${params}`, {
@@ -269,8 +273,15 @@ class ApiClient {
 
   // Autocomplete Dictionary API
 
-  async getDictionary(): Promise<{ words: string[]; version: number }> {
-    const response = await fetch(`${API_URL}/api/files/autocomplete/dictionary`, {
+  async getDictionary(mediaType?: string): Promise<{ words: string[]; version: number }> {
+    const params = new URLSearchParams();
+    if (mediaType) params.set('type', mediaType);
+
+    const url = params.toString()
+      ? `${API_URL}/api/files/autocomplete/dictionary?${params}`
+      : `${API_URL}/api/files/autocomplete/dictionary`;
+
+    const response = await fetch(url, {
       headers: this.getHeaders(),
     });
 

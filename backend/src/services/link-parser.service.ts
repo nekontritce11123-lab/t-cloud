@@ -40,7 +40,7 @@ export class LinkParserService {
         url,
         title: result.ogTitle || result.twitterTitle || this.extractDomain(url),
         description: result.ogDescription || result.twitterDescription,
-        imageUrl: this.getImageUrl(result),
+        imageUrl: this.getImageUrl(result, url),
         siteName: result.ogSiteName,
       };
     } catch (err) {
@@ -50,16 +50,27 @@ export class LinkParserService {
   }
 
   /**
-   * Extract image URL from OG result
+   * Extract image URL from OG result and convert relative URLs to absolute
    */
-  private getImageUrl(result: any): string | undefined {
+  private getImageUrl(result: any, baseUrl: string): string | undefined {
+    let imageUrl: string | undefined;
+
     if (result.ogImage && result.ogImage.length > 0) {
-      return result.ogImage[0].url;
+      imageUrl = result.ogImage[0].url;
+    } else if (result.twitterImage && result.twitterImage.length > 0) {
+      imageUrl = result.twitterImage[0].url;
     }
-    if (result.twitterImage && result.twitterImage.length > 0) {
-      return result.twitterImage[0].url;
+
+    if (!imageUrl) return undefined;
+
+    // Преобразуем относительные URL в абсолютные
+    try {
+      // new URL() автоматически разрешит относительный путь (/images/x.jpg -> https://site.com/images/x.jpg)
+      return new URL(imageUrl, baseUrl).href;
+    } catch (e) {
+      console.warn(`[LinkParser] Invalid image URL: ${imageUrl}`, e);
+      return undefined;
     }
-    return undefined;
   }
 
   /**

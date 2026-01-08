@@ -186,6 +186,20 @@ export interface FileSearchOptions {
   // Sender filters
   fromName?: string;
   fromChat?: string;
+  // MIME type filter (for file extension search)
+  mimeType?: string;
+}
+
+/**
+ * Escape FTS5 special characters and add prefix matching
+ * "мем" -> "\"мем\"*" найдёт "мемный"
+ */
+function escapeFtsQueryWithPrefix(q: string): string {
+  return q
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(word => `"${word.replace(/"/g, '""')}"*`)
+    .join(' ');
 }
 
 /**
@@ -244,22 +258,18 @@ export function searchFilesWithSnippets(
     params.push(`%${options.fromChat}%`);
   }
 
+  // MIME type filter (for file extension search, e.g., "image/jpeg" for .jpg)
+  if (options?.mimeType) {
+    conditions.push('f.mime_type = ?');
+    params.push(options.mimeType);
+  }
+
   // Text query handling - supports prefix search
   const trimmedQuery = query?.trim().toLowerCase() || '';
   const hasFtsQuery = trimmedQuery.length > 0;
 
   // Для коротких запросов (1-2 символа) используем LIKE - FTS требует минимум 3 символа для prefix
   const useSimpleLike = trimmedQuery.length > 0 && trimmedQuery.length < 3;
-
-  // Escape FTS5 special characters and add prefix matching
-  function escapeFtsQueryWithPrefix(q: string): string {
-    // Добавляем * для prefix-поиска: "мем" -> "мем*" найдёт "мемный"
-    return q
-      .split(/\s+/)
-      .filter(Boolean)
-      .map(word => `"${word.replace(/"/g, '""')}"*`)
-      .join(' ');
-  }
 
   let sql: string;
   let rows: any[];
@@ -401,6 +411,16 @@ export interface LinkSearchResult extends schema.Link {
  * Full-text search in links with snippets
  */
 export function searchLinksWithSnippets(userId: number, query: string, limit = 50): LinkSearchResult[] {
+  const trimmedQuery = query?.trim() || '';
+
+  // Пустой запрос - пустой результат
+  if (!trimmedQuery) {
+    return [];
+  }
+
+  // Экранируем запрос для FTS5 (как и для файлов)
+  const ftsQuery = escapeFtsQueryWithPrefix(trimmedQuery);
+
   const stmt = sqlite.prepare(`
     SELECT
       l.*,
@@ -415,7 +435,7 @@ export function searchLinksWithSnippets(userId: number, query: string, limit = 5
     LIMIT ?
   `);
 
-  const rows = stmt.all(userId, query, limit) as any[];
+  const rows = stmt.all(userId, ftsQuery, limit) as any[];
 
   return rows.map(row => {
     let matchedField: 'url' | 'title' | 'description' | 'site_name' = 'url';
@@ -452,30 +472,75 @@ export function searchLinksWithSnippets(userId: number, query: string, limit = 5
 }
 
 /**
- * Получить все уникальные слова из файлов пользователя для autocomplete
+ * Options for dictionary generation
  */
-export function getUserDictionary(userId: number): string[] {
-  const stmt = sqlite.prepare(`
-    SELECT
-      file_name,
-      caption,
-      forward_from_name,
-      forward_from_chat_title
+export interface DictionaryOptions {
+  mediaType?: string;      // Filter by media type (photo, video, document, etc.)
+  includeLinks?: boolean;  // Include words from links
+}
+
+/**
+ * Получить все уникальные слова из файлов пользователя для autocomplete
+ * С опциональной фильтрацией по типу медиа
+ */
+export function getUserDictionary(userId: number, options?: DictionaryOptions): string[] {
+  const wordSet = new Set<string>();
+
+  // Если секция "link" - получаем только слова из ссылок
+  if (options?.mediaType === 'link') {
+    const linksStmt = sqlite.prepare(`
+      SELECT title, description, site_name
+      FROM links
+      WHERE user_id = ? AND deleted_at IS NULL
+    `);
+
+    const linkRows = linksStmt.all(userId) as {
+      title: string | null;
+      description: string | null;
+      site_name: string | null;
+    }[];
+
+    for (const row of linkRows) {
+      const texts = [row.title, row.description, row.site_name].filter(Boolean).join(' ');
+      const words = texts.toLowerCase().match(/[\p{L}\d]{2,}/gu) || [];
+      words.forEach(w => wordSet.add(w));
+    }
+
+    return Array.from(wordSet).sort();
+  }
+
+  // Для файлов - строим динамический SQL с фильтром по типу
+  let sql = `
+    SELECT file_name, caption, forward_from_name, forward_from_chat_title
     FROM files
     WHERE user_id = ? AND deleted_at IS NULL
-  `);
+  `;
+  const params: any[] = [userId];
 
-  const rows = stmt.all(userId) as {
+  if (options?.mediaType && options.mediaType !== 'shared') {
+    // Фильтруем по типу (с учётом логики photo включает document+image/*)
+    if (options.mediaType === 'photo') {
+      sql += ` AND (media_type = 'photo' OR (media_type = 'document' AND mime_type LIKE 'image/%'))`;
+    } else if (options.mediaType === 'video') {
+      sql += ` AND (media_type = 'video' OR (media_type = 'document' AND mime_type LIKE 'video/%'))`;
+    } else if (options.mediaType === 'document') {
+      // Документы без изображений и видео
+      sql += ` AND media_type = 'document' AND (mime_type IS NULL OR (mime_type NOT LIKE 'image/%' AND mime_type NOT LIKE 'video/%'))`;
+    } else {
+      sql += ` AND media_type = ?`;
+      params.push(options.mediaType);
+    }
+  }
+
+  const filesStmt = sqlite.prepare(sql);
+  const fileRows = filesStmt.all(...params) as {
     file_name: string | null;
     caption: string | null;
     forward_from_name: string | null;
     forward_from_chat_title: string | null;
   }[];
 
-  const wordSet = new Set<string>();
-
-  for (const row of rows) {
-    // Собираем слова из всех полей
+  for (const row of fileRows) {
     const texts = [
       row.file_name,
       row.caption,
@@ -483,9 +548,29 @@ export function getUserDictionary(userId: number): string[] {
       row.forward_from_chat_title
     ].filter(Boolean).join(' ');
 
-    // Извлекаем слова (минимум 2 символа, буквы и цифры)
     const words = texts.toLowerCase().match(/[\p{L}\d]{2,}/gu) || [];
     words.forEach(w => wordSet.add(w));
+  }
+
+  // Добавляем слова из ссылок если не указан конкретный тип файлов
+  if (options?.includeLinks || !options?.mediaType) {
+    const linksStmt = sqlite.prepare(`
+      SELECT title, description, site_name
+      FROM links
+      WHERE user_id = ? AND deleted_at IS NULL
+    `);
+
+    const linkRows = linksStmt.all(userId) as {
+      title: string | null;
+      description: string | null;
+      site_name: string | null;
+    }[];
+
+    for (const row of linkRows) {
+      const texts = [row.title, row.description, row.site_name].filter(Boolean).join(' ');
+      const words = texts.toLowerCase().match(/[\p{L}\d]{2,}/gu) || [];
+      words.forEach(w => wordSet.add(w));
+    }
   }
 
   return Array.from(wordSet).sort();

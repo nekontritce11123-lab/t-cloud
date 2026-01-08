@@ -41,7 +41,8 @@ function App() {
   const { history: searchHistory, addToHistory, removeFromHistory, clearHistory } = useSearchHistory();
 
   // Autocomplete (мгновенные подсказки из словаря) - загружается ПОСЛЕ авторизации
-  const { suggestions, search: autocompleteSearch, clear: clearSuggestions } = useAutocomplete(apiReady);
+  // Словарь перезагружается при смене секции для релевантных подсказок
+  const { suggestions, search: autocompleteSearch, clear: clearSuggestions } = useAutocomplete(apiReady, selectedType);
 
   // Локальное состояние для инпута (для отзывчивости при вводе)
   const [searchInput, setSearchInput] = useState('');
@@ -566,7 +567,7 @@ function App() {
           onChange={handleSearchChange}
           onClear={handleClearSearch}
           onSearch={addToHistory}
-          placeholder="Искать по имени, подписи..."
+          placeholder="Имя, подпись, сегодня, .pdf..."
           history={searchHistory}
           onHistorySelect={addToHistory}
           onHistoryRemove={removeFromHistory}
