@@ -4,6 +4,7 @@ import { setupMediaHandlers } from './handlers/media.handler.js';
 import { setupTextHandlers } from './handlers/text.handler.js';
 import { setupRetrievalHandlers } from './handlers/retrieval.handler.js';
 import { FilesRepository } from '../db/repositories/files.repository.js';
+import { UsersRepository } from '../db/repositories/users.repository.js';
 import { MediaType } from '../types/index.js';
 import {
   getShareByToken,
@@ -18,6 +19,9 @@ import {
 
 // Create bot instance
 export const bot = new Bot(config.botToken);
+
+// Users repository for ensuring users exist (foreign key requirement)
+const usersRepo = new UsersRepository();
 
 /**
  * Validate share token and return validation result
@@ -183,6 +187,17 @@ export function setupBot(): void {
 
     // 2. Copy to cloud - non-critical (file already delivered)
     try {
+      // Ensure recipient exists in users table (foreign key requirement)
+      if (ctx.from) {
+        await usersRepo.upsert({
+          id: ctx.from.id,
+          first_name: ctx.from.first_name,
+          last_name: ctx.from.last_name,
+          username: ctx.from.username,
+          language_code: ctx.from.language_code,
+        });
+      }
+
       const { created, restored } = copyFileToUser(file, recipientId);
       if (created || restored) {
         await ctx.reply('📁 Файл добавлен в ваше облако');
@@ -232,6 +247,17 @@ export function setupBot(): void {
 
     // 2. Copy to cloud - non-critical (file already delivered)
     try {
+      // Ensure recipient exists in users table (foreign key requirement)
+      if (ctx.from) {
+        await usersRepo.upsert({
+          id: ctx.from.id,
+          first_name: ctx.from.first_name,
+          last_name: ctx.from.last_name,
+          username: ctx.from.username,
+          language_code: ctx.from.language_code,
+        });
+      }
+
       const { created, restored } = copyFileToUser(file, recipientId);
       if (created || restored) {
         await ctx.reply('📁 Файл добавлен в ваше облако');
