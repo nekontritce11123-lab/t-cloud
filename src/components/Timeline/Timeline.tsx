@@ -44,6 +44,8 @@ export function Timeline({
   const dragAnchorId = useRef<number | null>(null);
   const lastSelectedRange = useRef<Set<number>>(new Set());
   const lastTouchMoveTime = useRef<number>(0);
+  const dragStartCoordinate = useRef<{ x: number; y: number } | null>(null);
+  const dragThresholdMet = useRef(false);
 
   // Fallback ref если scrollContainerRef не передан
   const fallbackRef = useRef<HTMLElement>(null);
@@ -121,18 +123,32 @@ export function Timeline({
     if (fileId !== null && !isOnCooldown?.(fileId)) {
       setIsDragging(true);
       dragAnchorId.current = fileId;
+      dragStartCoordinate.current = { x: e.clientX, y: e.clientY };
+      dragThresholdMet.current = false;
       lastSelectedRange.current = new Set([fileId]);
 
-      // Сразу выделяем anchor файл
-      onSelectRange?.([fileId]);
+      // НЕ выделяем anchor сразу - пусть click handler в FileCard занимается toggle
+      // onSelectRange вызовется только при реальном drag (после threshold)
 
       // Захватываем pointer для получения событий за пределами элемента
       (e.target as HTMLElement).setPointerCapture(e.pointerId);
     }
-  }, [isSelectionMode, isOnCooldown, getFileIdAtPoint, onSelectRange]);
+  }, [isSelectionMode, isOnCooldown, getFileIdAtPoint]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!isDragging || !isSelectionMode || dragAnchorId.current === null) return;
+
+    // Проверяем threshold 10px перед началом drag selection
+    const start = dragStartCoordinate.current;
+    if (start && !dragThresholdMet.current) {
+      const distance = Math.sqrt(
+        Math.pow(e.clientX - start.x, 2) + Math.pow(e.clientY - start.y, 2)
+      );
+      if (distance < 10) return; // Игнорируем micro movements
+      dragThresholdMet.current = true;
+      // При первом превышении threshold - выделяем anchor файл
+      onSelectRange?.([dragAnchorId.current]);
+    }
 
     // Обновляем позицию для auto-scroll (без throttle - нужна плавность)
     updateAutoScrollPosition(e.clientY);
@@ -146,7 +162,7 @@ export function Timeline({
     if (currentFileId !== null) {
       selectRange(dragAnchorId.current, currentFileId);
     }
-  }, [isDragging, isSelectionMode, getFileIdAtPoint, selectRange, updateAutoScrollPosition]);
+  }, [isDragging, isSelectionMode, getFileIdAtPoint, selectRange, updateAutoScrollPosition, onSelectRange]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     if (isDragging) {
@@ -163,16 +179,11 @@ export function Timeline({
     }
   }, [isDragging]);
 
-  // Обёрнутый handler для long press - сразу инициализирует drag selection
+  // Обёрнутый handler для long press
   const handleFileLongPress = useCallback((file: FileRecord) => {
     // Вызываем оригинальный handler (он войдёт в selection mode)
     onFileLongPress?.(file);
-
-    // Сразу инициализируем drag state чтобы можно было продолжить выделение
-    // не отпуская палец/мышь
-    setIsDragging(true);
-    dragAnchorId.current = file.id;
-    lastSelectedRange.current = new Set([file.id]);
+    // Drag state уже установлен в handlePointerDown, не переустанавливаем
   }, [onFileLongPress]);
 
   if (files.length === 0) {

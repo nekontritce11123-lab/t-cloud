@@ -519,6 +519,13 @@ export function getUserDictionary(userId: number, options?: DictionaryOptions): 
     return Array.from(wordSet).sort();
   }
 
+  // Helper для извлечения расширений файлов из имени
+  const extractExtensions = (fileName: string | null): string[] => {
+    if (!fileName) return [];
+    const extMatch = fileName.toLowerCase().match(/\.\w{2,5}$/);
+    return extMatch ? [extMatch[0]] : [];
+  };
+
   // Для файлов - строим динамический SQL с фильтром по типу
   let sql = `
     SELECT file_name, caption, forward_from_name, forward_from_chat_title
@@ -560,6 +567,9 @@ export function getUserDictionary(userId: number, options?: DictionaryOptions): 
 
     const words = texts.toLowerCase().match(/[\p{L}\d]{2,}/gu) || [];
     words.forEach(w => wordSet.add(w));
+
+    // Добавляем расширения файлов для автодополнения (.pdf, .jpg и т.д.)
+    extractExtensions(row.file_name).forEach(ext => wordSet.add(ext));
   }
 
   // Добавляем слова из ссылок если не указан конкретный тип файлов
