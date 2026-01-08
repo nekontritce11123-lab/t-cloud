@@ -79,7 +79,6 @@
   z-index: 30;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: var(--spacing-sm) var(--spacing-lg);
   background: var(--app-bg-color);
   backdrop-filter: blur(10px);
@@ -88,8 +87,9 @@
 }
 
 .cancelBtn {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -112,15 +112,20 @@
 }
 
 .selectionCount {
+  flex: 1;
+  text-align: center;
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
   color: var(--app-text-color);
 }
 
 .selectionActions {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  justify-content: center;
 }
 
 .deleteBtn {
