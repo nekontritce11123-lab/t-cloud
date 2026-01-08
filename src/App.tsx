@@ -314,30 +314,20 @@ function App() {
     addToHistory(newQuery);
   }, [searchInput, search, addToHistory, clearSuggestions, getFiltersFromTags]);
 
-  // Управление главной кнопкой
+  // Управление главной кнопкой (только для отправки файлов)
   useEffect(() => {
     const filesCount = selectedFiles.size;
-    const linksCount = selectedLinks.size;
-    const totalCount = filesCount + linksCount;
 
-    if (totalCount > 0) {
-      if (selectionType === 'files' && filesCount > 0) {
-        // Для файлов показываем кнопку "Отправить"
-        mainButton.show(
-          `Отправить (${filesCount})`,
-          handleSendSelected
-        );
-      } else if (selectionType === 'links' && linksCount > 0) {
-        // Для ссылок показываем кнопку "Удалить"
-        mainButton.show(
-          `Удалить (${linksCount})`,
-          handleDeleteSelected
-        );
-      }
+    // mainButton только для отправки файлов, удаление через кнопку корзины сверху
+    if (selectionType === 'files' && filesCount > 0) {
+      mainButton.show(
+        `Отправить (${filesCount})`,
+        handleSendSelected
+      );
     } else {
       mainButton.hide();
     }
-  }, [selectedFiles.size, selectedLinks.size, selectionType]);
+  }, [selectedFiles.size, selectionType]);
 
   // Отправить выбранные файлы
   const handleSendSelected = useCallback(async () => {
@@ -605,7 +595,8 @@ function App() {
           </button>
           <span className={styles.selectionCount}>Выбрано: {selectionType === 'files' ? selectedFiles.size : selectedLinks.size}</span>
           <div className={styles.selectionActions}>
-            {selectionType === 'files' && selectedFiles.size > 0 && (
+            {((selectionType === 'files' && selectedFiles.size > 0) ||
+              (selectionType === 'links' && selectedLinks.size > 0)) && (
               <button onClick={handleDeleteSelected} className={styles.deleteBtn} disabled={isDeleting}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M3 6h18" />
