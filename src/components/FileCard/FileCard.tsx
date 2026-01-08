@@ -56,7 +56,10 @@ export function FileCard({
   includeDataFileId,
   searchMatch,
 }: FileCardProps) {
-  const longPress = useLongPress(file, onFileLongPress, onFileClick);
+  // When includeDataFileId is true, Timeline manages long press for drag selection
+  // FileCard's useLongPress only handles click vs long-press distinction (to prevent onClick after long press)
+  const effectiveLongPress = includeDataFileId ? undefined : onFileLongPress;
+  const longPress = useLongPress(file, effectiveLongPress, onFileClick);
 
   const cardClassName = [
     cardStyles.card,
