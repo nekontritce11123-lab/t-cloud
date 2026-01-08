@@ -716,9 +716,10 @@ export function copyFileToUser(
 
   if (existing) {
     if (existing.deleted_at) {
-      // File is in trash - restore it
+      // File is in trash - restore it and update created_at to now
+      // (so it appears at the top of the recipient's timeline, not at the sender's original date)
       const restoreStmt = sqlite.prepare(`
-        UPDATE files SET deleted_at = NULL WHERE id = ?
+        UPDATE files SET deleted_at = NULL, created_at = unixepoch() WHERE id = ?
       `);
       restoreStmt.run(existing.id);
       return { created: false, restored: true, fileId: existing.id };

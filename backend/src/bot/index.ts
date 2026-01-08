@@ -115,28 +115,46 @@ async function sendFileToUser(
   // Determine send method by file_id prefix, not by media_type
   const sendMethod = getSendMethodByFileId(file.file_id, file.media_type);
 
-  switch (sendMethod) {
-    case 'photo':
-      await ctx.replyWithPhoto(file.file_id, { caption });
-      break;
-    case 'video':
-      await ctx.replyWithVideo(file.file_id, { caption });
-      break;
-    case 'document':
+  // Helper to send by method type
+  const sendByMethod = async (method: string): Promise<void> => {
+    switch (method) {
+      case 'photo':
+        await ctx.replyWithPhoto(file.file_id, { caption });
+        break;
+      case 'video':
+        await ctx.replyWithVideo(file.file_id, { caption });
+        break;
+      case 'document':
+        await ctx.replyWithDocument(file.file_id, { caption });
+        break;
+      case 'audio':
+        await ctx.replyWithAudio(file.file_id, { caption });
+        break;
+      case 'voice':
+        await ctx.replyWithVoice(file.file_id, { caption });
+        break;
+      case 'video_note':
+        await ctx.replyWithVideoNote(file.file_id);
+        break;
+      default:
+        await ctx.replyWithDocument(file.file_id, { caption });
+    }
+  };
+
+  try {
+    await sendByMethod(sendMethod);
+  } catch (error) {
+    // If send fails (type mismatch, file unavailable, etc.), try as document
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.log(`[Bot] Send as ${sendMethod} failed: ${errMsg}, trying as document`);
+
+    if (sendMethod !== 'document') {
+      // Fallback to document - works for most file types
       await ctx.replyWithDocument(file.file_id, { caption });
-      break;
-    case 'audio':
-      await ctx.replyWithAudio(file.file_id, { caption });
-      break;
-    case 'voice':
-      await ctx.replyWithVoice(file.file_id, { caption });
-      break;
-    case 'video_note':
-      await ctx.replyWithVideoNote(file.file_id);
-      break;
-    default:
-      // Safe fallback - document works for all types
-      await ctx.replyWithDocument(file.file_id, { caption });
+    } else {
+      // Already tried document, re-throw
+      throw error;
+    }
   }
 }
 
