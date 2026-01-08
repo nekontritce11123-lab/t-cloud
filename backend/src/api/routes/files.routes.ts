@@ -555,6 +555,96 @@ router.get('/:id/video-url', async (req, res: Response) => {
   }
 });
 
+/**
+ * GET /api/files/:id/video-stream
+ * Stream video through our server (bypass CDN blocking in Russia)
+ * Auth via query param: ?initData=...
+ */
+router.get('/:id/video-stream', async (req, res: Response) => {
+  const { telegramUser } = req as unknown as AuthenticatedRequest;
+  const fileId = parseInt(req.params.id, 10);
+
+  if (isNaN(fileId)) {
+    res.status(400).json({ error: 'Invalid file ID' });
+    return;
+  }
+
+  try {
+    const file = await filesRepo.findById(fileId);
+
+    if (!file || file.userId !== telegramUser.id) {
+      res.status(404).json({ error: 'File not found' });
+      return;
+    }
+
+    if (!['video', 'video_note'].includes(file.mediaType)) {
+      res.status(400).json({ error: 'File is not a video' });
+      return;
+    }
+
+    const service = getThumbnailService();
+    const videoUrl = await service.getFileUrl(file.fileId);
+
+    if (!videoUrl) {
+      res.status(410).json({ error: 'VIDEO_UNAVAILABLE' });
+      return;
+    }
+
+    console.log('[API] Streaming video:', file.id, file.fileName);
+
+    // Fetch video from Telegram CDN
+    const videoResponse = await fetch(videoUrl);
+
+    if (!videoResponse.ok || !videoResponse.body) {
+      res.status(502).json({ error: 'Failed to fetch video from CDN' });
+      return;
+    }
+
+    // Set headers for streaming
+    res.setHeader('Content-Type', file.mimeType || 'video/mp4');
+    const contentLength = videoResponse.headers.get('content-length');
+    if (contentLength) {
+      res.setHeader('Content-Length', contentLength);
+    }
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+
+    // Stream the video using Node.js streams
+    const reader = videoResponse.body.getReader();
+
+    const pump = async (): Promise<void> => {
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          // Check if client disconnected
+          if (res.destroyed) {
+            reader.cancel();
+            break;
+          }
+
+          res.write(Buffer.from(value));
+        }
+        res.end();
+      } catch (streamError) {
+        console.error('[API] Stream error:', streamError);
+        if (!res.destroyed) {
+          res.end();
+        }
+      }
+    };
+
+    await pump();
+
+  } catch (error) {
+    console.error('[API] Error streaming video:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+});
+
 // Лимиты для предотвращения бана от Telegram
 const MAX_FILES_PER_REQUEST = 20;
 const DELAY_BETWEEN_SENDS_MS = 300; // 300ms между отправками

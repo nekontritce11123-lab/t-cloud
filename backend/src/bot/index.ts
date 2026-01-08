@@ -172,24 +172,27 @@ export function setupBot(): void {
       return;
     }
 
-    // Send file directly (no preview button)
+    // 1. Send file - critical operation
     try {
       await sendFileToUser(ctx, file, file.caption || undefined);
+    } catch (error) {
+      console.error('[Bot] Error sending shared file:', error);
+      await ctx.reply('❌ Ошибка при отправке файла. Попробуйте позже.');
+      return;
+    }
 
-      // Add file to recipient's cloud (if not already there)
+    // 2. Copy to cloud - non-critical (file already delivered)
+    try {
       const { created, restored } = copyFileToUser(file, recipientId);
       if (created || restored) {
         await ctx.reply('📁 Файл добавлен в ваше облако');
         console.log(`[Bot] File ${file.id} ${created ? 'copied' : 'restored'} to user ${recipientId}'s cloud`);
       }
-
-      // Record recipient and increment use_count
       recordShareRecipient(share.id, recipientId);
-
       console.log(`[Bot] File shared successfully: file=${file.id}, recipient=${recipientId}`);
-    } catch (error) {
-      console.error('[Bot] Error sending shared file:', error);
-      await ctx.reply('❌ Ошибка при отправке файла. Попробуйте позже.');
+    } catch (copyError) {
+      console.error('[Bot] Error copying file to cloud:', copyError);
+      await ctx.reply('⚠️ Файл отправлен, но не добавлен в облако. Сохраните его вручную.');
     }
   });
 
@@ -218,25 +221,30 @@ export function setupBot(): void {
       return;
     }
 
+    // 1. Send file - critical operation
     try {
-      // Send the file
       await sendFileToUser(ctx, file, file.caption || undefined);
+    } catch (error) {
+      console.error('[Bot] Error sending shared file:', error);
+      await ctx.answerCallbackQuery({ text: '❌ Ошибка при отправке файла', show_alert: true });
+      return;
+    }
 
-      // Add file to recipient's cloud (if not already there)
+    // 2. Copy to cloud - non-critical (file already delivered)
+    try {
       const { created, restored } = copyFileToUser(file, recipientId);
       if (created || restored) {
         await ctx.reply('📁 Файл добавлен в ваше облако');
         console.log(`[Bot] File ${file.id} ${created ? 'copied' : 'restored'} to user ${recipientId}'s cloud`);
       }
-
-      // Record recipient and increment use_count
       recordShareRecipient(share.id, recipientId);
-
       console.log(`[Bot] File shared successfully: file=${file.id}, recipient=${recipientId}`);
       await ctx.answerCallbackQuery({ text: '✅ Файл отправлен!' });
-    } catch (error) {
-      console.error('[Bot] Error sending shared file:', error);
-      await ctx.answerCallbackQuery({ text: '❌ Ошибка при отправке файла', show_alert: true });
+    } catch (copyError) {
+      console.error('[Bot] Error copying file to cloud:', copyError);
+      // File was sent, just couldn't copy to cloud
+      await ctx.answerCallbackQuery({ text: '✅ Файл отправлен!' });
+      await ctx.reply('⚠️ Не удалось добавить в облако. Сохраните вручную.');
     }
   });
 

@@ -83,11 +83,12 @@ export function authMiddleware(
   console.log('[Auth] Request:', req.method, req.path);
   console.log('[Auth] Origin:', req.headers.origin);
 
-  const initData = req.headers['x-telegram-init-data'] as string;
+  // Support both header and query param (for <video> streaming which can't set headers)
+  const initData = (req.headers['x-telegram-init-data'] || req.query.initData) as string;
   console.log('[Auth] initData present:', !!initData, initData ? `(${initData.length} chars)` : '');
 
   if (!initData) {
-    console.log('[Auth] REJECTED: Missing initData header');
+    console.log('[Auth] REJECTED: Missing initData header or query param');
     res.status(401).json({ error: 'Missing X-Telegram-Init-Data header' });
     return;
   }

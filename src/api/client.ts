@@ -278,6 +278,7 @@ class ApiClient {
     expiresIn: number;
     mimeType: string;
   }> {
+    // First check if file exists and is a video
     const response = await fetch(`${API_URL}/api/files/${fileId}/video-url`, {
       headers: this.getHeaders(),
     });
@@ -292,7 +293,17 @@ class ApiClient {
       throw new Error('Failed to get video URL');
     }
 
-    return response.json();
+    const data = await response.json();
+
+    // Return stream URL through our backend (bypasses CDN blocking)
+    // Include initData as query param since <video> can't set headers
+    const streamUrl = `${API_URL}/api/files/${fileId}/video-stream?initData=${encodeURIComponent(this.initData)}`;
+
+    return {
+      videoUrl: streamUrl,
+      expiresIn: data.expiresIn,
+      mimeType: data.mimeType,
+    };
   }
 
   // Autocomplete Dictionary API
