@@ -1,10 +1,11 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useTelegram } from './hooks/useTelegram';
 import { useFiles } from './hooks/useFiles';
 import { useSearchHistory } from './hooks/useSearchHistory';
 import { useAutocomplete } from './hooks/useAutocomplete';
 import { parseSearchInput, tagsToQueryParams, SearchTag } from './utils/searchTagParser';
 import { toggleInSet } from './shared/utils';
+import { formatFileSize } from './shared/formatters';
 import { COOLDOWN_MS } from './constants/config';
 import { apiClient, FileRecord, LinkRecord } from './api/client';
 import { CategoryChips } from './components/CategoryChips/CategoryChips';
@@ -14,6 +15,7 @@ import { Timeline } from './components/Timeline/Timeline';
 import { LinkList } from './components/LinkCard/LinkCard';
 import { TrashView } from './components/TrashView/TrashView';
 import { FileViewer } from './components/FileViewer/FileViewer';
+import { StatsSheet } from './components/StatsSheet';
 import './styles/global.css';
 import styles from './App.module.css';
 
@@ -58,8 +60,26 @@ function App() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [sentFiles, setSentFiles] = useState<Record<number, number>>({});
   const [sendingFileId, setSendingFileId] = useState<number | null>(null); // Защита от двойного клика
-  const [viewingFile, setViewingFile] = useState<FileRecord | null>(null); // Файл для просмотра
+  const [viewingFileIndex, setViewingFileIndex] = useState<number | null>(null); // Индекс файла для просмотра
+  const [isStatsOpen, setIsStatsOpen] = useState(false); // Stats sheet открыт
   const contentRef = useRef<HTMLElement>(null); // Ref для scroll контейнера (используется в Timeline для auto-scroll)
+
+  // Вычисляем viewingFile из индекса
+  const viewingFile = viewingFileIndex !== null ? files[viewingFileIndex] : null;
+
+  // Статистика для stats bar
+  const totalFiles = stats.reduce((sum, s) => sum + s.count, 0);
+  const totalSize = useMemo(() =>
+    files.reduce((sum, f) => sum + (f.fileSize ?? 0), 0),
+    [files]
+  );
+
+  // Навигация в FileViewer
+  const hasPrev = viewingFileIndex !== null && viewingFileIndex > 0;
+  const hasNext = viewingFileIndex !== null && viewingFileIndex < files.length - 1;
+  const positionLabel = viewingFileIndex !== null && files.length > 1
+    ? `${viewingFileIndex + 1} из ${files.length}`
+    : '';
 
   // Загрузка cooldown из localStorage
   useEffect(() => {
@@ -428,10 +448,32 @@ function App() {
       // В режиме выбора - toggle выбор
       setSelectedFiles(prev => toggleInSet(prev, file.id));
     } else {
-      // Обычный режим - открываем просмотр файла
-      setViewingFile(file);
+      // Обычный режим - открываем просмотр файла по индексу
+      const index = files.findIndex(f => f.id === file.id);
+      setViewingFileIndex(index >= 0 ? index : null);
     }
-  }, [hapticFeedback, isSelectionMode, selectionType]);
+  }, [hapticFeedback, isSelectionMode, selectionType, files]);
+
+  // Навигация в FileViewer
+  const handleViewerNavigate = useCallback((direction: 'prev' | 'next') => {
+    if (viewingFileIndex === null) return;
+    const newIndex = direction === 'prev'
+      ? Math.max(0, viewingFileIndex - 1)
+      : Math.min(files.length - 1, viewingFileIndex + 1);
+    setViewingFileIndex(newIndex);
+  }, [viewingFileIndex, files.length]);
+
+  // Handlers для StatsSheet
+  const handleCategoryClick = useCallback((category: string) => {
+    setIsStatsOpen(false);
+    filterByType(category as any);
+  }, [filterByType]);
+
+  const handleSourceClick = useCallback((source: string) => {
+    setIsStatsOpen(false);
+    setSearchInput(`от:${source}`);
+    search(`от:${source}`);
+  }, [search]);
 
   // Отправить файл из FileViewer
   const handleSendFromViewer = useCallback(async (file: FileRecord) => {
@@ -451,7 +493,7 @@ function App() {
       await apiClient.sendFile(file.id);
       markAsSent(file.id);
       hapticFeedback.success();
-      setViewingFile(null); // Закрываем просмотр после отправки
+      setViewingFileIndex(null); // Закрываем просмотр после отправки
     } catch (error) {
       console.error('Error sending file:', error);
       hapticFeedback.error();
@@ -550,13 +592,14 @@ function App() {
     <div className={styles.app}>
       {/* Header */}
       <header className={styles.header}>
-        <h1
-          className={styles.title}
+        <div
+          className={styles.statsBar}
+          onClick={() => setIsStatsOpen(true)}
           onDoubleClick={clearCooldown}
           title="Double-click to reset cooldown"
         >
-          T-Cloud
-        </h1>
+          {isLoading ? '-- файлов • -- МБ' : `${totalFiles} файлов • ${formatFileSize(totalSize)}`}
+        </div>
 
         <SearchBar
           value={searchInput}
@@ -750,13 +793,28 @@ function App() {
       {viewingFile && (
         <FileViewer
           file={viewingFile}
-          onClose={() => setViewingFile(null)}
+          hasPrev={hasPrev}
+          hasNext={hasNext}
+          positionLabel={positionLabel}
+          onNavigate={handleViewerNavigate}
+          onClose={() => setViewingFileIndex(null)}
           onSend={handleSendFromViewer}
           isOnCooldown={isOnCooldown(viewingFile.id)}
           isSending={sendingFileId === viewingFile.id}
           searchQuery={searchQuery}
         />
       )}
+
+      {/* StatsSheet modal */}
+      <StatsSheet
+        isOpen={isStatsOpen}
+        onClose={() => setIsStatsOpen(false)}
+        files={files}
+        stats={stats}
+        trashCount={trashCount}
+        onCategoryClick={handleCategoryClick}
+        onSourceClick={handleSourceClick}
+      />
     </div>
   );
 }

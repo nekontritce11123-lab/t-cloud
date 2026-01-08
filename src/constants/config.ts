@@ -29,3 +29,16 @@ export const BLUR_DELAY_MS = 150;
 export const BYTES_PER_KB = 1024;
 export const BYTES_PER_MB = BYTES_PER_KB * 1024;
 export const BYTES_PER_GB = BYTES_PER_MB * 1024;
+
+// =============================================================================
+// SWIPE GESTURES
+// =============================================================================
+export const SWIPE_HORIZONTAL_THRESHOLD_PX = 50;
+export const SWIPE_VERTICAL_THRESHOLD_PX = 150;
+export const SWIPE_VELOCITY_THRESHOLD = 500; // px/s
+export const NAVIGATION_COOLDOWN_MS = 300;   // Защита от rapid swipes
+
+// =============================================================================
+// FILE VIEWER
+// =============================================================================
+export const PRELOAD_ADJACENT_COUNT = 1;

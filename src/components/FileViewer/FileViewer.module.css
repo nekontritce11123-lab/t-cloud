@@ -96,6 +96,13 @@
   height: 100%;
 }
 
+.positionLabel {
+  color: var(--app-hint-color);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+  margin-left: var(--spacing-xs);
+}
+
 /* Header Send Button - стиль как у backButton */
 .headerSendButton {
   display: flex;
@@ -139,6 +146,7 @@
 
 /* Preview */
 .previewContainer {
+  position: relative; /* For nav buttons positioning */
   flex: 1; /* Занимает всё свободное место */
   display: flex;
   align-items: center; /* Картинка по центру */
@@ -170,6 +178,55 @@
 .iconPreview svg {
   width: 100%;
   height: 100%;
+}
+
+/* Navigation Buttons */
+.navButton {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 50%;
+  color: var(--app-text-color);
+  opacity: 0.7;
+  transition: opacity var(--animation-fast) var(--easing-smooth);
+  z-index: 10;
+}
+
+.navButton svg {
+  width: 24px;
+  height: 24px;
+}
+
+.navButtonLeft {
+  left: 16px;
+}
+
+.navButtonRight {
+  right: 16px;
+}
+
+.navButton:disabled {
+  opacity: 0.15;
+  cursor: default;
+}
+
+.navButton:hover:not(:disabled) {
+  opacity: 1;
+}
+
+/* Hide nav buttons on touch devices */
+@media (hover: none) {
+  .navButton {
+    display: none;
+  }
 }
 
 /* Info */

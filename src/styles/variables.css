@@ -71,4 +71,13 @@
   /* Overlays */
   --overlay-dark: rgba(0, 0, 0, 0.7);
   --overlay-darker: rgba(0, 0, 0, 0.8);
+
+  /* Navigation buttons */
+  --nav-button-size: 48px;
+  --nav-button-offset: 16px;
+  --nav-button-bg: rgba(0, 0, 0, 0.5);
+  --nav-button-blur: 8px;
+  --nav-button-opacity: 0.4;
+  --nav-button-opacity-hover: 1;
+  --nav-button-opacity-disabled: 0.15;
 }

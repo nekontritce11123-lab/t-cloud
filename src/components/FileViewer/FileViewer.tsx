@@ -5,6 +5,8 @@ import { formatFileSize, formatDuration, formatDate, getMediaTypeLabel, highligh
 import { getEffectiveMediaType } from '../../shared/mediaType';
 import { ShareSection } from '../ShareSection';
 import { VideoPlayer } from '../VideoPlayer';
+import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
+import { useFileViewerKeyboard } from '../../hooks/useFileViewerKeyboard';
 import styles from './FileViewer.module.css';
 
 // Helper to check if file is a video
@@ -22,6 +24,12 @@ const EXPIRES_PRESETS = [
 
 interface FileViewerProps {
   file: FileRecord;
+  // Navigation props
+  hasPrev?: boolean;
+  hasNext?: boolean;
+  positionLabel?: string;  // "3 из 47"
+  onNavigate?: (direction: 'prev' | 'next') => void;
+  // Existing props
   onClose: () => void;
   onSend: (file: FileRecord) => void;
   isOnCooldown?: boolean;
@@ -31,7 +39,18 @@ interface FileViewerProps {
 
 type ShareMode = 'idle' | 'creating';
 
-export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending, searchQuery }: FileViewerProps) {
+export function FileViewer({
+  file,
+  hasPrev,
+  hasNext,
+  positionLabel,
+  onNavigate,
+  onClose,
+  onSend,
+  isOnCooldown,
+  isSending,
+  searchQuery
+}: FileViewerProps) {
   const [shareLoading, setShareLoading] = useState(true);
   const [shareData, setShareData] = useState<ShareResponse | null>(null);
   const [disablingShare, setDisablingShare] = useState(false);
@@ -143,6 +162,35 @@ export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending, sea
     }
   }, [onClose]);
 
+  // Navigation handlers
+  const handlePrev = useCallback(() => {
+    if (hasPrev && onNavigate) {
+      onNavigate('prev');
+    }
+  }, [hasPrev, onNavigate]);
+
+  const handleNext = useCallback(() => {
+    if (hasNext && onNavigate) {
+      onNavigate('next');
+    }
+  }, [hasNext, onNavigate]);
+
+  // Swipe navigation (swipe left = next, swipe right = prev, swipe down = close)
+  const swipeHandlers = useSwipeNavigation({
+    onSwipeLeft: handleNext,
+    onSwipeRight: handlePrev,
+    onSwipeDown: onClose,
+  });
+
+  // Keyboard navigation (arrows, escape, enter)
+  useFileViewerKeyboard({
+    onPrev: handlePrev,
+    onNext: handleNext,
+    onClose,
+    onSend: handleSend,
+    isActive: true,
+  });
+
   return (
     <div className={styles.overlay} onClick={handleBackdropClick}>
       <div className={styles.viewer}>
@@ -160,6 +208,9 @@ export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending, sea
               {MediaTypeIcons[getEffectiveMediaType(file.mediaType, file.mimeType)]}
             </span>
             <span>{getMediaTypeLabel(getEffectiveMediaType(file.mediaType, file.mimeType))}</span>
+            {positionLabel && (
+              <span className={styles.positionLabel}>{positionLabel}</span>
+            )}
           </div>
 
           <button
@@ -190,7 +241,7 @@ export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending, sea
         </div>
 
         {/* Preview */}
-        <div className={styles.previewContainer}>
+        <div className={styles.previewContainer} {...swipeHandlers}>
           {isVideoFile(file.mediaType) ? (
             <VideoPlayer file={file} thumbnailUrl={file.thumbnailUrl} />
           ) : file.thumbnailUrl ? (
@@ -203,6 +254,32 @@ export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending, sea
             <div className={styles.iconPreview}>
               {MediaTypeIcons[file.mediaType]}
             </div>
+          )}
+
+          {/* Navigation buttons (desktop only) */}
+          {onNavigate && (
+            <>
+              <button
+                className={`${styles.navButton} ${styles.navButtonLeft}`}
+                onClick={handlePrev}
+                disabled={!hasPrev}
+                aria-label="Previous"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m15 18-6-6 6-6" />
+                </svg>
+              </button>
+              <button
+                className={`${styles.navButton} ${styles.navButtonRight}`}
+                onClick={handleNext}
+                disabled={!hasNext}
+                aria-label="Next"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m9 18 6-6-6-6" />
+                </svg>
+              </button>
+            </>
           )}
         </div>
 
