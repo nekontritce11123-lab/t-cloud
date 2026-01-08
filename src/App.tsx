@@ -645,6 +645,36 @@ function App() {
             selectedLinks={selectedLinks}
             isSelectionMode={isSelectionMode && selectionType === 'links'}
           />
+        ) : selectedType === 'shared' ? (
+          files.length > 0 ? (
+            <FileGrid
+              files={files}
+              onFileClick={handleFileClick}
+              onFileLongPress={handleFileLongPress}
+              selectedFiles={selectedFiles}
+              isSelectionMode={isSelectionMode}
+              searchQuery=""
+              isOnCooldown={isOnCooldown}
+            />
+          ) : isLoading ? (
+            <div className={styles.loadingMore}>
+              <div className="spinner" />
+            </div>
+          ) : (
+            <div className={styles.empty}>
+              <div className={styles.emptyIconWrapper}>
+                <svg className={styles.emptySearchIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <circle cx="18" cy="5" r="3" />
+                  <circle cx="6" cy="12" r="3" />
+                  <circle cx="18" cy="19" r="3" />
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+                </svg>
+              </div>
+              <h3 className={styles.emptyTitle}>Нет общих файлов</h3>
+              <p className={styles.emptyHint}>Здесь будут файлы, которыми вы поделились</p>
+            </div>
+          )
         ) : searchQuery ? (
           /* При поиске показываем файлы и ссылки */
           <>

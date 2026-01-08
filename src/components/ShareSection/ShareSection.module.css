@@ -1,0 +1,83 @@
+.section {
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--app-secondary-bg-color);
+  border-radius: 12px;
+}
+
+.urlRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.url {
+  flex: 1;
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--app-text-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.copyBtn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--app-link-color);
+  color: #fff;
+  border-radius: 8px;
+  transition: all var(--animation-fast) var(--easing-smooth);
+}
+
+.copyBtn:active {
+  transform: scale(0.95);
+}
+
+.copyBtn.copied {
+  background: var(--color-success, #34c759);
+}
+
+.copyBtn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--app-hint-color);
+  margin-bottom: 12px;
+}
+
+.separator {
+  color: var(--app-hint-color);
+  opacity: 0.5;
+}
+
+.disableBtn {
+  width: 100%;
+  padding: 10px;
+  background: transparent;
+  border: 1px solid #ff3b30;
+  color: #ff3b30;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all var(--animation-fast) var(--easing-smooth);
+}
+
+.disableBtn:active {
+  background: rgba(255, 59, 48, 0.1);
+}
+
+.disableBtn:disabled {
+  opacity: 0.5;
+}

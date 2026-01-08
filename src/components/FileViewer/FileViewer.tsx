@@ -1,9 +1,10 @@
-import { useCallback, useState } from 'react';
-import { FileRecord } from '../../api/client';
+import { useCallback, useState, useEffect } from 'react';
+import { FileRecord, ShareResponse, apiClient } from '../../api/client';
 import { MediaTypeIcons, ShareIcon } from '../../shared/icons';
 import { formatFileSize, formatDuration, formatDate, getMediaTypeLabel, highlightMatch } from '../../shared/formatters';
 import { getEffectiveMediaType } from '../../shared/mediaType';
 import { ShareModal } from '../ShareModal';
+import { ShareSection } from '../ShareSection';
 import styles from './FileViewer.module.css';
 
 interface FileViewerProps {
@@ -17,6 +18,38 @@ interface FileViewerProps {
 
 export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending, searchQuery }: FileViewerProps) {
   const [showShareModal, setShowShareModal] = useState(false);
+  const [shareLoading, setShareLoading] = useState(true);
+  const [shareData, setShareData] = useState<ShareResponse | null>(null);
+  const [disablingShare, setDisablingShare] = useState(false);
+
+  // Load share info on mount
+  useEffect(() => {
+    setShareLoading(true);
+    apiClient.getShareInfo(file.id)
+      .then(setShareData)
+      .catch(() => setShareData(null))
+      .finally(() => setShareLoading(false));
+  }, [file.id]);
+
+  // Handle share created from modal
+  const handleShareCreated = useCallback((data: ShareResponse) => {
+    setShareData(data);
+    setShowShareModal(false);
+  }, []);
+
+  // Handle disable share
+  const handleDisableShare = useCallback(async () => {
+    if (!shareData?.share.token) return;
+    setDisablingShare(true);
+    try {
+      await apiClient.deleteShareLink(shareData.share.token);
+      setShareData(null);
+    } catch (error) {
+      console.error('Failed to disable share:', error);
+    } finally {
+      setDisablingShare(false);
+    }
+  }, [shareData?.share.token]);
 
   const handleSend = useCallback(() => {
     if (!isOnCooldown && !isSending) {
@@ -167,21 +200,34 @@ export function FileViewer({ file, onClose, onSend, isOnCooldown, isSending, sea
             </div>
           </div>
 
-          {/* Share Button */}
-          <button
-            className={styles.shareButton}
-            onClick={() => setShowShareModal(true)}
-          >
-            <span className={styles.shareIcon}>{ShareIcon}</span>
-            Поделиться
-          </button>
+          {/* Share Section */}
+          {shareLoading ? (
+            <div className={styles.shareLoading}>
+              <div className={styles.miniSpinner} />
+            </div>
+          ) : shareData ? (
+            <ShareSection
+              shareData={shareData}
+              onDisable={handleDisableShare}
+              isDisabling={disablingShare}
+            />
+          ) : (
+            <button
+              className={styles.shareButton}
+              onClick={() => setShowShareModal(true)}
+            >
+              <span className={styles.shareIcon}>{ShareIcon}</span>
+              Поделиться
+            </button>
+          )}
         </div>
 
-        {/* Share Modal */}
+        {/* Share Modal - only for creating new share */}
         {showShareModal && (
           <ShareModal
             file={file}
             onClose={() => setShowShareModal(false)}
+            onCreated={handleShareCreated}
           />
         )}
       </div>

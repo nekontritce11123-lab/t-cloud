@@ -34,6 +34,9 @@ export function useFiles(apiReady = true) {
 
     setIsLoading(true);
     setError(null);
+    // Очищаем данные чтобы показался спиннер и не было чёрного экрана при переключении категорий
+    setFiles([]);
+    setLinks([]);
 
     try {
       const hasFilters = filters && (filters.dateFrom || filters.dateTo || filters.sizeMin || filters.sizeMax || filters.from || filters.chat);
