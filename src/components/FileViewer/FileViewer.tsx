@@ -51,6 +51,8 @@ export function FileViewer({
   isSending,
   searchQuery
 }: FileViewerProps) {
+  const [isClosing, setIsClosing] = useState(false);
+  const [slideDirection, setSlideDirection] = useState<'next' | 'prev' | null>(null);
   const [shareLoading, setShareLoading] = useState(true);
   const [shareData, setShareData] = useState<ShareResponse | null>(null);
   const [disablingShare, setDisablingShare] = useState(false);
@@ -156,22 +158,36 @@ export function FileViewer({
     }
   }, [file, onSend, isOnCooldown, isSending]);
 
+  const handleAnimatedClose = useCallback(() => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsClosing(false);
+      onClose();
+    }, 200);
+  }, [onClose]);
+
   const handleBackdropClick = useCallback((e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
-      onClose();
+      handleAnimatedClose();
     }
-  }, [onClose]);
+  }, [handleAnimatedClose]);
 
   // Navigation handlers
   const handlePrev = useCallback(() => {
     if (hasPrev && onNavigate) {
+      setSlideDirection('prev');
       onNavigate('prev');
+      // Reset after animation (match CSS duration)
+      setTimeout(() => setSlideDirection(null), 320);
     }
   }, [hasPrev, onNavigate]);
 
   const handleNext = useCallback(() => {
     if (hasNext && onNavigate) {
+      setSlideDirection('next');
       onNavigate('next');
+      // Reset after animation (match CSS duration)
+      setTimeout(() => setSlideDirection(null), 320);
     }
   }, [hasNext, onNavigate]);
 
@@ -179,24 +195,24 @@ export function FileViewer({
   const swipeHandlers = useSwipeNavigation({
     onSwipeLeft: handleNext,
     onSwipeRight: handlePrev,
-    onSwipeDown: onClose,
+    onSwipeDown: handleAnimatedClose,
   });
 
   // Keyboard navigation (arrows, escape, enter)
   useFileViewerKeyboard({
     onPrev: handlePrev,
     onNext: handleNext,
-    onClose,
+    onClose: handleAnimatedClose,
     onSend: handleSend,
     isActive: true,
   });
 
   return (
-    <div className={styles.overlay} onClick={handleBackdropClick}>
-      <div className={styles.viewer}>
+    <div className={`${styles.overlay} ${isClosing ? styles.closing : ''}`} onClick={handleBackdropClick}>
+      <div className={`${styles.viewer} ${isClosing ? styles.closing : ''}`}>
         {/* Header */}
         <div className={styles.header}>
-          <button className={styles.backButton} onClick={onClose}>
+          <button className={styles.backButton} onClick={handleAnimatedClose}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="m15 18-6-6 6-6" />
             </svg>
@@ -240,23 +256,31 @@ export function FileViewer({
           </button>
         </div>
 
-        {/* Preview */}
-        <div className={styles.previewContainer} {...swipeHandlers}>
-          {isVideoFile(file.mediaType) ? (
-            <VideoPlayer file={file} thumbnailUrl={file.thumbnailUrl} />
-          ) : file.thumbnailUrl ? (
-            <img
-              src={file.thumbnailUrl}
-              alt=""
-              className={styles.preview}
-            />
-          ) : (
-            <div className={styles.iconPreview}>
-              {MediaTypeIcons[file.mediaType]}
-            </div>
-          )}
+        {/* Preview with navigation wrapper */}
+        <div className={styles.previewWrapper}>
+          <div
+            className={`${styles.previewContainer} ${
+              slideDirection === 'next' ? styles.slideNext :
+              slideDirection === 'prev' ? styles.slidePrev : ''
+            }`}
+            {...swipeHandlers}
+          >
+            {isVideoFile(file.mediaType) ? (
+              <VideoPlayer file={file} thumbnailUrl={file.thumbnailUrl} />
+            ) : file.thumbnailUrl ? (
+              <img
+                src={file.thumbnailUrl}
+                alt=""
+                className={styles.preview}
+              />
+            ) : (
+              <div className={styles.iconPreview}>
+                {MediaTypeIcons[file.mediaType]}
+              </div>
+            )}
+          </div>
 
-          {/* Navigation buttons (desktop only) */}
+          {/* Navigation buttons (desktop only) - outside animated container */}
           {onNavigate && (
             <>
               <button

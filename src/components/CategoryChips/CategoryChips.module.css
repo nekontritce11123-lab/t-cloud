@@ -4,6 +4,7 @@
 }
 
 .scroll {
+  position: relative;
   display: flex;
   gap: var(--spacing-sm);
   padding: 0 var(--spacing-lg);
@@ -89,6 +90,7 @@
   pointer-events: none;
   cursor: not-allowed;
 }
+
 
 /* Центрирование chips на широких экранах */
 @media (min-width: 1200px) {

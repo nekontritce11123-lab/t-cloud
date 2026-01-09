@@ -38,6 +38,26 @@
   }
 }
 
+/* Close animations */
+.overlay.closing {
+  animation: fadeOut 200ms ease forwards;
+  pointer-events: none;
+}
+
+.sheet.closing {
+  animation: slideDown 250ms var(--easing-smooth) forwards;
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+
 /* Header */
 .header {
   position: relative;

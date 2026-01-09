@@ -68,7 +68,7 @@ function App() {
   const viewingFile = viewingFileIndex !== null ? files[viewingFileIndex] : null;
 
   // Статистика для stats bar
-  const totalFiles = stats.reduce((sum, s) => sum + s.count, 0);
+  const totalFiles = files.length;
   const totalSize = useMemo(() =>
     files.reduce((sum, f) => sum + (f.fileSize ?? 0), 0),
     [files]
@@ -590,17 +590,18 @@ function App() {
 
   return (
     <div className={styles.app}>
+      {/* Stats Badge - fixed position */}
+      <div
+        className={styles.statsBar}
+        onClick={() => setIsStatsOpen(true)}
+        onDoubleClick={clearCooldown}
+        title="Double-click to reset cooldown"
+      >
+        {isLoading ? '-- • --' : `${totalFiles} • ${formatFileSize(totalSize)}`}
+      </div>
+
       {/* Header */}
       <header className={styles.header}>
-        <div
-          className={styles.statsBar}
-          onClick={() => setIsStatsOpen(true)}
-          onDoubleClick={clearCooldown}
-          title="Double-click to reset cooldown"
-        >
-          {isLoading ? '-- файлов • -- МБ' : `${totalFiles} файлов • ${formatFileSize(totalSize)}`}
-        </div>
-
         <SearchBar
           value={searchInput}
           onChange={handleSearchChange}

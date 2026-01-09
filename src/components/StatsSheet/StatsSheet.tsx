@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import { FileRecord, CategoryStats, MediaType } from '../../api/client';
 import { formatFileSize, getMediaTypeLabel } from '../../shared/formatters';
 import { MediaTypeIcons } from '../../shared/icons';
@@ -32,6 +32,17 @@ export function StatsSheet({
   onCategoryClick,
   onSourceClick,
 }: StatsSheetProps) {
+  const [isClosing, setIsClosing] = useState(false);
+
+  // Animated close handler
+  const handleAnimatedClose = useCallback(() => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsClosing(false);
+      onClose();
+    }, 200);
+  }, [onClose]);
+
   // Compute total files and size
   const totalFiles = useMemo(() => {
     return stats.reduce((sum, s) => sum + s.count, 0);
@@ -100,38 +111,40 @@ export function StatsSheet({
   const handleBackdropClick = useCallback(
     (e: React.MouseEvent) => {
       if (e.target === e.currentTarget) {
-        onClose();
+        handleAnimatedClose();
       }
     },
-    [onClose]
+    [handleAnimatedClose]
   );
 
   // Handle category row click
   const handleCategoryClick = useCallback(
     (category: MediaType) => {
+      handleAnimatedClose();
       onCategoryClick(category);
     },
-    [onCategoryClick]
+    [handleAnimatedClose, onCategoryClick]
   );
 
   // Handle source row click
   const handleSourceClick = useCallback(
     (source: string) => {
+      handleAnimatedClose();
       onSourceClick(source);
     },
-    [onSourceClick]
+    [handleAnimatedClose, onSourceClick]
   );
 
   if (!isOpen) return null;
 
   return (
-    <div className={styles.overlay} onClick={handleBackdropClick}>
-      <div className={styles.sheet}>
+    <div className={`${styles.overlay} ${isClosing ? styles.closing : ''}`} onClick={handleBackdropClick}>
+      <div className={`${styles.sheet} ${isClosing ? styles.closing : ''}`}>
         {/* Header */}
         <div className={styles.header}>
           <div className={styles.handle} />
           <h2 className={styles.title}>Статистика</h2>
-          <button className={styles.closeButton} onClick={onClose}>
+          <button className={styles.closeButton} onClick={handleAnimatedClose}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 6 6 18" />
               <path d="m6 6 12 12" />

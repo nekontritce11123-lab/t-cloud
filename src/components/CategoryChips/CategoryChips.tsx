@@ -114,6 +114,7 @@ const CATEGORIES: Category[] = [
 export function CategoryChips({ stats, selectedType, onSelect, trashCount = 0, sharedCount = 0, disabledTypes }: CategoryChipsProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
+
   // Простая конвертация вертикального скролла в горизонтальный
   const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
     if (!scrollRef.current) return;
