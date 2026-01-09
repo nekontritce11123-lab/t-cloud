@@ -183,7 +183,85 @@
   animation: spin 0.8s linear infinite;
 }
 
-/* Preview Wrapper - для фиксированных кнопок навигации */
+/* ============================================ */
+/* CAROUSEL - двухслойная анимация             */
+/* ============================================ */
+
+.carouselContainer {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Базовые стили слоя */
+.slideLayer {
+  display: flex;
+  flex-direction: column;
+  will-change: transform;
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+}
+
+/* Текущий слой - занимает место в потоке */
+.slideLayer.current {
+  position: relative;
+  flex: 1;
+}
+
+/* Текущий слой при выходе - НЕ меняем position, только анимируем transform */
+/* Удалено: position: absolute вызывало скачок (элемент удалялся из потока) */
+
+/* Входящий слой - всегда absolute */
+.slideLayer.incoming {
+  position: absolute;
+  inset: 0;
+}
+
+/* Анимации выхода */
+.slideLayer.exitLeft {
+  animation: slideExitLeft 320ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.slideLayer.exitRight {
+  animation: slideExitRight 320ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+/* Анимации входа */
+.slideLayer.enterFromRight {
+  animation: slideEnterFromRight 320ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.slideLayer.enterFromLeft {
+  animation: slideEnterFromLeft 320ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes slideExitLeft {
+  from { transform: translateX(0) translateZ(0); }
+  to { transform: translateX(-100%) translateZ(0); }
+}
+
+@keyframes slideExitRight {
+  from { transform: translateX(0) translateZ(0); }
+  to { transform: translateX(100%) translateZ(0); }
+}
+
+@keyframes slideEnterFromRight {
+  from { transform: translateX(100%) translateZ(0); }
+  to { transform: translateX(0) translateZ(0); }
+}
+
+@keyframes slideEnterFromLeft {
+  from { transform: translateX(-100%) translateZ(0); }
+  to { transform: translateX(0) translateZ(0); }
+}
+
+/* ============================================ */
+/* PREVIEW WRAPPER/CONTAINER                   */
+/* ============================================ */
+
+/* Preview Wrapper - контейнер для превью внутри слоя */
 .previewWrapper {
   position: relative;
   flex: 1;
@@ -201,36 +279,38 @@
   align-items: center;
   justify-content: center;
   padding: var(--spacing-lg);
-  will-change: transform, opacity;
+  /* GPU acceleration for smooth animations */
+  will-change: transform;
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  -webkit-perspective: 1000px;
+  contain: layout style paint;
 }
 
+/* Apple-style slide animations - NO OPACITY (prevents flicker) */
 .previewContainer.slideNext {
-  animation: slideNextEnter 320ms var(--easing-smooth);
+  animation: slideNextEnter 320ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 }
 
 .previewContainer.slidePrev {
-  animation: slidePrevEnter 320ms var(--easing-smooth);
+  animation: slidePrevEnter 320ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 }
 
 @keyframes slideNextEnter {
   from {
-    opacity: 0;
-    transform: translateX(15%);
+    transform: translateX(100%) translateZ(0);
   }
   to {
-    opacity: 1;
-    transform: translateX(0);
+    transform: translateX(0) translateZ(0);
   }
 }
 
 @keyframes slidePrevEnter {
   from {
-    opacity: 0;
-    transform: translateX(-15%);
+    transform: translateX(-100%) translateZ(0);
   }
   to {
-    opacity: 1;
-    transform: translateX(0);
+    transform: translateX(0) translateZ(0);
   }
 }
 
@@ -314,6 +394,8 @@
   flex-shrink: 0;
   max-height: 50vh; /* Максимум половина экрана */
   overflow-y: auto; /* Скролл при длинном тексте */
+  overscroll-behavior: contain; /* Изолировать скролл - не прокидывать на родителя */
+  -webkit-overflow-scrolling: touch; /* Плавный скролл на iOS */
   padding: var(--spacing-lg);
   background: var(--app-bg-color);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
@@ -392,6 +474,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: all var(--animation-fast) var(--easing-smooth);
+  min-height: 48px; /* Стабильная высота - без скачков при загрузке */
 }
 
 .shareButton:active {
@@ -412,6 +495,26 @@
   height: 100%;
 }
 
+/* Share Placeholder - для incoming layer чтобы резервировать место */
+.sharePlaceholder {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  margin-top: 12px;
+  background: transparent;
+  border: 1px solid var(--app-link-color);
+  color: var(--app-link-color);
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  min-height: 48px;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 /* Share Loading */
 .shareLoading {
   display: flex;
@@ -419,6 +522,7 @@
   justify-content: center;
   padding: 16px;
   margin-top: 16px;
+  min-height: 48px; /* Стабильная высота - без скачков при загрузке */
 }
 
 .miniSpinner {

@@ -24,7 +24,9 @@ const EXPIRES_PRESETS = [
 
 interface FileViewerProps {
   file: FileRecord;
-  // Navigation props
+  // Navigation props - соседние файлы для carousel-анимации
+  prevFile?: FileRecord;
+  nextFile?: FileRecord;
   hasPrev?: boolean;
   hasNext?: boolean;
   positionLabel?: string;  // "3 из 47"
@@ -41,6 +43,8 @@ type ShareMode = 'idle' | 'creating';
 
 export function FileViewer({
   file,
+  prevFile,
+  nextFile,
   hasPrev,
   hasNext,
   positionLabel,
@@ -53,7 +57,9 @@ export function FileViewer({
 }: FileViewerProps) {
   const [isClosing, setIsClosing] = useState(false);
   const [slideDirection, setSlideDirection] = useState<'next' | 'prev' | null>(null);
-  const [shareLoading, setShareLoading] = useState(true);
+  const [isAnimating, setIsAnimating] = useState(false);  // Блокировка rapid swipes
+  // Инициализация shareLoading зависит от файла - если нет share, сразу false
+  const [shareLoading, setShareLoading] = useState(() => file.hasShare);
   const [shareData, setShareData] = useState<ShareResponse | null>(null);
   const [disablingShare, setDisablingShare] = useState(false);
 
@@ -76,7 +82,8 @@ export function FileViewer({
 
   // Load share info on mount (optimized: skip if no share exists)
   useEffect(() => {
-    // If file has no share, show button immediately
+    // Сразу установить правильное значение при смене файла
+    // Это предотвращает мелькание spinner для файлов без share
     if (!file.hasShare) {
       setShareLoading(false);
       setShareData(null);
@@ -172,24 +179,34 @@ export function FileViewer({
     }
   }, [handleAnimatedClose]);
 
-  // Navigation handlers
+  // Navigation handlers - вызываем onNavigate ПОСЛЕ анимации
   const handlePrev = useCallback(() => {
-    if (hasPrev && onNavigate) {
-      setSlideDirection('prev');
+    if (isAnimating || !hasPrev || !onNavigate || !prevFile) return;
+
+    setIsAnimating(true);
+    setSlideDirection('prev');
+
+    // Ждём окончания анимации, потом меняем файл
+    setTimeout(() => {
       onNavigate('prev');
-      // Reset after animation (match CSS duration)
-      setTimeout(() => setSlideDirection(null), 320);
-    }
-  }, [hasPrev, onNavigate]);
+      setSlideDirection(null);
+      setIsAnimating(false);
+    }, 320);
+  }, [isAnimating, hasPrev, onNavigate, prevFile]);
 
   const handleNext = useCallback(() => {
-    if (hasNext && onNavigate) {
-      setSlideDirection('next');
+    if (isAnimating || !hasNext || !onNavigate || !nextFile) return;
+
+    setIsAnimating(true);
+    setSlideDirection('next');
+
+    // Ждём окончания анимации, потом меняем файл
+    setTimeout(() => {
       onNavigate('next');
-      // Reset after animation (match CSS duration)
-      setTimeout(() => setSlideDirection(null), 320);
-    }
-  }, [hasNext, onNavigate]);
+      setSlideDirection(null);
+      setIsAnimating(false);
+    }, 320);
+  }, [isAnimating, hasNext, onNavigate, nextFile]);
 
   // Swipe navigation (swipe left = next, swipe right = prev, swipe down = close)
   const swipeHandlers = useSwipeNavigation({
@@ -207,9 +224,102 @@ export function FileViewer({
     isActive: true,
   });
 
+  // Helper: рендер превью для файла
+  const renderPreview = (f: FileRecord | undefined) => {
+    if (!f) return null;
+    if (isVideoFile(f.mediaType)) {
+      return <VideoPlayer file={f} thumbnailUrl={f.thumbnailUrl} />;
+    }
+    if (f.thumbnailUrl) {
+      // Вычислить aspect-ratio из размеров файла для резервирования места
+      // Это предотвращает layout shift при загрузке высоких фото
+      const aspectRatio = f.width && f.height ? f.width / f.height : undefined;
+      return (
+        <img
+          src={f.thumbnailUrl}
+          alt=""
+          className={styles.preview}
+          style={aspectRatio ? { aspectRatio: String(aspectRatio) } : undefined}
+        />
+      );
+    }
+    return (
+      <div className={styles.iconPreview}>
+        {MediaTypeIcons[f.mediaType]}
+      </div>
+    );
+  };
+
+  // Helper: рендер info секции для файла (caption + meta, без share)
+  const renderInfo = (f: FileRecord | undefined) => {
+    if (!f) return null;
+    return (
+      <>
+        {/* Caption */}
+        {f.caption && (
+          <div
+            className={styles.caption}
+            dangerouslySetInnerHTML={{
+              __html: highlightMatch(f.caption.replace(/\n/g, '<br/>'), searchQuery)
+            }}
+          />
+        )}
+
+        {/* Meta info */}
+        <div className={styles.meta}>
+          {f.fileName && (
+            <div className={styles.metaItem}>
+              <span className={styles.metaLabel}>Название:</span>
+              <span dangerouslySetInnerHTML={{ __html: highlightMatch(f.fileName, searchQuery) }} />
+            </div>
+          )}
+          {f.mimeType && (
+            <div className={styles.metaItem}>
+              <span className={styles.metaLabel}>Тип:</span>
+              <span>{f.mimeType}</span>
+            </div>
+          )}
+          {f.fileSize && (
+            <div className={styles.metaItem}>
+              <span className={styles.metaLabel}>Размер:</span>
+              <span>{formatFileSize(f.fileSize)}</span>
+            </div>
+          )}
+          {f.duration && (
+            <div className={styles.metaItem}>
+              <span className={styles.metaLabel}>Длительность:</span>
+              <span>{formatDuration(f.duration)}</span>
+            </div>
+          )}
+          {(f.width && f.height) && (
+            <div className={styles.metaItem}>
+              <span className={styles.metaLabel}>Разрешение:</span>
+              <span>{f.width} × {f.height}</span>
+            </div>
+          )}
+          {(f.forwardFromName || f.forwardFromChatTitle) && (
+            <div className={styles.metaItem}>
+              <span className={styles.metaLabel}>От:</span>
+              <span dangerouslySetInnerHTML={{
+                __html: highlightMatch(f.forwardFromName || f.forwardFromChatTitle || '', searchQuery)
+              }} />
+            </div>
+          )}
+          <div className={styles.metaItem}>
+            <span className={styles.metaLabel}>Добавлено:</span>
+            <span>{formatDate(f.createdAt)}</span>
+          </div>
+        </div>
+      </>
+    );
+  };
+
+  // Определяем входящий файл для анимации
+  const incomingFile = slideDirection === 'next' ? nextFile : slideDirection === 'prev' ? prevFile : undefined;
+
   return (
     <div className={`${styles.overlay} ${isClosing ? styles.closing : ''}`} onClick={handleBackdropClick}>
-      <div className={`${styles.viewer} ${isClosing ? styles.closing : ''}`}>
+      <div className={`${styles.viewer} ${isClosing ? styles.closing : ''}`} {...swipeHandlers}>
         {/* Header */}
         <div className={styles.header}>
           <button className={styles.backButton} onClick={handleAnimatedClose}>
@@ -256,134 +366,21 @@ export function FileViewer({
           </button>
         </div>
 
-        {/* Preview with navigation wrapper */}
-        <div className={styles.previewWrapper}>
-          <div
-            className={`${styles.previewContainer} ${
-              slideDirection === 'next' ? styles.slideNext :
-              slideDirection === 'prev' ? styles.slidePrev : ''
-            }`}
-            {...swipeHandlers}
-          >
-            {isVideoFile(file.mediaType) ? (
-              <VideoPlayer file={file} thumbnailUrl={file.thumbnailUrl} />
-            ) : file.thumbnailUrl ? (
-              <img
-                src={file.thumbnailUrl}
-                alt=""
-                className={styles.preview}
-              />
-            ) : (
-              <div className={styles.iconPreview}>
-                {MediaTypeIcons[file.mediaType]}
+        {/* Carousel Container - двухслойная анимация */}
+        <div className={styles.carouselContainer}>
+          {/* Слой 1: Текущий файл (может уезжать) */}
+          <div className={`${styles.slideLayer} ${styles.current} ${
+            slideDirection === 'next' ? styles.exitLeft :
+            slideDirection === 'prev' ? styles.exitRight : ''
+          }`}>
+            <div className={styles.previewWrapper}>
+              <div className={styles.previewContainer}>
+                {renderPreview(file)}
               </div>
-            )}
-          </div>
-
-          {/* Navigation buttons (desktop only) - outside animated container */}
-          {onNavigate && (
-            <>
-              <button
-                className={`${styles.navButton} ${styles.navButtonLeft}`}
-                onClick={handlePrev}
-                disabled={!hasPrev}
-                aria-label="Previous"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="m15 18-6-6 6-6" />
-                </svg>
-              </button>
-              <button
-                className={`${styles.navButton} ${styles.navButtonRight}`}
-                onClick={handleNext}
-                disabled={!hasNext}
-                aria-label="Next"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="m9 18 6-6-6-6" />
-                </svg>
-              </button>
-            </>
-          )}
-        </div>
-
-        {/* Info */}
-        <div className={styles.info}>
-          {/* Caption с подсветкой совпадений */}
-          {file.caption && (
-            <div
-              className={styles.caption}
-              dangerouslySetInnerHTML={{
-                __html: highlightMatch(
-                  file.caption.replace(/\n/g, '<br/>'),
-                  searchQuery
-                )
-              }}
-            />
-          )}
-
-          {/* Meta info */}
-          <div className={styles.meta}>
-            {file.fileName && (
-              <div className={styles.metaItem}>
-                <span className={styles.metaLabel}>Название:</span>
-                <span
-                  dangerouslySetInnerHTML={{
-                    __html: highlightMatch(file.fileName, searchQuery)
-                  }}
-                />
-              </div>
-            )}
-
-            {file.mimeType && (
-              <div className={styles.metaItem}>
-                <span className={styles.metaLabel}>Тип:</span>
-                <span>{file.mimeType}</span>
-              </div>
-            )}
-
-            {file.fileSize && (
-              <div className={styles.metaItem}>
-                <span className={styles.metaLabel}>Размер:</span>
-                <span>{formatFileSize(file.fileSize)}</span>
-              </div>
-            )}
-
-            {file.duration && (
-              <div className={styles.metaItem}>
-                <span className={styles.metaLabel}>Длительность:</span>
-                <span>{formatDuration(file.duration)}</span>
-              </div>
-            )}
-
-            {(file.width && file.height) && (
-              <div className={styles.metaItem}>
-                <span className={styles.metaLabel}>Разрешение:</span>
-                <span>{file.width} × {file.height}</span>
-              </div>
-            )}
-
-            {(file.forwardFromName || file.forwardFromChatTitle) && (
-              <div className={styles.metaItem}>
-                <span className={styles.metaLabel}>От:</span>
-                <span
-                  dangerouslySetInnerHTML={{
-                    __html: highlightMatch(
-                      file.forwardFromName || file.forwardFromChatTitle || '',
-                      searchQuery
-                    )
-                  }}
-                />
-              </div>
-            )}
-
-            <div className={styles.metaItem}>
-              <span className={styles.metaLabel}>Добавлено:</span>
-              <span>{formatDate(file.createdAt)}</span>
             </div>
-          </div>
-
-          {/* Share Section */}
+            <div className={styles.info}>
+              {renderInfo(file)}
+              {/* Share Section - только для текущего файла */}
           {shareLoading ? (
             <div className={styles.shareLoading}>
               <div className={styles.miniSpinner} />
@@ -593,7 +590,56 @@ export function FileViewer({
               Поделиться
             </button>
           )}
+            </div>
+          </div>
+
+          {/* Слой 2: Входящий файл (только во время анимации) */}
+          {slideDirection && incomingFile && (
+            <div className={`${styles.slideLayer} ${styles.incoming} ${
+              slideDirection === 'next' ? styles.enterFromRight : styles.enterFromLeft
+            }`}>
+              <div className={styles.previewWrapper}>
+                <div className={styles.previewContainer}>
+                  {renderPreview(incomingFile)}
+                </div>
+              </div>
+              <div className={styles.info}>
+                {renderInfo(incomingFile)}
+                {/* Share placeholder - резервирует место чтобы не было скачка layout */}
+                <div className={styles.sharePlaceholder}>
+                  <span className={styles.shareIcon}>{ShareIcon}</span>
+                  Поделиться
+                </div>
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Navigation buttons (desktop only) - position: fixed */}
+        {onNavigate && (
+          <>
+            <button
+              className={`${styles.navButton} ${styles.navButtonLeft}`}
+              onClick={handlePrev}
+              disabled={!hasPrev || isAnimating}
+              aria-label="Previous"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m15 18-6-6 6-6" />
+              </svg>
+            </button>
+            <button
+              className={`${styles.navButton} ${styles.navButtonRight}`}
+              onClick={handleNext}
+              disabled={!hasNext || isAnimating}
+              aria-label="Next"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m9 18 6-6-6-6" />
+              </svg>
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
