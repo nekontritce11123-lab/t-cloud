@@ -350,7 +350,8 @@ function App() {
     const filesCount = selectedFiles.size;
 
     // mainButton только для отправки файлов, удаление через кнопку корзины сверху
-    if (selectionType === 'files' && filesCount > 0) {
+    // Скрываем кнопку если открыт CaptionSheet
+    if (selectionType === 'files' && filesCount > 0 && !isCaptionSheetOpen) {
       mainButton.show(
         `Отправить (${filesCount})`,
         handleSendSelected
@@ -358,7 +359,7 @@ function App() {
     } else {
       mainButton.hide();
     }
-  }, [selectedFiles.size, selectionType]);
+  }, [selectedFiles.size, selectionType, isCaptionSheetOpen]);
 
   // Отправить выбранные файлы
   const handleSendSelected = useCallback(async () => {

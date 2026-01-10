@@ -743,30 +743,13 @@ router.post('/send', async (req, res: Response) => {
       const sendCaptionSeparately = needsSeparateMessage(file.caption, mediaType);
 
       try {
-        let sent = false;
+        // Всегда используем sendFileByFileId чтобы отправить наш caption из БД
+        // (copyMessage отправляет оригинальный caption, игнорируя наш)
+        await sendFileByFileId(telegramUser.id, file.fileId, mediaType, caption);
+        console.log('[Files] Sent via file_id with caption:', file.id, file.fileName);
 
-        // Приоритет 1: copyMessage (сохраняет оригинальное сообщение)
-        if (file.chatId && file.originalMessageId) {
-          try {
-            await bot.api.copyMessage(telegramUser.id, file.chatId, file.originalMessageId);
-            sent = true;
-            console.log('[Files] Sent via copyMessage:', file.id, file.fileName);
-          } catch (copyError) {
-            console.log('[Files] copyMessage failed, trying sendFileByFileId:', copyError instanceof Error ? copyError.message : copyError);
-          }
-        }
-
-        // Приоритет 2: sendFileByFileId (fallback)
-        if (!sent) {
-          await sendFileByFileId(telegramUser.id, file.fileId, mediaType, caption);
-          console.log('[Files] Sent via file_id:', file.id, file.fileName);
-        }
-
-        // Отправка длинного caption отдельно (если был copyMessage, caption не был отправлен через sendFileByFileId)
-        if (sent && sendCaptionSeparately && file.caption) {
-          await sendCaptionAsText(telegramUser.id, file.caption);
-        } else if (!sent && sendCaptionSeparately && file.caption) {
-          // Если отправляли через sendFileByFileId, caption уже был обрезан, отправляем полный отдельно
+        // Отправка длинного caption отдельно (если caption был обрезан)
+        if (sendCaptionSeparately && file.caption) {
           await sendCaptionAsText(telegramUser.id, file.caption);
         }
 
@@ -870,41 +853,21 @@ router.post('/:id/send', async (req, res: Response) => {
     const caption = getCaptionForMedia(file.caption, mediaType);
     const sendCaptionSeparately = needsSeparateMessage(file.caption, mediaType);
 
-    let sent = false;
-
-    // Try to copy original message first (preserves formatting, quality)
+    // Всегда используем sendFileByFileId чтобы отправить наш caption из БД
+    // (copyMessage отправляет оригинальный caption, игнорируя наш)
     try {
-      await bot.api.copyMessage(telegramUser.id, file.chatId, file.originalMessageId);
-      sent = true;
-      console.log('[Files] Sent via copyMessage:', file.id);
-    } catch (copyError) {
-      const copyErrMsg = copyError instanceof Error ? copyError.message : String(copyError);
-      console.log('[Files] copyMessage failed, trying file_id:', copyError);
+      await sendFileByFileId(telegramUser.id, file.fileId, mediaType, caption);
+      console.log('[Files] Sent via file_id with caption:', file.id);
+    } catch (sendError) {
+      const errMsg = sendError instanceof Error ? sendError.message : String(sendError);
+      console.error('[Files] Send failed:', sendError);
 
-      // Если ошибка VOICE_MESSAGES_FORBIDDEN на copyMessage - сразу отдаём ошибку
-      if (copyErrMsg.includes('VOICE_MESSAGES_FORBIDDEN')) {
+      // Проверяем на VOICE_MESSAGES_FORBIDDEN
+      if (errMsg.includes('VOICE_MESSAGES_FORBIDDEN')) {
         res.status(403).json({ error: 'VOICE_FORBIDDEN' });
         return;
       }
 
-      // Fallback: send by file_id
-      try {
-        await sendFileByFileId(telegramUser.id, file.fileId, mediaType, caption);
-        sent = true;
-        console.log('[Files] Sent via file_id:', file.id);
-      } catch (sendError) {
-        const errMsg = sendError instanceof Error ? sendError.message : String(sendError);
-        console.error('[Files] Both methods failed:', sendError);
-
-        // Проверяем на VOICE_MESSAGES_FORBIDDEN
-        if (errMsg.includes('VOICE_MESSAGES_FORBIDDEN')) {
-          res.status(403).json({ error: 'VOICE_FORBIDDEN' });
-          return;
-        }
-      }
-    }
-
-    if (!sent) {
       res.status(410).json({ error: 'FILE_UNAVAILABLE' });
       return;
     }

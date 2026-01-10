@@ -30,24 +30,13 @@ export function setupRetrievalHandlers(bot: Bot<Context>): void {
     }
 
     try {
-      // Copy message - sends without "Forwarded from" label
-      await ctx.api.copyMessage(
-        ctx.chat!.id,
-        file.chatId,
-        file.originalMessageId
-      );
-
+      // Всегда используем sendByFileId чтобы отправить наш caption из БД
+      // (copyMessage отправляет оригинальный caption, игнорируя наш)
+      await sendByFileId(ctx, file);
       await ctx.answerCallbackQuery({ text: '✅ Отправлено!' });
     } catch (error) {
-      console.error('[Retrieval] Copy message failed:', error);
-
-      // Fallback: send by file_id
-      try {
-        await sendByFileId(ctx, file);
-        await ctx.answerCallbackQuery({ text: '✅ Отправлено!' });
-      } catch {
-        await ctx.answerCallbackQuery({ text: '❌ Не удалось отправить' });
-      }
+      console.error('[Retrieval] Send by file_id failed:', error);
+      await ctx.answerCallbackQuery({ text: '❌ Не удалось отправить' });
     }
   });
 
@@ -74,10 +63,12 @@ export function setupRetrievalHandlers(bot: Bot<Context>): void {
       return;
     }
 
+    // Всегда используем sendByFileId чтобы отправить наш caption из БД
     try {
-      await ctx.api.copyMessage(ctx.chat.id, file.chatId, file.originalMessageId);
-    } catch {
       await sendByFileId(ctx, file);
+    } catch (error) {
+      console.error('[Retrieval] /get command failed:', error);
+      await ctx.reply('Не удалось отправить файл');
     }
   });
 }
