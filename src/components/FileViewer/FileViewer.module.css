@@ -217,10 +217,13 @@
 /* Текущий слой при выходе - НЕ меняем position, только анимируем transform */
 /* Удалено: position: absolute вызывало скачок (элемент удалялся из потока) */
 
-/* Входящий слой - всегда absolute */
+/* Входящий слой - идентичен current по структуре, но absolute для наложения */
 .slideLayer.incoming {
   position: absolute;
   inset: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Анимации выхода */
@@ -401,6 +404,7 @@
   background: var(--app-bg-color);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
+
 
 .caption {
   font-size: var(--font-size-md);

@@ -155,6 +155,67 @@ const isLongPress = useRef(false);
 **Проблема:** Появляется горизонтальный скроллбар в списках/гридах.
 **Решение:** Добавить `overflow-x: hidden` на НЕСКОЛЬКО уровней: container, grid, content.
 
+### 11. Двухслойная анимация (карусель) - КРИТИЧНО!
+**Проблема:** При реализации карусели с двумя слоями (current + incoming) допущены ошибки, вызывающие скачки layout.
+
+**Ошибка 1: Разная структура слоёв**
+```tsx
+// НЕПРАВИЛЬНО - info внутри previewWrapper для incoming:
+<div className="incoming">
+  <div className="previewWrapper">
+    <div className="previewContainer">...</div>
+    <div className="info">...</div>  <!-- ВНУТРИ! -->
+  </div>
+</div>
+
+// ПРАВИЛЬНО - идентичная структура:
+<div className="incoming">
+  <div className="previewWrapper">
+    <div className="previewContainer">...</div>
+  </div>
+  <div className="info">...</div>  <!-- СНАРУЖИ, как у current! -->
+</div>
+```
+
+**Ошибка 2: Разные условия рендеринга**
+```tsx
+// НЕПРАВИЛЬНО - incoming возвращает null, current показывает placeholder:
+if (!isCurrentFile) {
+  if (f.caption) return <Caption/>;
+  return null;  // ← Скачок! Current покажет кнопку "Добавить описание"
+}
+
+// ПРАВИЛЬНО - одинаковое поведение:
+if (!isCurrentFile) {
+  if (f.caption) return <Caption/>;
+  return <Placeholder/>;  // ← Такой же placeholder как у current
+}
+```
+
+**Ошибка 3: Разные CSS классы**
+```tsx
+// НЕПРАВИЛЬНО:
+// incoming: className={styles.caption}
+// current:  className={`${styles.caption} ${styles.captionEditable}`}
+
+// ПРАВИЛЬНО - одинаковые классы:
+// incoming: className={`${styles.caption} ${styles.captionEditable}`}
+// current:  className={`${styles.caption} ${styles.captionEditable}`}
+```
+
+**Ошибка 4: Переопределение стилей для incoming**
+```css
+/* НЕПРАВИЛЬНО - разные размеры вызывают скачок: */
+.slideLayer.incoming .previewWrapper {
+  min-height: auto;
+  flex: 0 0 auto;
+}
+
+/* ПРАВИЛЬНО - не переопределять, пусть наследует от .previewWrapper */
+```
+
+**ЗОЛОТОЕ ПРАВИЛО:** Incoming layer должен быть ТОЧНОЙ КОПИЕЙ current layer по структуре, классам и стилям. Единственное отличие - `position: absolute` для наложения и отсутствие onClick handlers.
+
 ## CSS переменные (не хардкодить!)
 
 ```css

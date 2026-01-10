@@ -312,19 +312,27 @@ export function FileViewer({
 
     // Caption section - editable only for current file
     const renderCaption = () => {
-      // For non-current files (incoming during animation), just show static
+      // For non-current files (incoming during animation), show static content
       if (!isCurrentFile) {
         if (f.caption) {
           return (
             <div
-              className={styles.caption}
+              className={`${styles.caption} ${styles.captionEditable}`}
               dangerouslySetInnerHTML={{
                 __html: highlightMatch(f.caption.replace(/\n/g, '<br/>'), searchQuery)
               }}
             />
           );
         }
-        return null;
+        // Показываем placeholder для резервирования места (без onClick)
+        return (
+          <div className={styles.captionPlaceholder}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+            </svg>
+            Добавить описание
+          </div>
+        );
       }
 
       // Current file - show editable caption
@@ -727,6 +735,7 @@ export function FileViewer({
           </div>
 
           {/* Слой 2: Входящий файл (только во время анимации) */}
+          {/* Структура ИДЕНТИЧНА current layer для консистентного layout */}
           {slideDirection && incomingFile && (
             <div className={`${styles.slideLayer} ${styles.incoming} ${
               slideDirection === 'next' ? styles.enterFromRight : styles.enterFromLeft
@@ -736,9 +745,9 @@ export function FileViewer({
                   {renderPreview(incomingFile)}
                 </div>
               </div>
+              {/* Info СНАРУЖИ previewWrapper - как у current layer */}
               <div className={styles.info}>
                 {renderInfo(incomingFile, false)}
-                {/* Share placeholder - резервирует место чтобы не было скачка layout */}
                 <div className={styles.sharePlaceholder}>
                   <span className={styles.shareIcon}>{ShareIcon}</span>
                   Поделиться

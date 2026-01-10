@@ -59,22 +59,17 @@
   z-index: 50;
 }
 
-.card:active:not(.cooldown) {
+.card:active {
   will-change: transform;
   transform: scale(0.97);
 }
 
 /* Desktop hover effect */
 @media (hover: hover) {
-  .card:hover:not(.cooldown):not(.selected) {
+  .card:hover:not(.selected) {
     transform: scale(1.02);
     box-shadow: 0 4px 16px rgba(82, 136, 193, 0.15);
   }
-}
-
-/* Disable hover for cooldown cards */
-.card.cooldown:hover {
-  transform: none;
 }
 
 .card.selected {
