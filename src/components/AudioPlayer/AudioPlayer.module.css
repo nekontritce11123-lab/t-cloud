@@ -7,7 +7,7 @@
   height: 100%;
   padding: var(--spacing-lg);
   gap: var(--spacing-md);
-  background: var(--app-bg-color);
+  background: transparent;
 }
 
 /* Cover image / icon placeholder */
@@ -16,7 +16,8 @@
   height: 160px;
   border-radius: var(--radius-lg);
   overflow: hidden;
-  background: var(--app-secondary-bg-color);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -116,7 +117,7 @@
 .progressBar {
   width: 100%;
   height: 6px;
-  background: var(--app-secondary-bg-color);
+  background: rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-full);
   cursor: pointer;
   position: relative;
