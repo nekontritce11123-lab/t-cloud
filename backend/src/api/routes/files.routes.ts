@@ -606,6 +606,142 @@ router.get('/:id/video-url', async (req, res: Response) => {
 });
 
 /**
+ * GET /api/files/:id/audio-url
+ * Check availability of audio file (audio and voice)
+ */
+router.get('/:id/audio-url', async (req, res: Response) => {
+  const { telegramUser } = req as unknown as AuthenticatedRequest;
+  const fileId = parseInt(req.params.id, 10);
+
+  if (isNaN(fileId)) {
+    res.status(400).json({ error: 'Invalid file ID' });
+    return;
+  }
+
+  try {
+    const file = await filesRepo.findById(fileId);
+
+    if (!file || file.userId !== telegramUser.id) {
+      res.status(404).json({ error: 'File not found' });
+      return;
+    }
+
+    // Only allow audio and voice types
+    if (!['audio', 'voice'].includes(file.mediaType)) {
+      res.status(400).json({ error: 'NOT_AN_AUDIO' });
+      return;
+    }
+
+    const service = getThumbnailService();
+    const audioUrl = await service.getFileUrl(file.fileId);
+
+    if (!audioUrl) {
+      res.status(410).json({ error: 'AUDIO_UNAVAILABLE' });
+      return;
+    }
+
+    res.json({
+      available: true,
+      mimeType: file.mimeType || 'audio/mpeg',
+      duration: file.duration,
+    });
+  } catch (error) {
+    console.error('[API] Error getting audio URL:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/files/:id/audio-stream
+ * Stream audio through our server (bypass CDN blocking in Russia)
+ * Auth via query param: ?initData=...
+ */
+router.get('/:id/audio-stream', async (req, res: Response) => {
+  const { telegramUser } = req as unknown as AuthenticatedRequest;
+  const fileId = parseInt(req.params.id, 10);
+
+  if (isNaN(fileId)) {
+    res.status(400).json({ error: 'Invalid file ID' });
+    return;
+  }
+
+  try {
+    const file = await filesRepo.findById(fileId);
+
+    if (!file || file.userId !== telegramUser.id) {
+      res.status(404).json({ error: 'File not found' });
+      return;
+    }
+
+    if (!['audio', 'voice'].includes(file.mediaType)) {
+      res.status(400).json({ error: 'NOT_AN_AUDIO' });
+      return;
+    }
+
+    const service = getThumbnailService();
+    const audioUrl = await service.getFileUrl(file.fileId);
+
+    if (!audioUrl) {
+      res.status(410).json({ error: 'AUDIO_UNAVAILABLE' });
+      return;
+    }
+
+    console.log('[API] Streaming audio:', file.id, file.fileName);
+
+    // Fetch audio from Telegram CDN
+    const audioResponse = await fetch(audioUrl);
+
+    if (!audioResponse.ok || !audioResponse.body) {
+      res.status(502).json({ error: 'Failed to fetch audio from CDN' });
+      return;
+    }
+
+    // Set headers for streaming
+    res.setHeader('Content-Type', file.mimeType || 'audio/mpeg');
+    const contentLength = audioResponse.headers.get('content-length');
+    if (contentLength) {
+      res.setHeader('Content-Length', contentLength);
+    }
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+
+    // Stream the audio using Node.js streams
+    const reader = audioResponse.body.getReader();
+
+    const pump = async (): Promise<void> => {
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          // Check if client disconnected
+          if (res.destroyed) {
+            reader.cancel();
+            break;
+          }
+
+          res.write(Buffer.from(value));
+        }
+        res.end();
+      } catch (streamError) {
+        console.error('[API] Audio stream error:', streamError);
+        if (!res.destroyed) {
+          res.end();
+        }
+      }
+    };
+
+    await pump();
+
+  } catch (error) {
+    console.error('[API] Error streaming audio:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+});
+
+/**
  * GET /api/files/:id/video-stream
  * Stream video through our server (bypass CDN blocking in Russia)
  * Auth via query param: ?initData=...

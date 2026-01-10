@@ -5,6 +5,7 @@ import { formatFileSize, formatDuration, formatDate, getMediaTypeLabel, highligh
 import { getEffectiveMediaType } from '../../shared/mediaType';
 import { ShareSection } from '../ShareSection';
 import { VideoPlayer } from '../VideoPlayer';
+import { AudioPlayer } from '../AudioPlayer';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { useFileViewerKeyboard } from '../../hooks/useFileViewerKeyboard';
 import styles from './FileViewer.module.css';
@@ -12,6 +13,11 @@ import styles from './FileViewer.module.css';
 // Helper to check if file is a video
 function isVideoFile(mediaType: string): boolean {
   return mediaType === 'video' || mediaType === 'video_note';
+}
+
+// Helper to check if file is audio
+function isAudioFile(mediaType: string): boolean {
+  return mediaType === 'audio' || mediaType === 'voice';
 }
 
 // Preset options for share creation
@@ -285,6 +291,9 @@ export function FileViewer({
     if (!f) return null;
     if (isVideoFile(f.mediaType)) {
       return <VideoPlayer file={f} thumbnailUrl={f.thumbnailUrl} />;
+    }
+    if (isAudioFile(f.mediaType)) {
+      return <AudioPlayer file={f} />;
     }
     if (f.thumbnailUrl) {
       // Вычислить aspect-ratio из размеров файла для резервирования места

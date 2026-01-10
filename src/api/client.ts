@@ -306,6 +306,41 @@ class ApiClient {
     };
   }
 
+  // Audio streaming API
+
+  async getAudioUrl(fileId: number): Promise<{
+    audioUrl: string;
+    mimeType: string;
+    duration?: number;
+  }> {
+    // First check if file exists and is audio
+    const response = await fetch(`${API_URL}/api/files/${fileId}/audio-url`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      if (response.status === 410) {
+        throw new Error('AUDIO_UNAVAILABLE');
+      }
+      if (response.status === 400) {
+        throw new Error('NOT_AN_AUDIO');
+      }
+      throw new Error('Failed to get audio URL');
+    }
+
+    const data = await response.json();
+
+    // Return stream URL through our backend (bypasses CDN blocking)
+    // Include initData as query param since <audio> can't set headers
+    const streamUrl = `${API_URL}/api/files/${fileId}/audio-stream?initData=${encodeURIComponent(this.initData)}`;
+
+    return {
+      audioUrl: streamUrl,
+      mimeType: data.mimeType,
+      duration: data.duration,
+    };
+  }
+
   // Autocomplete Dictionary API
 
   async getDictionary(mediaType?: string): Promise<{ words: string[]; version: number }> {
