@@ -41,7 +41,6 @@ function App() {
     search,
     clearSearch,
     refresh,
-    toggleFavorite,
   } = useFiles(apiReady);
 
   // История поиска
@@ -907,7 +906,6 @@ function App() {
           onClose={() => setViewingFileIndex(null)}
           onSend={handleSendFromViewer}
           onCaptionUpdate={handleCaptionUpdate}
-          onToggleFavorite={toggleFavorite}
           isOnCooldown={isOnCooldown(viewingFile.id)}
           isSending={sendingFileId === viewingFile.id}
           searchQuery={searchQuery}

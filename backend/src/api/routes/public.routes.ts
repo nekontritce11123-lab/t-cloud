@@ -61,6 +61,13 @@ function formatFileSize(bytes: number): string {
   return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
 }
 
+// Format duration
+function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
 // Get file type icon (emoji for simplicity)
 function getFileTypeIcon(mediaType: string, mimeType?: string | null): string {
   if (mediaType === 'photo') return '🖼️';
@@ -185,18 +192,20 @@ router.get('/:token', async (req: Request, res: Response) => {
   const canDownload = !file.file_size || file.file_size <= MAX_WEB_DOWNLOAD_SIZE;
   const previewUrl = `${WEB_URL}/share/${token}/preview`;
   const downloadUrl = `${WEB_URL}/share/${token}/download`;
+  const videoStreamUrl = `${WEB_URL}/share/${token}/video-stream`;
   const telegramUrl = `https://t.me/${BOT_USERNAME}?start=share_${token}`;
+  const duration = file.duration ? formatDuration(file.duration) : '';
 
   // Expiry info
   let expiryInfo = '';
   if (share.expires_at) {
-    expiryInfo = `Истекает через ${getTimeRemaining(share.expires_at)}`;
+    expiryInfo = getTimeRemaining(share.expires_at);
   }
 
   // Downloads info
   let downloadsInfo = '';
   if (share.max_recipients !== null) {
-    downloadsInfo = `Скачано: ${share.use_count}/${share.max_recipients}`;
+    downloadsInfo = `${share.use_count}/${share.max_recipients}`;
   }
 
   res.send(renderSharePage({
@@ -209,10 +218,14 @@ router.get('/:token', async (req: Request, res: Response) => {
     caption: file.caption,
     previewUrl,
     downloadUrl,
+    videoStreamUrl,
     telegramUrl,
     canDownload,
     expiryInfo,
     downloadsInfo,
+    duration,
+    width: file.width,
+    height: file.height,
   }));
 });
 
@@ -284,6 +297,92 @@ router.get('/:token/preview', async (req: Request, res: Response) => {
   } else {
     // Return a default placeholder image
     res.status(404).send('No preview available');
+  }
+});
+
+/**
+ * GET /share/:token/video-stream
+ * Stream video for inline playback on share page
+ */
+router.get('/:token/video-stream', async (req: Request, res: Response) => {
+  const ip = getClientIp(req);
+  if (isRateLimited(ip, 'view')) {
+    res.status(429).send('Too many requests');
+    return;
+  }
+
+  const { token } = req.params;
+  const data = getShareData(token);
+
+  if (!data) {
+    res.status(404).send('Not found');
+    return;
+  }
+
+  const { file } = data;
+
+  // Only allow video files
+  if (!['video', 'video_note'].includes(file.media_type)) {
+    res.status(400).send('Not a video file');
+    return;
+  }
+
+  try {
+    // Get file from Telegram
+    const telegramFile = await bot.api.getFile(file.file_id);
+    if (!telegramFile.file_path) {
+      res.status(500).send('Failed to get file');
+      return;
+    }
+
+    // Get file URL
+    const fileUrl = `https://api.telegram.org/file/bot${config.botToken}/${telegramFile.file_path}`;
+
+    // Fetch video
+    const videoResponse = await fetch(fileUrl);
+    if (!videoResponse.ok || !videoResponse.body) {
+      res.status(502).send('Failed to fetch video');
+      return;
+    }
+
+    // Set headers for streaming
+    res.setHeader('Content-Type', file.mime_type || 'video/mp4');
+    const contentLength = videoResponse.headers.get('content-length');
+    if (contentLength) {
+      res.setHeader('Content-Length', contentLength);
+    }
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+
+    // Stream the video
+    const reader = videoResponse.body.getReader();
+
+    const pump = async (): Promise<void> => {
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (res.destroyed) {
+            reader.cancel();
+            break;
+          }
+          res.write(Buffer.from(value));
+        }
+        res.end();
+      } catch (streamError) {
+        console.error('[Public] Stream error:', streamError);
+        if (!res.destroyed) {
+          res.end();
+        }
+      }
+    };
+
+    await pump();
+  } catch (error) {
+    console.error('[Public] Video stream error:', error);
+    if (!res.headersSent) {
+      res.status(500).send('Stream failed');
+    }
   }
 });
 
@@ -385,13 +484,23 @@ function renderSharePage(params: {
   caption: string | null;
   previewUrl: string;
   downloadUrl: string;
+  videoStreamUrl: string;
   telegramUrl: string;
   canDownload: boolean;
   expiryInfo: string;
   downloadsInfo: string;
+  duration: string;
+  width: number | null;
+  height: number | null;
 }): string {
   const isImage = params.mediaType === 'photo';
   const isVideo = params.mediaType === 'video' || params.mediaType === 'video_note';
+  const isAudio = params.mediaType === 'audio' || params.mediaType === 'voice';
+
+  // Calculate aspect ratio for video
+  const aspectRatio = params.width && params.height
+    ? `${params.width} / ${params.height}`
+    : '16 / 9';
 
   return `<!DOCTYPE html>
 <html lang="ru">
@@ -400,301 +509,579 @@ function renderSharePage(params: {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(params.fileName)} - FC-Cloud</title>
   <meta property="og:title" content="${escapeHtml(params.fileName)} - FC-Cloud">
-  <meta property="og:description" content="${params.caption ? escapeHtml(params.caption.slice(0, 200)) : 'Скачать файл, отправленный через FC-Cloud'}">
+  <meta property="og:description" content="${params.caption ? escapeHtml(params.caption.slice(0, 200)) : 'Скачать файл через FC-Cloud'}">
   <meta property="og:image" content="${params.previewUrl}">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <style>
-    :root {
-      --bg: #18222d;
-      --bg-secondary: #232e3c;
-      --text: #ffffff;
-      --text-secondary: #8e99a4;
-      --accent: #5288c1;
-      --favorite: #FFD700;
-    }
     * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
+      background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0d1117 100%);
+      color: #e6edf3;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 20px;
+      padding: 16px;
     }
-    .container {
-      max-width: 500px;
+
+    .page {
       width: 100%;
-      background: var(--bg-secondary);
+      max-width: 1200px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      padding: 12px 0;
+    }
+
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 20px;
+      font-weight: 700;
+      color: #e6edf3;
+      text-decoration: none;
+    }
+
+    .logo svg {
+      width: 28px;
+      height: 28px;
+      color: #58a6ff;
+    }
+
+    /* Glass Card */
+    .card {
+      background: rgba(22, 27, 34, 0.8);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(240, 246, 252, 0.1);
       border-radius: 16px;
       overflow: hidden;
     }
-    .header {
-      padding: 16px;
-      text-align: center;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-    .logo {
-      font-size: 20px;
-      font-weight: 600;
+
+    /* Media Section */
+    .media {
+      position: relative;
+      background: #010409;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      min-height: 200px;
     }
-    .logo svg {
-      width: 24px;
-      height: 24px;
-      color: var(--accent);
-    }
-    .preview {
+
+    .media-image {
       width: 100%;
-      aspect-ratio: 16/9;
+      height: auto;
+      max-height: 70vh;
+      object-fit: contain;
+      display: block;
+    }
+
+    /* Video Player */
+    .video-container {
+      position: relative;
+      width: 100%;
+      background: #010409;
+    }
+
+    .video-player {
+      width: 100%;
+      display: block;
+      max-height: 70vh;
+    }
+
+    .play-overlay {
+      position: absolute;
+      inset: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(0,0,0,0.3);
-      overflow: hidden;
+      background: rgba(0, 0, 0, 0.4);
+      cursor: pointer;
+      transition: background 0.2s;
     }
-    .preview img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
+
+    .play-overlay:hover {
+      background: rgba(0, 0, 0, 0.3);
     }
-    .preview-icon {
+
+    .play-overlay.hidden {
+      display: none;
+    }
+
+    .play-button {
+      width: 72px;
+      height: 72px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      transition: transform 0.2s;
+    }
+
+    .play-overlay:hover .play-button {
+      transform: scale(1.05);
+    }
+
+    .play-button svg {
+      width: 32px;
+      height: 32px;
+      color: #0d1117;
+      margin-left: 4px;
+    }
+
+    /* File Icon Preview */
+    .file-icon-preview {
+      padding: 48px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .file-icon-preview .icon {
       font-size: 64px;
+      line-height: 1;
     }
+
+    .file-icon-preview .type {
+      font-size: 13px;
+      font-weight: 500;
+      color: #8b949e;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Info Section */
     .info {
       padding: 20px;
     }
+
+    .file-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .file-icon {
+      font-size: 28px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .file-details {
+      flex: 1;
+      min-width: 0;
+    }
+
     .file-name {
       font-size: 18px;
       font-weight: 600;
-      margin-bottom: 4px;
+      color: #e6edf3;
+      word-break: break-word;
+      line-height: 1.3;
+    }
+
+    .file-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+      font-size: 13px;
+      color: #8b949e;
+    }
+
+    .file-meta span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .file-meta .dot {
+      width: 3px;
+      height: 3px;
+      background: #484f58;
+      border-radius: 50%;
+    }
+
+    /* Caption */
+    .caption {
+      margin-top: 16px;
+      padding: 14px 16px;
+      background: rgba(110, 118, 129, 0.1);
+      border-left: 3px solid #58a6ff;
+      border-radius: 0 8px 8px 0;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #c9d1d9;
+      white-space: pre-wrap;
       word-break: break-word;
     }
-    .file-meta {
-      color: var(--text-secondary);
-      font-size: 14px;
-    }
-    .caption {
-      margin-top: 12px;
-      padding: 12px;
-      background: rgba(0,0,0,0.2);
-      border-radius: 8px;
-      font-size: 14px;
-      line-height: 1.5;
-    }
+
+    /* Download Button */
     .download-btn {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 10px;
       width: 100%;
-      padding: 16px;
+      padding: 14px 20px;
       margin-top: 16px;
-      background: var(--accent);
-      color: white;
+      background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
+      color: #ffffff;
       border: none;
-      border-radius: 12px;
-      font-size: 16px;
+      border-radius: 10px;
+      font-size: 15px;
       font-weight: 600;
       cursor: pointer;
       text-decoration: none;
-      transition: opacity 0.2s;
+      transition: all 0.2s;
     }
+
     .download-btn:hover {
-      opacity: 0.9;
+      background: linear-gradient(135deg, #2ea043 0%, #3fb950 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(46, 160, 67, 0.3);
     }
-    .download-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
+
+    .download-btn:active {
+      transform: translateY(0);
     }
+
     .download-btn svg {
       width: 20px;
       height: 20px;
     }
-    .share-info {
-      margin-top: 12px;
+
+    /* Share Stats */
+    .share-stats {
       display: flex;
       justify-content: center;
-      gap: 16px;
-      color: var(--text-secondary);
-      font-size: 13px;
+      gap: 20px;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(240, 246, 252, 0.1);
     }
+
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #8b949e;
+    }
+
+    .stat svg {
+      width: 14px;
+      height: 14px;
+      opacity: 0.7;
+    }
+
+    /* No Download */
+    .no-download {
+      margin-top: 16px;
+      padding: 14px;
+      background: rgba(248, 81, 73, 0.1);
+      border: 1px solid rgba(248, 81, 73, 0.2);
+      border-radius: 10px;
+      text-align: center;
+      color: #f85149;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    /* CTA Card */
     .cta {
-      margin-top: 24px;
-      padding: 20px;
-      background: rgba(82, 136, 193, 0.1);
+      background: rgba(22, 27, 34, 0.6);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(240, 246, 252, 0.1);
       border-radius: 12px;
+      padding: 20px;
       text-align: center;
     }
-    .cta-title {
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
+
     .cta-text {
       font-size: 14px;
-      color: var(--text-secondary);
-      margin-bottom: 16px;
+      color: #8b949e;
+      margin-bottom: 14px;
     }
+
     .telegram-btn {
       display: inline-flex;
       align-items: center;
       gap: 8px;
       padding: 12px 24px;
-      background: #0088cc;
+      background: #2AABEE;
       color: white;
       border: none;
       border-radius: 8px;
       font-size: 14px;
-      font-weight: 500;
+      font-weight: 600;
       text-decoration: none;
-      transition: opacity 0.2s;
-    }
-    .telegram-btn:hover {
-      opacity: 0.9;
-    }
-    .no-download {
-      margin-top: 16px;
-      padding: 12px;
-      background: rgba(255,107,107,0.1);
-      border-radius: 8px;
-      text-align: center;
-      color: #ff6b6b;
-      font-size: 14px;
-    }
-    .content {
-      display: flex;
-      flex-direction: column;
+      transition: all 0.2s;
     }
 
-    /* Tablet (768-1200px) */
+    .telegram-btn:hover {
+      background: #229ED9;
+      transform: translateY(-1px);
+    }
+
+    .telegram-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* Desktop Layout */
     @media (min-width: 768px) {
-      .container {
-        max-width: 700px;
+      body {
+        padding: 24px;
       }
-      .preview {
-        min-height: 350px;
+
+      .page {
+        gap: 20px;
       }
+
+      .logo {
+        font-size: 22px;
+      }
+
+      .logo svg {
+        width: 32px;
+        height: 32px;
+      }
+
+      .card {
+        border-radius: 20px;
+      }
+
+      .media {
+        min-height: 300px;
+      }
+
+      .info {
+        padding: 28px;
+      }
+
       .file-name {
         font-size: 22px;
       }
-      .info {
-        padding: 24px;
+
+      .file-meta {
+        font-size: 14px;
+      }
+
+      .download-btn {
+        padding: 16px 24px;
+        font-size: 16px;
       }
     }
 
-    /* Desktop (1200px+) */
-    @media (min-width: 1200px) {
-      .container {
-        max-width: 1000px;
-      }
-      .content {
+    @media (min-width: 1024px) {
+      .main-content {
         display: grid;
-        grid-template-columns: 1.2fr 1fr;
+        grid-template-columns: 1.4fr 1fr;
+        gap: 20px;
+        align-items: start;
       }
-      .preview {
-        min-height: 500px;
-        aspect-ratio: auto;
-        height: 100%;
-        border-radius: 0;
+
+      .media-card {
+        position: sticky;
+        top: 24px;
       }
-      .info {
-        padding: 32px;
+
+      .media {
+        min-height: 400px;
+        border-radius: 20px;
+      }
+
+      .video-player {
+        max-height: 80vh;
+      }
+
+      .media-image {
+        max-height: 80vh;
+      }
+
+      .info-card {
         display: flex;
         flex-direction: column;
-        justify-content: center;
       }
+
+      .info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
       .file-name {
         font-size: 24px;
-        margin-bottom: 8px;
-      }
-      .file-meta {
-        font-size: 15px;
-      }
-      .caption {
-        margin-top: 16px;
-        padding: 16px;
-        font-size: 15px;
-      }
-      .download-btn {
-        margin-top: 24px;
-        padding: 18px;
-        font-size: 17px;
-      }
-      .cta {
-        margin-top: 32px;
-        padding: 24px;
       }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <div class="logo">
+  <div class="page">
+    <header class="header">
+      <a href="https://t.me/${BOT_USERNAME}" class="logo">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
         </svg>
         FC-Cloud
+      </a>
+    </header>
+
+    <div class="main-content">
+      <!-- Media Card -->
+      <div class="card media-card">
+        ${isVideo ? `
+        <div class="video-container">
+          <video
+            class="video-player"
+            id="videoPlayer"
+            poster="${params.previewUrl}"
+            preload="metadata"
+            controls
+            playsinline
+            style="aspect-ratio: ${aspectRatio};"
+          >
+            <source src="${params.videoStreamUrl}" type="${params.mimeType || 'video/mp4'}">
+          </video>
+          <div class="play-overlay" id="playOverlay" onclick="playVideo()">
+            <div class="play-button">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+        ` : isImage ? `
+        <div class="media">
+          <img
+            class="media-image"
+            src="${params.previewUrl}"
+            alt="${escapeHtml(params.fileName)}"
+            onerror="this.parentElement.innerHTML='<div class=\\'file-icon-preview\\'><span class=\\'icon\\'>${params.fileIcon}</span><span class=\\'type\\'>Изображение недоступно</span></div>'"
+          >
+        </div>
+        ` : `
+        <div class="media">
+          <div class="file-icon-preview">
+            <span class="icon">${params.fileIcon}</span>
+            <span class="type">${params.mimeType ? escapeHtml(params.mimeType.split('/')[1] || params.mimeType) : 'Файл'}</span>
+          </div>
+        </div>
+        `}
+      </div>
+
+      <!-- Info Card -->
+      <div class="card info-card">
+        <div class="info">
+          <div class="file-header">
+            <span class="file-icon">${params.fileIcon}</span>
+            <div class="file-details">
+              <div class="file-name">${escapeHtml(params.fileName)}</div>
+              <div class="file-meta">
+                ${params.fileSize ? `<span>${params.fileSize}</span>` : ''}
+                ${params.fileSize && params.duration ? '<span class="dot"></span>' : ''}
+                ${params.duration ? `<span>${params.duration}</span>` : ''}
+                ${(params.fileSize || params.duration) && params.mimeType ? '<span class="dot"></span>' : ''}
+                ${params.mimeType ? `<span>${escapeHtml(params.mimeType.split('/')[1] || params.mimeType)}</span>` : ''}
+              </div>
+            </div>
+          </div>
+
+          ${params.caption ? `<div class="caption">${escapeHtml(params.caption)}</div>` : ''}
+
+          ${params.canDownload
+            ? `<a href="${params.downloadUrl}" class="download-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Скачать файл
+              </a>`
+            : `<div class="no-download">
+                Файл слишком большой для браузера.<br>
+                Скачайте через Telegram.
+              </div>`
+          }
+
+          ${params.expiryInfo || params.downloadsInfo
+            ? `<div class="share-stats">
+                ${params.expiryInfo ? `
+                <div class="stat">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                  ${params.expiryInfo}
+                </div>` : ''}
+                ${params.downloadsInfo ? `
+                <div class="stat">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  ${params.downloadsInfo}
+                </div>` : ''}
+              </div>`
+            : ''
+          }
+        </div>
       </div>
     </div>
 
-    <div class="content">
-    <div class="preview">
-      ${isImage || isVideo
-        ? `<img src="${params.previewUrl}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">`
-        : ''
-      }
-      <span class="preview-icon" ${isImage || isVideo ? 'style="display:none"' : ''}>${params.fileIcon}</span>
-    </div>
-
-    <div class="info">
-      <div class="file-name">${escapeHtml(params.fileName)}</div>
-      <div class="file-meta">${params.fileSize}${params.mimeType ? ' • ' + escapeHtml(params.mimeType.split('/')[1] || params.mimeType) : ''}</div>
-
-      ${params.caption ? `<div class="caption">${escapeHtml(params.caption)}</div>` : ''}
-
-      ${params.canDownload
-        ? `<a href="${params.downloadUrl}" class="download-btn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            Скачать файл
-          </a>`
-        : `<div class="no-download">
-            Файл слишком большой для скачивания через браузер.<br>
-            Используйте Telegram для загрузки.
-          </div>`
-      }
-
-      ${params.expiryInfo || params.downloadsInfo
-        ? `<div class="share-info">
-            ${params.expiryInfo ? `<span>${params.expiryInfo}</span>` : ''}
-            ${params.downloadsInfo ? `<span>${params.downloadsInfo}</span>` : ''}
-          </div>`
-        : ''
-      }
-
-    </div>
-    </div>
-
+    <!-- CTA -->
     <div class="cta">
-      <div class="cta-title">Хотите своё облако?</div>
-      <div class="cta-text">Храните и делитесь файлами через FC-Cloud</div>
+      <div class="cta-text">Хотите своё облако для файлов?</div>
       <a href="${params.telegramUrl}" class="telegram-btn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <svg viewBox="0 0 24 24" fill="currentColor">
           <path d="M11.944 0A12 12 0 1 0 24 12 12.01 12.01 0 0 0 11.944 0zm5.768 7.93l-1.975 9.413c-.15.664-.55.82-1.115.51l-3.056-2.254-1.474 1.42c-.163.163-.3.3-.614.3l.22-3.106 5.643-5.1c.246-.22-.054-.342-.382-.124l-6.978 4.392-3.006-.938c-.653-.205-.667-.653.137-.967l11.744-4.527c.545-.198 1.022.132.856.963z"/>
         </svg>
         Открыть в Telegram
       </a>
     </div>
   </div>
+
+  ${isVideo ? `
+  <script>
+    const video = document.getElementById('videoPlayer');
+    const overlay = document.getElementById('playOverlay');
+
+    function playVideo() {
+      video.play();
+      overlay.classList.add('hidden');
+    }
+
+    video.addEventListener('pause', () => {
+      if (video.currentTime > 0) {
+        overlay.classList.remove('hidden');
+      }
+    });
+
+    video.addEventListener('play', () => {
+      overlay.classList.add('hidden');
+    });
+
+    video.addEventListener('ended', () => {
+      overlay.classList.remove('hidden');
+    });
+  </script>
+  ` : ''}
 </body>
 </html>`;
 }
