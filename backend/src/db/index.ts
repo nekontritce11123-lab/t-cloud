@@ -275,49 +275,17 @@ export function searchFilesWithSnippets(
   }
 
   // Text query handling - supports prefix search
+  // Всегда используем FTS5 - он корректно обрабатывает Unicode (кириллицу)
+  // LIKE не работает для кириллицы т.к. SQLite LOWER() не поддерживает Unicode
   const trimmedQuery = query?.trim().toLowerCase() || '';
   const hasFtsQuery = trimmedQuery.length > 0;
-
-  // Для коротких запросов (1-2 символа) используем LIKE - FTS требует минимум 3 символа для prefix
-  const useSimpleLike = trimmedQuery.length > 0 && trimmedQuery.length < 3;
 
   let sql: string;
   let rows: any[];
 
-  if (useSimpleLike) {
-    // LIKE поиск для коротких запросов (1-2 символа)
-    const likePattern = `%${trimmedQuery}%`;
-    const likeConditions = [...conditions];
-    const likeParams = [...params];
-
-    likeConditions.push(`(
-      LOWER(f.file_name) LIKE ?
-      OR LOWER(f.caption) LIKE ?
-      OR LOWER(f.forward_from_name) LIKE ?
-      OR LOWER(f.forward_from_chat_title) LIKE ?
-    )`);
-    likeParams.push(likePattern, likePattern, likePattern, likePattern);
-
-    const whereClause = likeConditions.join(' AND ');
-
-    sql = `
-      SELECT
-        f.*,
-        NULL as snippet_file_name,
-        NULL as snippet_caption,
-        NULL as snippet_forward,
-        NULL as snippet_chat_title
-      FROM files f
-      WHERE ${whereClause}
-      ORDER BY f.created_at DESC
-      LIMIT ?
-    `;
-
-    likeParams.push(limit);
-    const stmt = sqlite.prepare(sql);
-    rows = stmt.all(...likeParams) as any[];
-  } else if (hasFtsQuery) {
-    // FTS5 поиск с prefix matching для запросов 3+ символов
+  if (hasFtsQuery) {
+    // FTS5 поиск с prefix matching - работает для любой длины запроса
+    // unicode61 tokenizer корректно обрабатывает кириллицу и другие Unicode символы
     conditions.push('files_fts MATCH ?');
     params.push(escapeFtsQueryWithPrefix(trimmedQuery));
 

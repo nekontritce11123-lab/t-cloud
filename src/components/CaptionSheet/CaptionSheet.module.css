@@ -160,8 +160,8 @@
 
 .textarea {
   width: 100%;
-  min-height: 120px;
-  max-height: 40vh;
+  min-height: 200px;
+  max-height: 60vh;
   padding: var(--spacing-md);
   padding-bottom: calc(var(--spacing-md) + 24px);
   background: var(--app-secondary-bg-color);

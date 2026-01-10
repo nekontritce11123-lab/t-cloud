@@ -854,8 +854,8 @@
 
 .captionTextarea {
   width: 100%;
-  min-height: 80px;
-  max-height: 200px;
+  min-height: 150px;
+  max-height: 50vh;
   padding: var(--spacing-md);
   background: var(--app-secondary-bg-color);
   border: 2px solid transparent;
