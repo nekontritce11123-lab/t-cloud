@@ -18,6 +18,7 @@ export function useFiles(apiReady = true) {
   const [trashCount, setTrashCount] = useState(0);
   const [sharedCount, setSharedCount] = useState(0);
   const [linksCount, setLinksCount] = useState(0);
+  const [favoritesCount, setFavoritesCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<CategoryType>(null);
@@ -95,6 +96,12 @@ export function useFiles(apiReady = true) {
         console.log('[useFiles] Shared files result:', result);
         setFiles(result.items || []);
         setLinks([]);
+      } else if (type === 'favorite') {
+        const result = await apiClient.getFavorites();
+        if (requestId !== currentRequestId.current) return;
+        console.log('[useFiles] Favorites result:', result);
+        setFiles(result.items || []);
+        setLinks([]);
       } else {
         const result = await apiClient.getFiles({
           type: type || undefined,
@@ -125,18 +132,20 @@ export function useFiles(apiReady = true) {
   const loadStats = useCallback(async () => {
     if (!apiReady) return;
     try {
-      const [statsResult, trashFilesCount, trashLinksCount, sharedFilesCount, linksCountResult] = await Promise.all([
+      const [statsResult, trashFilesCount, trashLinksCount, sharedFilesCount, linksCountResult, favoritesCountResult] = await Promise.all([
         apiClient.getFileStats(),
         apiClient.getTrashFilesCount(),
         apiClient.getTrashLinksCount(),
         apiClient.getSharedFilesCount(),
         apiClient.getLinksCount(),
+        apiClient.getFavoritesCount(),
       ]);
-      console.log('[useFiles] Stats:', statsResult, 'Links count:', linksCountResult.count);
+      console.log('[useFiles] Stats:', statsResult, 'Links count:', linksCountResult.count, 'Favorites:', favoritesCountResult.count);
       setStats(statsResult || []);
       setTrashCount(trashFilesCount.count + trashLinksCount.count);
       setSharedCount(sharedFilesCount.count);
       setLinksCount(linksCountResult.count);
+      setFavoritesCount(favoritesCountResult.count);
     } catch (err) {
       console.error('[useFiles] Stats error:', err);
     }
@@ -204,6 +213,12 @@ export function useFiles(apiReady = true) {
         if (requestId !== currentRequestId.current) return;
         setFiles(result.items || []);
         setLinks([]);
+      } else if (selectedType === 'favorite') {
+        // Для категории "Избранное" загружаем избранные файлы
+        const result = await apiClient.getFavorites();
+        if (requestId !== currentRequestId.current) return;
+        setFiles(result.items || []);
+        setLinks([]);
       } else {
         // Для остальных категорий загружаем files
         const result = await apiClient.getFiles({
@@ -237,6 +252,40 @@ export function useFiles(apiReady = true) {
     loadStats();
   }, [loadDataForQuery, loadStats, searchQuery, selectedType]);
 
+  // Toggle favorite for a single file
+  const toggleFavorite = useCallback(async (fileId: number): Promise<boolean | null> => {
+    try {
+      const result = await apiClient.toggleFavorite(fileId);
+      // Update local state
+      setFiles(prev => prev.map(f =>
+        f.id === fileId ? { ...f, isFavorite: result.isFavorite } : f
+      ));
+      // Update favorites count
+      setFavoritesCount(prev => result.isFavorite ? prev + 1 : prev - 1);
+      return result.isFavorite;
+    } catch (error) {
+      console.error('[useFiles] toggleFavorite error:', error);
+      return null;
+    }
+  }, []);
+
+  // Set favorite for multiple files
+  const setFavoriteMany = useCallback(async (fileIds: number[], isFavorite: boolean): Promise<number> => {
+    try {
+      const result = await apiClient.setFavoriteMany(fileIds, isFavorite);
+      // Update local state
+      setFiles(prev => prev.map(f =>
+        fileIds.includes(f.id) ? { ...f, isFavorite } : f
+      ));
+      // Update favorites count
+      setFavoritesCount(prev => isFavorite ? prev + result.updated : prev - result.updated);
+      return result.updated;
+    } catch (error) {
+      console.error('[useFiles] setFavoriteMany error:', error);
+      return 0;
+    }
+  }, []);
+
   return {
     files,
     links,
@@ -244,6 +293,7 @@ export function useFiles(apiReady = true) {
     trashCount,
     sharedCount,
     linksCount,
+    favoritesCount,
     isLoading,
     error,
     selectedType,
@@ -252,5 +302,7 @@ export function useFiles(apiReady = true) {
     search,
     clearSearch,
     refresh,
+    toggleFavorite,
+    setFavoriteMany,
   };
 }

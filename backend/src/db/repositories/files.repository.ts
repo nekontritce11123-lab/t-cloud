@@ -326,6 +326,7 @@ export class FilesRepository {
       caption: row.caption,
       forwardFromName: row.forward_from_name,
       forwardFromChatTitle: row.forward_from_chat_title,
+      isFavorite: Boolean(row.is_favorite),
       createdAt: new Date(row.created_at * 1000),
       deletedAt: row.deleted_at ? new Date(row.deleted_at * 1000) : null,
     })) as File[];
@@ -389,5 +390,117 @@ export class FilesRepository {
 
     const result = stmt.run(caption, ...ids, userId);
     return result.changes;
+  }
+
+  // ==================== FAVORITES ====================
+
+  /**
+   * Toggle favorite status for a single file
+   * Returns the new favorite status
+   */
+  toggleFavorite(id: number, userId: number): boolean | null {
+    // First get current status
+    const getStmt = sqlite.prepare(`
+      SELECT is_favorite FROM files
+      WHERE id = ? AND user_id = ? AND deleted_at IS NULL
+    `);
+    const current = getStmt.get(id, userId) as { is_favorite: number } | undefined;
+
+    if (!current) return null;
+
+    const newStatus = current.is_favorite ? 0 : 1;
+
+    const updateStmt = sqlite.prepare(`
+      UPDATE files SET is_favorite = ?
+      WHERE id = ? AND user_id = ? AND deleted_at IS NULL
+    `);
+    updateStmt.run(newStatus, id, userId);
+
+    return newStatus === 1;
+  }
+
+  /**
+   * Set favorite status for multiple files
+   * Returns count of updated files
+   */
+  setFavoriteMany(ids: number[], userId: number, isFavorite: boolean): number {
+    if (ids.length === 0) return 0;
+
+    const placeholders = ids.map(() => '?').join(',');
+    const stmt = sqlite.prepare(`
+      UPDATE files
+      SET is_favorite = ?
+      WHERE id IN (${placeholders})
+        AND user_id = ?
+        AND deleted_at IS NULL
+    `);
+
+    const result = stmt.run(isFavorite ? 1 : 0, ...ids, userId);
+    return result.changes;
+  }
+
+  /**
+   * Get favorite files for a user
+   */
+  async findFavorites(userId: number, limit = 100, offset = 0): Promise<{ items: File[]; total: number }> {
+    const whereCondition = and(
+      eq(files.userId, userId),
+      eq(files.isFavorite, true),
+      isNull(files.deletedAt)
+    );
+
+    const items = await db
+      .select()
+      .from(files)
+      .where(whereCondition)
+      .orderBy(desc(files.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const countResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(files)
+      .where(whereCondition);
+
+    return {
+      items,
+      total: countResult[0]?.count || 0,
+    };
+  }
+
+  /**
+   * Get count of favorite files
+   */
+  async getFavoritesCount(userId: number): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(files)
+      .where(and(
+        eq(files.userId, userId),
+        eq(files.isFavorite, true),
+        isNull(files.deletedAt)
+      ));
+
+    return result[0]?.count || 0;
+  }
+
+  /**
+   * Get favorite status for a batch of file IDs
+   * Returns a Set of file IDs that are favorites
+   */
+  getFavoriteStatusBatch(userId: number, fileIds: number[]): Set<number> {
+    if (fileIds.length === 0) return new Set();
+
+    const placeholders = fileIds.map(() => '?').join(',');
+    const stmt = sqlite.prepare(`
+      SELECT id FROM files
+      WHERE user_id = ?
+        AND id IN (${placeholders})
+        AND is_favorite = 1
+        AND deleted_at IS NULL
+    `);
+
+    const rows = stmt.all(userId, ...fileIds) as { id: number }[];
+    return new Set(rows.map(r => r.id));
   }
 }

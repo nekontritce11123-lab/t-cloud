@@ -69,6 +69,10 @@
   --color-success: #34c759;
   --color-icon-secondary: rgba(255, 255, 255, 0.5);
 
+  /* Favorites */
+  --color-favorite: #FFD700;
+  --color-favorite-glow: rgba(255, 215, 0, 0.4);
+
   /* Overlays */
   --overlay-dark: rgba(0, 0, 0, 0.7);
   --overlay-darker: rgba(0, 0, 0, 0.8);

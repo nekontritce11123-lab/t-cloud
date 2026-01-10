@@ -2,8 +2,8 @@ import { useRef, useCallback } from 'react';
 import { MediaType, CategoryStats } from '../../api/client';
 import styles from './CategoryChips.module.css';
 
-// Extended type to include 'trash' and 'shared' as special categories
-export type CategoryType = MediaType | 'trash' | 'shared' | null;
+// Extended type to include 'trash', 'shared', and 'favorite' as special categories
+export type CategoryType = MediaType | 'trash' | 'shared' | 'favorite' | null;
 
 interface CategoryChipsProps {
   stats: CategoryStats[];
@@ -12,6 +12,7 @@ interface CategoryChipsProps {
   trashCount?: number;
   sharedCount?: number;
   linksCount?: number;
+  favoritesCount?: number;
   disabledTypes?: 'trash' | 'not-trash';
 }
 
@@ -90,6 +91,11 @@ const Icons = {
       <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
     </svg>
   ),
+  favorite: (
+    <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  ),
 };
 
 interface Category {
@@ -101,6 +107,7 @@ interface Category {
 
 const CATEGORIES: Category[] = [
   { type: null, label: 'Все', icon: 'all', color: 'var(--app-button-color)' },
+  { type: 'favorite', label: 'Избранное', icon: 'favorite', color: 'var(--color-favorite)' },
   { type: 'photo', label: 'Фото', icon: 'photo', color: 'var(--color-photo)' },
   { type: 'video', label: 'Видео', icon: 'video', color: 'var(--color-video)' },
   { type: 'document', label: 'Доки', icon: 'document', color: 'var(--color-document)' },
@@ -112,7 +119,7 @@ const CATEGORIES: Category[] = [
   { type: 'trash', label: 'Корзина', icon: 'trash', color: 'var(--app-destructive-text-color, #ff3b30)' },
 ];
 
-export function CategoryChips({ stats, selectedType, onSelect, trashCount = 0, sharedCount = 0, linksCount = 0, disabledTypes }: CategoryChipsProps) {
+export function CategoryChips({ stats, selectedType, onSelect, trashCount = 0, sharedCount = 0, linksCount = 0, favoritesCount = 0, disabledTypes }: CategoryChipsProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
 
@@ -134,6 +141,9 @@ export function CategoryChips({ stats, selectedType, onSelect, trashCount = 0, s
     }
     if (type === 'shared') {
       return sharedCount;
+    }
+    if (type === 'favorite') {
+      return favoritesCount;
     }
     if (type === 'link') {
       return linksCount;

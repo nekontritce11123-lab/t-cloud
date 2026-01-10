@@ -13,6 +13,8 @@ interface FileCardProps {
   isSelected?: boolean;
   isSelectionMode?: boolean;
   isOnCooldown?: boolean;
+  /** File is in favorites (golden border) */
+  isFavorite?: boolean;
   /** Custom badge (cooldown checkmark or days remaining) */
   badge?: ReactNode;
   /** Disable scale on active (for trash cards) */
@@ -51,6 +53,7 @@ export function FileCard({
   isSelected,
   isSelectionMode,
   isOnCooldown,
+  isFavorite,
   badge,
   disableActiveScale,
   includeDataFileId,
@@ -65,6 +68,7 @@ export function FileCard({
     cardStyles.card,
     isSelected ? cardStyles.selected : '',
     isOnCooldown ? cardStyles.cooldown : '',
+    isFavorite ? cardStyles.favorite : '',
     disableActiveScale ? cardStyles.noActiveScale : '',
   ].filter(Boolean).join(' ');
 

@@ -29,6 +29,8 @@ export interface FileRecord {
   deletedAt?: string | null;
   // Share status (for instant UI without extra API call)
   hasShare?: boolean;
+  // Favorite status
+  isFavorite?: boolean;
   // Search result fields (only present in search results)
   matchedField?: 'file_name' | 'caption' | 'forward_from_name' | 'forward_from_chat_title';
   matchedSnippet?: string;
@@ -75,6 +77,7 @@ export interface ShareInfo {
 export interface ShareResponse {
   share: ShareInfo;
   shareUrl: string;
+  webUrl?: string;
   isExisting?: boolean;
   recipients?: number;
 }
@@ -444,6 +447,67 @@ class ApiClient {
 
     if (!response.ok) {
       throw new Error('Failed to fetch shared files count');
+    }
+
+    return response.json();
+  }
+
+  // Favorites API
+
+  async getFavorites(limit = 100, offset = 0): Promise<{ items: FileRecord[]; total: number }> {
+    const params = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset),
+    });
+
+    const response = await fetch(`${API_URL}/api/files/favorites?${params}`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch favorites');
+    }
+
+    return response.json();
+  }
+
+  async getFavoritesCount(): Promise<{ count: number }> {
+    const response = await fetch(`${API_URL}/api/files/favorites/count`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch favorites count');
+    }
+
+    return response.json();
+  }
+
+  async toggleFavorite(fileId: number): Promise<{ success: boolean; isFavorite: boolean }> {
+    const response = await fetch(`${API_URL}/api/files/${fileId}/favorite`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to toggle favorite');
+    }
+
+    return response.json();
+  }
+
+  async setFavoriteMany(
+    fileIds: number[],
+    isFavorite: boolean
+  ): Promise<{ success: boolean; updated: number; isFavorite: boolean }> {
+    const response = await fetch(`${API_URL}/api/files/favorite-many`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ fileIds, isFavorite }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update favorites');
     }
 
     return response.json();

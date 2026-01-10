@@ -48,6 +48,11 @@ export const files = sqliteTable('files', {
   forwardFromName: text('forward_from_name'),
   forwardFromChatTitle: text('forward_from_chat_title'),
 
+  // Favorites
+  isFavorite: integer('is_favorite', { mode: 'boolean' })
+    .default(false)
+    .notNull(),
+
   // Timestamps
   createdAt: integer('created_at', { mode: 'timestamp' })
     .default(sql`(unixepoch())`)

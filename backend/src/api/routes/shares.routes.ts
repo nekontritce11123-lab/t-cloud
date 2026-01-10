@@ -8,6 +8,7 @@ const router = Router();
 const filesRepo = new FilesRepository();
 
 const BOT_USERNAME = process.env.BOT_USERNAME || 'FC_Cloud_Bot';
+const WEB_URL = process.env.WEB_URL || 'https://factchain-traker.online';
 
 interface FileShare {
   id: number;
@@ -30,10 +31,17 @@ interface ShareRecipient {
 }
 
 /**
- * Generate share URL
+ * Generate share URL (Telegram bot)
  */
 function getShareUrl(token: string): string {
   return `https://t.me/${BOT_USERNAME}?start=share_${token}`;
+}
+
+/**
+ * Generate web share URL
+ */
+function getWebShareUrl(token: string): string {
+  return `${WEB_URL}/share/${token}`;
 }
 
 /**
@@ -111,6 +119,7 @@ router.post('/:id/share', async (req, res: Response) => {
       res.json({
         share,
         shareUrl: getShareUrl(share.token),
+        webUrl: getWebShareUrl(share.token),
         isExisting: true,
       });
       return;
@@ -142,6 +151,7 @@ router.post('/:id/share', async (req, res: Response) => {
     res.json({
       share,
       shareUrl: getShareUrl(share.token),
+      webUrl: getWebShareUrl(share.token),
       isExisting: false,
     });
   } catch (error) {
@@ -200,6 +210,7 @@ router.get('/:id/share', async (req, res: Response) => {
     res.json({
       share,
       shareUrl: getShareUrl(share.token),
+      webUrl: getWebShareUrl(share.token),
       recipients,
     });
   } catch (error) {

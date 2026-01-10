@@ -9,20 +9,23 @@ interface ShareSectionProps {
   isDisabling: boolean;
 }
 
-export function ShareSection({ shareData, onDisable, isDisabling }: ShareSectionProps) {
-  const [copied, setCopied] = useState(false);
+type CopiedType = 'telegram' | 'web' | null;
 
-  const handleCopy = useCallback(async () => {
-    if (!shareData.shareUrl) return;
+export function ShareSection({ shareData, onDisable, isDisabling }: ShareSectionProps) {
+  const [copied, setCopied] = useState<CopiedType>(null);
+
+  const handleCopy = useCallback(async (type: 'telegram' | 'web') => {
+    const url = type === 'telegram' ? shareData.shareUrl : shareData.webUrl;
+    if (!url) return;
 
     try {
-      await navigator.clipboard.writeText(shareData.shareUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(url);
+      setCopied(type);
+      setTimeout(() => setCopied(null), 2000);
     } catch (error) {
       console.error('Failed to copy:', error);
     }
-  }, [shareData.shareUrl]);
+  }, [shareData.shareUrl, shareData.webUrl]);
 
   const formatExpiresAt = (expiresAt: string | null): string => {
     if (!expiresAt) return 'Бессрочно';
@@ -43,16 +46,35 @@ export function ShareSection({ shareData, onDisable, isDisabling }: ShareSection
 
   return (
     <div className={styles.section}>
-      {/* URL + Copy */}
-      <div className={styles.urlRow}>
-        <span className={styles.url}>{shareData.shareUrl}</span>
-        <button
-          className={`${styles.copyBtn} ${copied ? styles.copied : ''}`}
-          onClick={handleCopy}
-        >
-          {copied ? CheckIcon : CopyIcon}
-        </button>
+      {/* Telegram URL */}
+      <div className={styles.urlBlock}>
+        <div className={styles.urlLabel}>Telegram:</div>
+        <div className={styles.urlRow}>
+          <span className={styles.url}>{shareData.shareUrl}</span>
+          <button
+            className={`${styles.copyBtn} ${copied === 'telegram' ? styles.copied : ''}`}
+            onClick={() => handleCopy('telegram')}
+          >
+            {copied === 'telegram' ? CheckIcon : CopyIcon}
+          </button>
+        </div>
       </div>
+
+      {/* Web URL */}
+      {shareData.webUrl && (
+        <div className={styles.urlBlock}>
+          <div className={styles.urlLabel}>Веб-ссылка:</div>
+          <div className={styles.urlRow}>
+            <span className={styles.url}>{shareData.webUrl}</span>
+            <button
+              className={`${styles.copyBtn} ${copied === 'web' ? styles.copied : ''}`}
+              onClick={() => handleCopy('web')}
+            >
+              {copied === 'web' ? CheckIcon : CopyIcon}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className={styles.stats}>

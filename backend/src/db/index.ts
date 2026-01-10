@@ -158,7 +158,33 @@ export async function initDatabase(): Promise<void> {
     );
 
     CREATE INDEX IF NOT EXISTS idx_recipients_share ON share_recipients(share_id);
+
+    -- Web share downloads tracking
+    CREATE TABLE IF NOT EXISTS share_downloads (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      share_id INTEGER NOT NULL REFERENCES file_shares(id) ON DELETE CASCADE,
+      download_type TEXT NOT NULL, -- 'telegram', 'web_view', 'web_download'
+      ip_address TEXT,
+      user_agent TEXT,
+      created_at INTEGER DEFAULT (unixepoch())
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_share_downloads_share ON share_downloads(share_id);
   `);
+
+  // Migration: Add is_favorite column if not exists
+  try {
+    sqlite.exec(`ALTER TABLE files ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0`);
+    console.log('[Database] Added is_favorite column');
+  } catch (e: any) {
+    // Column already exists - ignore
+    if (!e.message?.includes('duplicate column')) {
+      throw e;
+    }
+  }
+
+  // Create index for favorites
+  sqlite.exec(`CREATE INDEX IF NOT EXISTS idx_files_user_favorite ON files(user_id, is_favorite)`);
 
   console.log('[Database] Initialized successfully');
 }
@@ -369,6 +395,7 @@ export function searchFilesWithSnippets(
       caption: row.caption,
       forwardFromName: row.forward_from_name,
       forwardFromChatTitle: row.forward_from_chat_title,
+      isFavorite: Boolean(row.is_favorite),
       createdAt: row.created_at,
       matchedField,
       matchedSnippet,

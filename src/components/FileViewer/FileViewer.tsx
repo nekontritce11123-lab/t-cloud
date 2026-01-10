@@ -41,6 +41,7 @@ interface FileViewerProps {
   onClose: () => void;
   onSend: (file: FileRecord) => void;
   onCaptionUpdate?: (fileId: number, newCaption: string | null) => void;
+  onToggleFavorite?: (fileId: number) => Promise<boolean | null>;
   isOnCooldown?: boolean;
   isSending?: boolean;
   searchQuery?: string;
@@ -61,6 +62,7 @@ export function FileViewer({
   onClose,
   onSend,
   onCaptionUpdate,
+  onToggleFavorite,
   isOnCooldown,
   isSending,
   searchQuery,
@@ -74,6 +76,10 @@ export function FileViewer({
   const [shareLoading, setShareLoading] = useState(() => file.hasShare);
   const [shareData, setShareData] = useState<ShareResponse | null>(null);
   const [disablingShare, setDisablingShare] = useState(false);
+
+  // Favorite state
+  const [isFavorite, setIsFavorite] = useState(file.isFavorite ?? false);
+  const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
 
   // Caption editing state
   const [isEditingCaption, setIsEditingCaption] = useState(false);
@@ -144,6 +150,11 @@ export function FileViewer({
     setIsEditingCaption(false);
     setCaptionDraft('');
   }, [file.id]);
+
+  // Sync isFavorite with file prop when file changes
+  useEffect(() => {
+    setIsFavorite(file.isFavorite ?? false);
+  }, [file.id, file.isFavorite]);
 
   // Caption editing handlers
   const startCaptionEdit = useCallback(() => {
@@ -230,6 +241,20 @@ export function FileViewer({
       onSend(file);
     }
   }, [file, onSend, isOnCooldown, isSending]);
+
+  // Handle toggle favorite
+  const handleToggleFavorite = useCallback(async () => {
+    if (!onToggleFavorite || isTogglingFavorite) return;
+    setIsTogglingFavorite(true);
+    try {
+      const newStatus = await onToggleFavorite(file.id);
+      if (newStatus !== null) {
+        setIsFavorite(newStatus);
+      }
+    } finally {
+      setIsTogglingFavorite(false);
+    }
+  }, [file.id, onToggleFavorite, isTogglingFavorite]);
 
   const handleAnimatedClose = useCallback(() => {
     setIsClosing(true);
@@ -504,6 +529,24 @@ export function FileViewer({
               <span className={styles.positionLabel}>{positionLabel}</span>
             )}
           </div>
+
+          {/* Favorite button */}
+          {onToggleFavorite && (
+            <button
+              className={`${styles.favoriteButton} ${isFavorite ? styles.favoriteActive : ''}`}
+              onClick={handleToggleFavorite}
+              disabled={isTogglingFavorite}
+              title={isFavorite ? 'Убрать из избранного' : 'В избранное'}
+            >
+              {isTogglingFavorite ? (
+                <span className={styles.smallSpinner} />
+              ) : (
+                <svg viewBox="0 0 24 24" fill={isFavorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+              )}
+            </button>
+          )}
 
           <button
             className={`${styles.headerSendButton} ${isOnCooldown ? styles.disabled : ''}`}

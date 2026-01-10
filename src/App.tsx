@@ -32,6 +32,7 @@ function App() {
     trashCount,
     sharedCount,
     linksCount,
+    favoritesCount,
     isLoading,
     error,
     selectedType,
@@ -40,6 +41,7 @@ function App() {
     search,
     clearSearch,
     refresh,
+    toggleFavorite,
   } = useFiles(apiReady);
 
   // История поиска
@@ -696,6 +698,7 @@ function App() {
         trashCount={trashCount}
         sharedCount={sharedCount}
         linksCount={linksCount}
+        favoritesCount={favoritesCount}
         disabledTypes={isSelectionMode ? (selectedType === 'trash' ? 'not-trash' : 'trash') : undefined}
       />
 
@@ -877,6 +880,7 @@ function App() {
           onClose={() => setViewingFileIndex(null)}
           onSend={handleSendFromViewer}
           onCaptionUpdate={handleCaptionUpdate}
+          onToggleFavorite={toggleFavorite}
           isOnCooldown={isOnCooldown(viewingFile.id)}
           isSending={sendingFileId === viewingFile.id}
           searchQuery={searchQuery}

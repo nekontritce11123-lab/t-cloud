@@ -523,6 +523,101 @@ router.patch('/caption', async (req, res: Response) => {
   }
 });
 
+// ==================== FAVORITES ====================
+
+/**
+ * GET /api/files/favorites
+ * Get favorite files for the user
+ * ВАЖНО: Этот роут должен быть ДО /:id
+ */
+router.get('/favorites', async (req, res: Response) => {
+  const { telegramUser } = req as AuthenticatedRequest;
+  const { limit = '100', offset = '0' } = req.query;
+
+  try {
+    const limitNum = Math.min(parseInt(limit as string, 10), MAX_PAGE_SIZE);
+    const offsetNum = parseInt(offset as string, 10);
+
+    const result = await filesRepo.findFavorites(telegramUser.id, limitNum, offsetNum);
+
+    // Add thumbnail URLs
+    const service = getThumbnailService();
+    const itemsWithThumbnails = await Promise.all(
+      result.items.map(async (file) => ({
+        ...file,
+        thumbnailUrl: await service.getThumbnailUrl(
+          file.thumbnailFileId,
+          file.fileId,
+          file.mediaType as MediaType
+        ),
+      }))
+    );
+
+    // Add hasShare flag
+    const itemsWithShareStatus = addShareStatus(itemsWithThumbnails, telegramUser.id);
+    // Mark all as favorite
+    const itemsWithFavorite = itemsWithShareStatus.map(f => ({ ...f, isFavorite: true }));
+
+    res.json({
+      items: itemsWithFavorite,
+      total: result.total,
+    });
+  } catch (error) {
+    console.error('[API] Error fetching favorites:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/files/favorites/count
+ * Get count of favorite files
+ * ВАЖНО: Этот роут должен быть ДО /:id
+ */
+router.get('/favorites/count', async (req, res: Response) => {
+  const { telegramUser } = req as AuthenticatedRequest;
+
+  try {
+    const count = await filesRepo.getFavoritesCount(telegramUser.id);
+    res.json({ count });
+  } catch (error) {
+    console.error('[API] Error fetching favorites count:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/files/favorite-many
+ * Set favorite status for multiple files
+ * ВАЖНО: Этот роут должен быть ДО /:id
+ */
+router.post('/favorite-many', async (req, res: Response) => {
+  const { telegramUser } = req as unknown as AuthenticatedRequest;
+  const { fileIds, isFavorite } = req.body as { fileIds: number[]; isFavorite: boolean };
+
+  if (!Array.isArray(fileIds) || fileIds.length === 0) {
+    res.status(400).json({ error: 'fileIds array is required' });
+    return;
+  }
+
+  if (fileIds.length > MAX_BATCH_SIZE) {
+    res.status(400).json({ error: `Maximum ${MAX_BATCH_SIZE} files per request` });
+    return;
+  }
+
+  if (typeof isFavorite !== 'boolean') {
+    res.status(400).json({ error: 'isFavorite boolean is required' });
+    return;
+  }
+
+  try {
+    const updatedCount = filesRepo.setFavoriteMany(fileIds, telegramUser.id, isFavorite);
+    res.json({ success: true, updated: updatedCount, isFavorite });
+  } catch (error) {
+    console.error('[API] Error updating favorites:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 /**
  * GET /api/files/:id
  * Get a single file by ID
@@ -1074,6 +1169,34 @@ router.post('/:id/restore', async (req, res: Response) => {
     res.json({ success: true });
   } catch (error) {
     console.error('[API] Error restoring file:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/files/:id/favorite
+ * Toggle favorite status for a single file
+ */
+router.post('/:id/favorite', async (req, res: Response) => {
+  const { telegramUser } = req as unknown as AuthenticatedRequest;
+  const fileId = parseInt(req.params.id, 10);
+
+  if (isNaN(fileId)) {
+    res.status(400).json({ error: 'Invalid file ID' });
+    return;
+  }
+
+  try {
+    const newStatus = filesRepo.toggleFavorite(fileId, telegramUser.id);
+
+    if (newStatus === null) {
+      res.status(404).json({ error: 'File not found' });
+      return;
+    }
+
+    res.json({ success: true, isFavorite: newStatus });
+  } catch (error) {
+    console.error('[API] Error toggling favorite:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -5,6 +5,7 @@ import { authMiddleware, devAuthMiddleware } from './middleware/auth.js';
 import filesRoutes from './routes/files.routes.js';
 import linksRoutes from './routes/links.routes.js';
 import sharesRoutes from './routes/shares.routes.js';
+import publicRoutes from './routes/public.routes.js';
 
 const app = express();
 
@@ -50,6 +51,9 @@ app.get('/health', (req, res) => {
 
 // Choose auth middleware based on environment
 const auth = process.env.NODE_ENV === 'production' ? authMiddleware : devAuthMiddleware;
+
+// Public routes (NO authentication required)
+app.use('/share', publicRoutes);
 
 // API routes (require authentication)
 app.use('/api/files', auth, filesRoutes);

@@ -142,6 +142,37 @@
   margin-left: var(--spacing-xs);
 }
 
+/* Favorite Button */
+.favoriteButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-md);
+  color: var(--app-hint-color);
+  transition: color var(--animation-fast) var(--easing-smooth),
+              background var(--animation-fast) var(--easing-smooth);
+}
+
+.favoriteButton:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.favoriteButton svg {
+  width: 22px;
+  height: 22px;
+}
+
+.favoriteButton.favoriteActive {
+  color: var(--color-favorite);
+}
+
+.favoriteButton.favoriteActive svg {
+  filter: drop-shadow(0 0 4px var(--color-favorite-glow));
+}
+
 /* Header Send Button - стиль как у backButton */
 .headerSendButton {
   display: flex;

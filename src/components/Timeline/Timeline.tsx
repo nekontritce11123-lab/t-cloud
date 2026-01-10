@@ -324,6 +324,7 @@ export function Timeline({
                 isSelected={selectedFiles?.has(file.id)}
                 isSelectionMode={isSelectionMode}
                 isOnCooldown={isOnCooldown?.(file.id)}
+                isFavorite={file.isFavorite}
                 includeDataFileId
               />
             ))}
