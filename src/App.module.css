@@ -149,12 +149,11 @@
 }
 
 .selectionActions {
-  width: 40px;
-  height: 40px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
+  gap: var(--spacing-xs);
 }
 
 .deleteBtn {
@@ -185,6 +184,31 @@
 .deleteBtn svg {
   width: 22px;
   height: 22px;
+}
+
+.editBtn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--app-link-color);
+  cursor: pointer;
+  transition: all var(--animation-fast) ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.editBtn:active {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(0.95);
+}
+
+.editBtn svg {
+  width: 20px;
+  height: 20px;
 }
 
 /* Empty state for search - минималистичный стиль */

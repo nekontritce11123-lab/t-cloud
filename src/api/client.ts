@@ -428,6 +428,28 @@ class ApiClient {
     return response.json();
   }
 
+  /**
+   * Update caption for one or more files
+   * @param fileIds - Array of file IDs to update
+   * @param caption - New caption (null or empty string to clear)
+   */
+  async updateCaption(
+    fileIds: number[],
+    caption: string | null
+  ): Promise<{ success: boolean; updated: number }> {
+    const response = await fetch(`${API_URL}/api/files/caption`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ fileIds, caption }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update caption');
+    }
+
+    return response.json();
+  }
+
   async restoreFile(id: number): Promise<void> {
     const response = await fetch(`${API_URL}/api/files/${id}/restore`, {
       method: 'POST',

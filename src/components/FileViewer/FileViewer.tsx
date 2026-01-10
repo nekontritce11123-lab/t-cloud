@@ -34,6 +34,7 @@ interface FileViewerProps {
   // Existing props
   onClose: () => void;
   onSend: (file: FileRecord) => void;
+  onCaptionUpdate?: (fileId: number, newCaption: string | null) => void;
   isOnCooldown?: boolean;
   isSending?: boolean;
   searchQuery?: string;
@@ -51,6 +52,7 @@ export function FileViewer({
   onNavigate,
   onClose,
   onSend,
+  onCaptionUpdate,
   isOnCooldown,
   isSending,
   searchQuery
@@ -62,6 +64,12 @@ export function FileViewer({
   const [shareLoading, setShareLoading] = useState(() => file.hasShare);
   const [shareData, setShareData] = useState<ShareResponse | null>(null);
   const [disablingShare, setDisablingShare] = useState(false);
+
+  // Caption editing state
+  const [isEditingCaption, setIsEditingCaption] = useState(false);
+  const [captionDraft, setCaptionDraft] = useState('');
+  const [isSavingCaption, setIsSavingCaption] = useState(false);
+  const captionTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Share creation state
   const [shareMode, setShareMode] = useState<ShareMode>('idle');
@@ -110,6 +118,54 @@ export function FileViewer({
       expiresInputRef.current.focus();
     }
   }, [isCustomExpires]);
+
+  // Auto-focus caption textarea when editing
+  useEffect(() => {
+    if (isEditingCaption && captionTextareaRef.current) {
+      captionTextareaRef.current.focus();
+      // Move cursor to end
+      const len = captionTextareaRef.current.value.length;
+      captionTextareaRef.current.setSelectionRange(len, len);
+    }
+  }, [isEditingCaption]);
+
+  // Reset caption edit when file changes
+  useEffect(() => {
+    setIsEditingCaption(false);
+    setCaptionDraft('');
+  }, [file.id]);
+
+  // Caption editing handlers
+  const startCaptionEdit = useCallback(() => {
+    setCaptionDraft(file.caption || '');
+    setIsEditingCaption(true);
+  }, [file.caption]);
+
+  const cancelCaptionEdit = useCallback(() => {
+    setIsEditingCaption(false);
+    setCaptionDraft('');
+  }, []);
+
+  const saveCaptionEdit = useCallback(async () => {
+    if (!onCaptionUpdate) return;
+
+    const newCaption = captionDraft.trim() || null;
+    // Skip if no change
+    if (newCaption === (file.caption || null)) {
+      setIsEditingCaption(false);
+      return;
+    }
+
+    setIsSavingCaption(true);
+    try {
+      await onCaptionUpdate(file.id, newCaption);
+      setIsEditingCaption(false);
+    } catch (error) {
+      console.error('Failed to save caption:', error);
+    } finally {
+      setIsSavingCaption(false);
+    }
+  }, [file.id, file.caption, captionDraft, onCaptionUpdate]);
 
   // Reset share creation state
   const resetShareCreation = useCallback(() => {
@@ -251,19 +307,96 @@ export function FileViewer({
   };
 
   // Helper: рендер info секции для файла (caption + meta, без share)
-  const renderInfo = (f: FileRecord | undefined) => {
+  const renderInfo = (f: FileRecord | undefined, isCurrentFile = false) => {
     if (!f) return null;
-    return (
-      <>
-        {/* Caption */}
-        {f.caption && (
+
+    // Caption section - editable only for current file
+    const renderCaption = () => {
+      // For non-current files (incoming during animation), just show static
+      if (!isCurrentFile) {
+        if (f.caption) {
+          return (
+            <div
+              className={styles.caption}
+              dangerouslySetInnerHTML={{
+                __html: highlightMatch(f.caption.replace(/\n/g, '<br/>'), searchQuery)
+              }}
+            />
+          );
+        }
+        return null;
+      }
+
+      // Current file - show editable caption
+      if (isEditingCaption) {
+        return (
+          <div className={styles.captionEdit}>
+            <textarea
+              ref={captionTextareaRef}
+              className={styles.captionTextarea}
+              value={captionDraft}
+              onChange={(e) => setCaptionDraft(e.target.value)}
+              placeholder="Введите описание..."
+              rows={3}
+              maxLength={4096}
+            />
+            <div className={styles.captionEditFooter}>
+              <span className={styles.captionCharCount}>
+                {captionDraft.length} / 4096
+              </span>
+              <div className={styles.captionEditButtons}>
+                <button
+                  className={styles.captionCancelBtn}
+                  onClick={cancelCaptionEdit}
+                  disabled={isSavingCaption}
+                >
+                  Отмена
+                </button>
+                <button
+                  className={styles.captionSaveBtn}
+                  onClick={saveCaptionEdit}
+                  disabled={isSavingCaption}
+                >
+                  {isSavingCaption ? 'Сохранение...' : 'Сохранить'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // Not editing - show caption or placeholder (clickable if onCaptionUpdate provided)
+      if (f.caption) {
+        return (
           <div
-            className={styles.caption}
+            className={`${styles.caption} ${onCaptionUpdate ? styles.captionEditable : ''}`}
+            onClick={onCaptionUpdate ? startCaptionEdit : undefined}
             dangerouslySetInnerHTML={{
               __html: highlightMatch(f.caption.replace(/\n/g, '<br/>'), searchQuery)
             }}
           />
-        )}
+        );
+      }
+
+      // No caption - show placeholder if editable
+      if (onCaptionUpdate) {
+        return (
+          <button className={styles.captionPlaceholder} onClick={startCaptionEdit}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+            </svg>
+            Добавить описание
+          </button>
+        );
+      }
+
+      return null;
+    };
+
+    return (
+      <>
+        {/* Caption */}
+        {renderCaption()}
 
         {/* Meta info */}
         <div className={styles.meta}>
@@ -379,7 +512,7 @@ export function FileViewer({
               </div>
             </div>
             <div className={styles.info}>
-              {renderInfo(file)}
+              {renderInfo(file, true)}
               {/* Share Section - только для текущего файла */}
           {shareLoading ? (
             <div className={styles.shareLoading}>
@@ -604,7 +737,7 @@ export function FileViewer({
                 </div>
               </div>
               <div className={styles.info}>
-                {renderInfo(incomingFile)}
+                {renderInfo(incomingFile, false)}
                 {/* Share placeholder - резервирует место чтобы не было скачка layout */}
                 <div className={styles.sharePlaceholder}>
                   <span className={styles.shareIcon}>{ShareIcon}</span>

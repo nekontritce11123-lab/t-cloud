@@ -16,6 +16,7 @@ import { LinkList } from './components/LinkCard/LinkCard';
 import { TrashView } from './components/TrashView/TrashView';
 import { FileViewer } from './components/FileViewer/FileViewer';
 import { StatsSheet } from './components/StatsSheet';
+import { CaptionSheet } from './components/CaptionSheet';
 import './styles/global.css';
 import styles from './App.module.css';
 
@@ -63,6 +64,7 @@ function App() {
   const [sendingFileId, setSendingFileId] = useState<number | null>(null); // Защита от двойного клика
   const [viewingFileIndex, setViewingFileIndex] = useState<number | null>(null); // Индекс файла для просмотра
   const [isStatsOpen, setIsStatsOpen] = useState(false); // Stats sheet открыт
+  const [isCaptionSheetOpen, setIsCaptionSheetOpen] = useState(false); // Caption sheet открыт
   const contentRef = useRef<HTMLElement>(null); // Ref для scroll контейнера (используется в Timeline для auto-scroll)
 
   // Вычисляем viewingFile из индекса
@@ -484,6 +486,33 @@ function App() {
     search(`от:${source}`);
   }, [search]);
 
+  // Обновить caption одного файла (из FileViewer)
+  const handleCaptionUpdate = useCallback(async (fileId: number, newCaption: string | null) => {
+    try {
+      await apiClient.updateCaption([fileId], newCaption);
+      refresh(); // Обновляем список для отображения нового caption
+    } catch (error) {
+      console.error('Failed to update caption:', error);
+      throw error; // Пробрасываем ошибку для обработки в FileViewer
+    }
+  }, [refresh]);
+
+  // Сохранить caption для выбранных файлов (batch)
+  const handleSaveBatchCaption = useCallback(async (caption: string | null) => {
+    const fileIds = Array.from(selectedFiles);
+    if (fileIds.length === 0) return;
+
+    try {
+      await apiClient.updateCaption(fileIds, caption);
+      hapticFeedback.success();
+      refresh(); // Обновляем список
+    } catch (error) {
+      console.error('Failed to batch update captions:', error);
+      hapticFeedback.error();
+      throw error;
+    }
+  }, [selectedFiles, refresh, hapticFeedback]);
+
   // Отправить файл из FileViewer
   const handleSendFromViewer = useCallback(async (file: FileRecord) => {
     if (isOnCooldown(file.id)) {
@@ -655,6 +684,15 @@ function App() {
           </button>
           <span className={styles.selectionCount}>Выбрано: {selectionType === 'files' ? selectedFiles.size : selectedLinks.size}</span>
           <div className={styles.selectionActions}>
+            {/* Кнопка редактирования caption - только для файлов */}
+            {selectionType === 'files' && selectedFiles.size > 0 && (
+              <button onClick={() => setIsCaptionSheetOpen(true)} className={styles.editBtn}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                  <path d="m15 5 4 4" />
+                </svg>
+              </button>
+            )}
             {((selectionType === 'files' && selectedFiles.size > 0) ||
               (selectionType === 'links' && selectedLinks.size > 0)) && (
               <button onClick={handleDeleteSelected} className={styles.deleteBtn} disabled={isDeleting}>
@@ -812,6 +850,7 @@ function App() {
           onNavigate={handleViewerNavigate}
           onClose={() => setViewingFileIndex(null)}
           onSend={handleSendFromViewer}
+          onCaptionUpdate={handleCaptionUpdate}
           isOnCooldown={isOnCooldown(viewingFile.id)}
           isSending={sendingFileId === viewingFile.id}
           searchQuery={searchQuery}
@@ -827,6 +866,15 @@ function App() {
         trashCount={trashCount}
         onCategoryClick={handleCategoryClick}
         onSourceClick={handleSourceClick}
+      />
+
+      {/* CaptionSheet modal for batch caption editing */}
+      <CaptionSheet
+        isOpen={isCaptionSheetOpen}
+        onClose={() => setIsCaptionSheetOpen(false)}
+        selectedFiles={selectedFiles}
+        files={files}
+        onSave={handleSaveBatchCaption}
       />
     </div>
   );

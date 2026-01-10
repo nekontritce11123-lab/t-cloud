@@ -474,6 +474,56 @@ router.get('/shared/count', async (req, res: Response) => {
 });
 
 /**
+ * PATCH /api/files/caption
+ * Update caption for one or more files
+ */
+router.patch('/caption', async (req, res: Response) => {
+  const { telegramUser } = req as unknown as AuthenticatedRequest;
+  const { fileIds, caption } = req.body as {
+    fileIds: number[];
+    caption: string | null;
+  };
+
+  // Validate fileIds
+  if (!Array.isArray(fileIds) || fileIds.length === 0) {
+    res.status(400).json({ error: 'fileIds array is required' });
+    return;
+  }
+
+  if (fileIds.length > MAX_BATCH_SIZE) {
+    res.status(400).json({ error: `Maximum ${MAX_BATCH_SIZE} files per request` });
+    return;
+  }
+
+  // Validate caption (can be null, empty string, or text)
+  if (caption !== null && typeof caption !== 'string') {
+    res.status(400).json({ error: 'caption must be a string or null' });
+    return;
+  }
+
+  // Limit caption length
+  if (caption && caption.length > DEFAULT_CAPTION_LIMIT) {
+    res.status(400).json({
+      error: `caption exceeds maximum length of ${DEFAULT_CAPTION_LIMIT}`
+    });
+    return;
+  }
+
+  console.log('[Files] Updating caption for', fileIds.length, 'files, user:', telegramUser.id);
+
+  try {
+    const updatedCount = filesRepo.updateCaption(fileIds, telegramUser.id, caption);
+
+    console.log('[Files] Updated caption for', updatedCount, 'files');
+
+    res.json({ success: true, updated: updatedCount });
+  } catch (error) {
+    console.error('[API] Error updating caption:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * GET /api/files/:id
  * Get a single file by ID
  */

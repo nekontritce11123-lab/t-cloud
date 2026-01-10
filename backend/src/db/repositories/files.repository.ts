@@ -369,4 +369,25 @@ export class FilesRepository {
     const rows = stmt.all(userId, ...fileIds) as { file_id: number }[];
     return new Set(rows.map(r => r.file_id));
   }
+
+  /**
+   * Update caption for multiple files
+   * Returns count of actually updated files
+   * FTS index is automatically updated via database triggers
+   */
+  updateCaption(ids: number[], userId: number, caption: string | null): number {
+    if (ids.length === 0) return 0;
+
+    const placeholders = ids.map(() => '?').join(',');
+    const stmt = sqlite.prepare(`
+      UPDATE files
+      SET caption = ?
+      WHERE id IN (${placeholders})
+        AND user_id = ?
+        AND deleted_at IS NULL
+    `);
+
+    const result = stmt.run(caption, ...ids, userId);
+    return result.changes;
+  }
 }
