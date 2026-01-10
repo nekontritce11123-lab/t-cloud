@@ -235,8 +235,9 @@ export function Timeline({
       longPressTimer.current = null;
     }
 
-    // Блокируем click events после drag чтобы предотвратить toggle anchor файла
-    if (isDragging) {
+    // Блокируем click events ТОЛЬКО после реального drag (движение > threshold)
+    // Простые клики должны проходить для toggle выделения
+    if (isDragging && dragThresholdMet.current) {
       blockClickUntil.current = Date.now() + 100;
     }
 
