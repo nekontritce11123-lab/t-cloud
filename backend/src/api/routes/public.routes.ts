@@ -9,7 +9,7 @@ const router = Router();
 const filesRepo = new FilesRepository();
 
 const BOT_USERNAME = process.env.BOT_USERNAME || 'FC_Cloud_Bot';
-const WEB_URL = process.env.WEB_URL || 'https://factchain-traker.online';
+const WEB_URL = process.env.WEB_URL || 'https://api.factchain-traker.online';
 const MAX_WEB_DOWNLOAD_SIZE = 50 * 1024 * 1024; // 50 MB limit for web downloads
 
 // Simple in-memory rate limiter
