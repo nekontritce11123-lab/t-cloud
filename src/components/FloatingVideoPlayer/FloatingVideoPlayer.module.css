@@ -153,33 +153,6 @@
   margin-left: 4px;
 }
 
-/* Close button */
-.closeButton {
-  position: absolute;
-  top: calc(var(--spacing-md) + env(safe-area-inset-top, 0px));
-  right: calc(var(--spacing-md) + env(safe-area-inset-right, 0px));
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.6);
-  border-radius: 50%;
-  color: #fff;
-  z-index: 20;
-  transition: all var(--animation-fast, 0.15s) var(--easing-smooth, ease-out);
-}
-
-.closeButton:active {
-  transform: scale(0.9);
-  background: rgba(0, 0, 0, 0.8);
-}
-
-.closeButton svg {
-  width: 24px;
-  height: 24px;
-}
-
 /* Desktop hover effects */
 @media (hover: hover) {
   .controlButton:hover {
@@ -189,10 +162,5 @@
   .bigPlayButton:hover {
     transform: translate(-50%, -50%) scale(1.1);
     background: rgba(0, 0, 0, 0.7);
-  }
-
-  .closeButton:hover {
-    background: rgba(0, 0, 0, 0.8);
-    transform: scale(1.05);
   }
 }

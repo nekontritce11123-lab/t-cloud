@@ -234,24 +234,6 @@ export function FloatingVideoPlayer({
           </span>
 
           <div className={styles.rightControls}>
-            {/* Play/Pause */}
-            <button
-              className={styles.controlButton}
-              onClick={togglePlay}
-              aria-label={isPlaying ? 'Пауза' : 'Воспроизвести'}
-            >
-              {isPlaying ? (
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <rect x="6" y="4" width="4" height="16" rx="1" />
-                  <rect x="14" y="4" width="4" height="16" rx="1" />
-                </svg>
-              ) : (
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <polygon points="5,3 19,12 5,21" />
-                </svg>
-              )}
-            </button>
-
             {/* Sound toggle */}
             <button
               className={styles.controlButton}
@@ -272,6 +254,20 @@ export function FloatingVideoPlayer({
                 </svg>
               )}
             </button>
+
+            {/* Exit fullscreen button - крайний правый угол */}
+            <button
+              className={styles.controlButton}
+              onClick={handleClose}
+              aria-label="Выйти из полноэкранного режима"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 3v3a2 2 0 0 1-2 2H3" />
+                <path d="M21 8h-3a2 2 0 0 1-2-2V3" />
+                <path d="M3 16h3a2 2 0 0 1 2 2v3" />
+                <path d="M16 21v-3a2 2 0 0 1 2-2h3" />
+              </svg>
+            </button>
           </div>
         </div>
       </div>
@@ -289,18 +285,6 @@ export function FloatingVideoPlayer({
         </button>
       )}
 
-      {/* Close button - always visible when controls are visible */}
-      {controlsVisible && (
-        <button
-          className={styles.closeButton}
-          onClick={handleClose}
-          aria-label="Закрыть"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 6L6 18M6 6l12 12" />
-          </svg>
-        </button>
-      )}
     </div>
   );
 }

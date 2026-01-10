@@ -7,7 +7,7 @@ import { sqlite, deactivateExpiredShares } from '../../db/index.js';
 const router = Router();
 const filesRepo = new FilesRepository();
 
-const BOT_USERNAME = process.env.BOT_USERNAME || 'FC_Cloudbot';
+const BOT_USERNAME = process.env.BOT_USERNAME || 'FC_Cloud_Bot';
 
 interface FileShare {
   id: number;
