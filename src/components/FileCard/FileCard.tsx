@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { FileRecord } from '../../api/client';
 import { MediaTypeIcons, ForwardIcon, FolderIcon } from '../../shared/icons';
-import { formatFileSize, formatDuration } from '../../shared/formatters';
+import { formatDuration, formatFileSize } from '../../shared/formatters';
 import { getEffectiveMediaType } from '../../shared/mediaType';
 import { useLongPress } from '../../hooks/useLongPress';
 import cardStyles from '../../styles/Card.module.css';
@@ -67,12 +67,6 @@ export function FileCard({
     isOnCooldown ? cardStyles.cooldown : '',
     disableActiveScale ? cardStyles.noActiveScale : '',
   ].filter(Boolean).join(' ');
-
-  // Не показывать размер файла на миниатюрах изображений (photo, video_note, PNG и др.)
-  const isImageType = file.mediaType === 'photo' ||
-    file.mediaType === 'video_note' ||
-    file.mimeType?.startsWith('image/');
-  const showFileSize = !isImageType;
 
   return (
     <button
@@ -147,9 +141,6 @@ export function FileCard({
                   )}
                 </>
               )}
-              {showFileSize && file.fileSize && (
-                <span className={cardStyles.size}>{formatFileSize(file.fileSize)}</span>
-              )}
             </div>
           ) : file.mediaType !== 'photo' ? (
             /* Компактный бейдж для видео/документов без текста (не для фото) */
@@ -157,7 +148,6 @@ export function FileCard({
               <span className={cardStyles.miniBadgeIcon}>
                 {MediaTypeIcons[getEffectiveMediaType(file.mediaType, file.mimeType)]}
               </span>
-              {showFileSize && file.fileSize && <span>{formatFileSize(file.fileSize)}</span>}
             </div>
           ) : null}
         </>
@@ -175,7 +165,7 @@ export function FileCard({
               }}
             />
           )}
-          {showFileSize && file.fileSize && (
+          {file.fileSize && (
             <span className={cardStyles.fileSizeCenter}>{formatFileSize(file.fileSize)}</span>
           )}
         </div>
