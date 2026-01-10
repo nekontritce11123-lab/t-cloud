@@ -114,17 +114,6 @@ export function useTelegram() {
       (tg as unknown as { setHeaderColor?: (c: string) => void }).setHeaderColor?.('#18222d');
       (tg as unknown as { setBackgroundColor?: (c: string) => void }).setBackgroundColor?.('#18222d');
 
-      // На мобильных - запросить полный экран (Bot API 8.0+)
-      const isMobile = window.innerWidth < 600 ||
-        /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-      if (isMobile && tg.requestFullscreen) {
-        requestAnimationFrame(() => {
-          tg.requestFullscreen?.();
-          tg.disableVerticalSwipes?.();
-        });
-      }
-
       setWebApp(tg);
       setIsReady(true);
     } else {
