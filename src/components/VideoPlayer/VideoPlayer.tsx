@@ -1,10 +1,14 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { FileRecord, apiClient } from '../../api/client';
+import { useTelegram } from '../../hooks/useTelegram';
 import styles from './VideoPlayer.module.css';
 
 interface VideoPlayerProps {
   file: FileRecord;
   thumbnailUrl?: string | null;
+  onFullscreenChange?: (isFullscreen: boolean) => void;
+  // Called when user clicks fullscreen - passes video data to parent for FloatingVideoPlayer
+  onEnterFullscreen?: (videoUrl: string, currentTime: number, isMuted: boolean) => void;
 }
 
 type LoadingState = 'idle' | 'loading' | 'ready' | 'error';
@@ -17,11 +21,14 @@ function formatTime(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-export function VideoPlayer({ file, thumbnailUrl }: VideoPlayerProps) {
+export function VideoPlayer({ file, thumbnailUrl, onFullscreenChange, onEnterFullscreen }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Telegram API
+  const { fullscreen: tgFullscreen, safeAreaInset } = useTelegram();
 
   const [loadingState, setLoadingState] = useState<LoadingState>('idle');
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -67,29 +74,55 @@ export function VideoPlayer({ file, thumbnailUrl }: VideoPlayerProps) {
     };
   }, [file.id]);
 
-  // Fullscreen change listener
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      const isFs = !!document.fullscreenElement;
-      setIsFullscreen(isFs);
+  // Exit fullscreen helper (for close button and escape key)
+  const exitFullscreen = useCallback(() => {
+    console.log('[VideoPlayer] Exit fullscreen requested');
+    setIsFullscreen(false);
+    onFullscreenChange?.(false);
 
-      // Unlock orientation when exiting fullscreen
-      const orientation = screen.orientation as ScreenOrientation & { unlock?: () => void };
-      if (!isFs && orientation?.unlock) {
-        try {
-          orientation.unlock();
-        } catch {}
+    if (tgFullscreen.isSupported) {
+      tgFullscreen.exit();
+    }
+  }, [tgFullscreen, onFullscreenChange]);
+
+  // Subscribe to Telegram fullscreen events
+  useEffect(() => {
+    if (!tgFullscreen.isSupported) return;
+
+    // Listen for fullscreen state changes from Telegram
+    const unsubChanged = tgFullscreen.onChanged((isFs) => {
+      console.log('[VideoPlayer] Telegram fullscreen changed:', isFs);
+      setIsFullscreen(isFs);
+      onFullscreenChange?.(isFs);
+    });
+
+    // Listen for fullscreen errors
+    const unsubFailed = tgFullscreen.onFailed((error) => {
+      console.error('[VideoPlayer] Telegram fullscreen failed:', error);
+      // Fallback to CSS fullscreen on error
+      if (error === 'UNSUPPORTED') {
+        setIsFullscreen(true);
+        onFullscreenChange?.(true);
+      }
+    });
+
+    return () => {
+      unsubChanged();
+      unsubFailed();
+    };
+  }, [tgFullscreen, onFullscreenChange]);
+
+  // Escape key handler for fullscreen exit (CSS fallback)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        exitFullscreen();
       }
     };
 
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-    };
-  }, []);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen, exitFullscreen]);
 
   // Auto-hide controls logic
   const showControls = useCallback(() => {
@@ -180,28 +213,37 @@ export function VideoPlayer({ file, thumbnailUrl }: VideoPlayerProps) {
     showControls();
   }, [duration, showControls]);
 
-  const toggleFullscreen = useCallback(async () => {
-    if (!containerRef.current) return;
-
-    try {
-      if (document.fullscreenElement) {
-        await document.exitFullscreen();
-      } else {
-        await containerRef.current.requestFullscreen();
-
-        // Lock to landscape on mobile (if supported)
-        const orientation = screen.orientation as ScreenOrientation & { lock?: (orientation: string) => Promise<void> };
-        if (orientation?.lock) {
-          try {
-            await orientation.lock('landscape');
-          } catch {}
-        }
-      }
-    } catch (err) {
-      console.error('[VideoPlayer] Fullscreen error:', err);
+  // Fullscreen handler
+  const toggleFullscreen = useCallback(() => {
+    // If onEnterFullscreen is provided, use FloatingVideoPlayer instead of CSS fullscreen
+    if (onEnterFullscreen && videoUrl) {
+      console.log('[VideoPlayer] Opening FloatingVideoPlayer');
+      onEnterFullscreen(videoUrl, currentTime, isMuted);
+      return;
     }
+
+    // Fallback: CSS Fullscreen + Telegram API
+    if (!isFullscreen) {
+      console.log('[VideoPlayer] Entering CSS fullscreen');
+      setIsFullscreen(true);
+      onFullscreenChange?.(true);
+
+      if (tgFullscreen.isSupported) {
+        console.log('[VideoPlayer] Also requesting Telegram fullscreen');
+        tgFullscreen.request();
+      }
+    } else {
+      console.log('[VideoPlayer] Exiting fullscreen');
+      setIsFullscreen(false);
+      onFullscreenChange?.(false);
+
+      if (tgFullscreen.isSupported) {
+        tgFullscreen.exit();
+      }
+    }
+
     showControls();
-  }, [showControls]);
+  }, [isFullscreen, showControls, onFullscreenChange, tgFullscreen, onEnterFullscreen, videoUrl, currentTime, isMuted]);
 
   // Prevent propagation to avoid closing FileViewer
   const handleContainerClick = useCallback((e: React.MouseEvent) => {
@@ -224,10 +266,19 @@ export function VideoPlayer({ file, thumbnailUrl }: VideoPlayerProps) {
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
+  // Safe area padding for notched devices in fullscreen
+  const fullscreenStyle = isFullscreen && safeAreaInset ? {
+    paddingTop: safeAreaInset.top,
+    paddingBottom: safeAreaInset.bottom,
+    paddingLeft: safeAreaInset.left,
+    paddingRight: safeAreaInset.right,
+  } : undefined;
+
   return (
     <div
       ref={containerRef}
       className={`${styles.container} ${isFullscreen ? styles.fullscreen : ''} ${!controlsVisible ? styles.hideControls : ''}`}
+      style={fullscreenStyle}
       onClick={handleContainerClick}
       onMouseMove={handleMouseMove}
     >
@@ -361,6 +412,19 @@ export function VideoPlayer({ file, thumbnailUrl }: VideoPlayerProps) {
             >
               <svg viewBox="0 0 24 24" fill="currentColor">
                 <polygon points="5,3 19,12 5,21" />
+              </svg>
+            </button>
+          )}
+
+          {/* Close button in fullscreen mode */}
+          {isFullscreen && controlsVisible && (
+            <button
+              className={styles.closeFullscreenButton}
+              onClick={exitFullscreen}
+              aria-label="Выйти из полноэкранного режима"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6L6 18M6 6l12 12" />
               </svg>
             </button>
           )}

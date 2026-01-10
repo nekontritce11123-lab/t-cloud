@@ -982,3 +982,17 @@
     flex: 0 0 auto;
   }
 }
+
+/* ============================================ */
+/* VIDEO FULLSCREEN - overlay transparent      */
+/* ============================================ */
+
+.overlay.videoFullscreen {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.overlay.videoFullscreen .viewer {
+  background: transparent;
+}

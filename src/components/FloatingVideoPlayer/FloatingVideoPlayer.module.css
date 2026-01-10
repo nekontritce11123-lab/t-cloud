@@ -1,0 +1,198 @@
+.container {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Hide cursor when controls hidden */
+.container.hideControls {
+  cursor: none;
+}
+
+/* Video element */
+.video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  cursor: pointer;
+}
+
+/* Controls overlay */
+.controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  padding-bottom: calc(var(--spacing-lg) + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  transition: opacity 0.3s ease;
+  z-index: 10;
+}
+
+.controls.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Progress bar */
+.progressBar {
+  width: 100%;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  position: relative;
+}
+
+/* Make progress bar easier to click on touch */
+.progressBar::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 0;
+  right: 0;
+  bottom: -10px;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--app-link-color);
+  border-radius: var(--radius-full);
+  transition: width 100ms linear;
+}
+
+.progressThumb {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  opacity: 1;
+}
+
+/* Bottom controls row */
+.bottomControls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.time {
+  font-size: var(--font-size-sm);
+  color: rgba(255, 255, 255, 0.9);
+  font-variant-numeric: tabular-nums;
+}
+
+.rightControls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+/* Control buttons */
+.controlButton {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border-radius: 50%;
+  color: #fff;
+  transition: all var(--animation-fast, 0.15s) var(--easing-smooth, ease-out);
+}
+
+.controlButton:active {
+  transform: scale(0.9);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.controlButton svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* Big play button in center */
+.bigPlayButton {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 50%;
+  color: #fff;
+  transition: all var(--animation-fast, 0.15s) var(--easing-smooth, ease-out);
+  z-index: 5;
+}
+
+.bigPlayButton:active {
+  transform: translate(-50%, -50%) scale(0.95);
+}
+
+.bigPlayButton svg {
+  width: 36px;
+  height: 36px;
+  margin-left: 4px;
+}
+
+/* Close button */
+.closeButton {
+  position: absolute;
+  top: calc(var(--spacing-md) + env(safe-area-inset-top, 0px));
+  right: calc(var(--spacing-md) + env(safe-area-inset-right, 0px));
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 50%;
+  color: #fff;
+  z-index: 20;
+  transition: all var(--animation-fast, 0.15s) var(--easing-smooth, ease-out);
+}
+
+.closeButton:active {
+  transform: scale(0.9);
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.closeButton svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* Desktop hover effects */
+@media (hover: hover) {
+  .controlButton:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  .bigPlayButton:hover {
+    transform: translate(-50%, -50%) scale(1.1);
+    background: rgba(0, 0, 0, 0.7);
+  }
+
+  .closeButton:hover {
+    background: rgba(0, 0, 0, 0.8);
+    transform: scale(1.05);
+  }
+}

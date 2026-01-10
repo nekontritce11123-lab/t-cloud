@@ -44,6 +44,8 @@ interface FileViewerProps {
   isOnCooldown?: boolean;
   isSending?: boolean;
   searchQuery?: string;
+  // Fullscreen video - opens FloatingVideoPlayer at App level
+  onEnterVideoFullscreen?: (file: FileRecord, videoUrl: string, currentTime: number, isMuted: boolean) => void;
 }
 
 type ShareMode = 'idle' | 'creating';
@@ -61,11 +63,13 @@ export function FileViewer({
   onCaptionUpdate,
   isOnCooldown,
   isSending,
-  searchQuery
+  searchQuery,
+  onEnterVideoFullscreen
 }: FileViewerProps) {
   const [isClosing, setIsClosing] = useState(false);
   const [slideDirection, setSlideDirection] = useState<'next' | 'prev' | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);  // Блокировка rapid swipes
+  const [isVideoFullscreen, setIsVideoFullscreen] = useState(false);  // Track video fullscreen
   // Инициализация shareLoading зависит от файла - если нет share, сразу false
   const [shareLoading, setShareLoading] = useState(() => file.hasShare);
   const [shareData, setShareData] = useState<ShareResponse | null>(null);
@@ -287,10 +291,21 @@ export function FileViewer({
   });
 
   // Helper: рендер превью для файла
-  const renderPreview = (f: FileRecord | undefined) => {
+  const renderPreview = (f: FileRecord | undefined, isCurrentFile = false) => {
     if (!f) return null;
     if (isVideoFile(f.mediaType)) {
-      return <VideoPlayer file={f} thumbnailUrl={f.thumbnailUrl} />;
+      return (
+        <VideoPlayer
+          file={f}
+          thumbnailUrl={f.thumbnailUrl}
+          onFullscreenChange={isCurrentFile ? setIsVideoFullscreen : undefined}
+          onEnterFullscreen={
+            isCurrentFile && onEnterVideoFullscreen
+              ? (videoUrl, currentTime, isMuted) => onEnterVideoFullscreen(f, videoUrl, currentTime, isMuted)
+              : undefined
+          }
+        />
+      );
     }
     if (isAudioFile(f.mediaType)) {
       return <AudioPlayer file={f} />;
@@ -468,9 +483,10 @@ export function FileViewer({
   const incomingFile = slideDirection === 'next' ? nextFile : slideDirection === 'prev' ? prevFile : undefined;
 
   return (
-    <div className={`${styles.overlay} ${isClosing ? styles.closing : ''}`} onClick={handleBackdropClick}>
+    <div className={`${styles.overlay} ${isClosing ? styles.closing : ''} ${isVideoFullscreen ? styles.videoFullscreen : ''}`} onClick={handleBackdropClick}>
       <div className={`${styles.viewer} ${isClosing ? styles.closing : ''}`} {...swipeHandlers}>
-        {/* Header */}
+        {/* Header - hide when video is fullscreen */}
+        {!isVideoFullscreen && (
         <div className={styles.header}>
           <button className={styles.backButton} onClick={handleAnimatedClose}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -515,6 +531,7 @@ export function FileViewer({
             )}
           </button>
         </div>
+        )}
 
         {/* Carousel Container - двухслойная анимация */}
         <div className={styles.carouselContainer}>
@@ -525,7 +542,7 @@ export function FileViewer({
           }`}>
             <div className={styles.previewWrapper}>
               <div className={styles.previewContainer}>
-                {renderPreview(file)}
+                {renderPreview(file, true)}
               </div>
             </div>
             <div className={styles.info}>
@@ -766,8 +783,8 @@ export function FileViewer({
           )}
         </div>
 
-        {/* Navigation buttons (desktop only) - position: fixed */}
-        {onNavigate && (
+        {/* Navigation buttons (desktop only) - position: fixed - hide when video is fullscreen */}
+        {onNavigate && !isVideoFullscreen && (
           <>
             <button
               className={`${styles.navButton} ${styles.navButtonLeft}`}

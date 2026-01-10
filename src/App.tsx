@@ -15,6 +15,7 @@ import { Timeline } from './components/Timeline/Timeline';
 import { LinkList } from './components/LinkCard/LinkCard';
 import { TrashView } from './components/TrashView/TrashView';
 import { FileViewer } from './components/FileViewer/FileViewer';
+import { FloatingVideoPlayer } from './components/FloatingVideoPlayer/FloatingVideoPlayer';
 import { StatsSheet } from './components/StatsSheet';
 import { CaptionSheet } from './components/CaptionSheet';
 import './styles/global.css';
@@ -66,6 +67,14 @@ function App() {
   const [isStatsOpen, setIsStatsOpen] = useState(false); // Stats sheet открыт
   const [isCaptionSheetOpen, setIsCaptionSheetOpen] = useState(false); // Caption sheet открыт
   const contentRef = useRef<HTMLElement>(null); // Ref для scroll контейнера (используется в Timeline для auto-scroll)
+
+  // Floating video player state (fullscreen video outside FileViewer)
+  const [floatingVideo, setFloatingVideo] = useState<{
+    file: FileRecord;
+    videoUrl: string;
+    currentTime: number;
+    isMuted: boolean;
+  } | null>(null);
 
   // Вычисляем viewingFile из индекса
   const viewingFile = viewingFileIndex !== null ? files[viewingFileIndex] : null;
@@ -475,6 +484,22 @@ function App() {
     setViewingFileIndex(newIndex);
   }, [viewingFileIndex, files.length]);
 
+  // Enter fullscreen video (from VideoPlayer inside FileViewer)
+  const handleEnterVideoFullscreen = useCallback((
+    file: FileRecord,
+    videoUrl: string,
+    currentTime: number,
+    isMuted: boolean
+  ) => {
+    setFloatingVideo({ file, videoUrl, currentTime, isMuted });
+  }, []);
+
+  // Exit fullscreen video (back to FileViewer)
+  const handleExitVideoFullscreen = useCallback(() => {
+    setFloatingVideo(null);
+    // FileViewer stays open - just hide the floating player
+  }, []);
+
   // Handlers для StatsSheet
   const handleCategoryClick = useCallback((category: string) => {
     setIsStatsOpen(false);
@@ -855,6 +880,7 @@ function App() {
           isOnCooldown={isOnCooldown(viewingFile.id)}
           isSending={sendingFileId === viewingFile.id}
           searchQuery={searchQuery}
+          onEnterVideoFullscreen={handleEnterVideoFullscreen}
         />
       )}
 
@@ -877,6 +903,17 @@ function App() {
         files={files}
         onSave={handleSaveBatchCaption}
       />
+
+      {/* Floating video player - renders on top of EVERYTHING */}
+      {floatingVideo && (
+        <FloatingVideoPlayer
+          file={floatingVideo.file}
+          videoUrl={floatingVideo.videoUrl}
+          initialTime={floatingVideo.currentTime}
+          initialMuted={floatingVideo.isMuted}
+          onClose={handleExitVideoFullscreen}
+        />
+      )}
     </div>
   );
 }

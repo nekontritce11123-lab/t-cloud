@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 
 declare global {
   interface Window {
@@ -69,6 +69,34 @@ interface TelegramWebApp {
   viewportStableHeight: number;
   sendData: (data: string) => void;
   switchInlineQuery: (query: string, chatTypes?: string[]) => void;
+
+  // Fullscreen API (Telegram Mini Apps Bot API 8.0+)
+  isFullscreen?: boolean;
+  requestFullscreen?: () => void;
+  exitFullscreen?: () => void;
+  onEvent?: (eventType: string, callback: (params?: unknown) => void) => void;
+  offEvent?: (eventType: string, callback: (params?: unknown) => void) => void;
+
+  // Safe area for notched devices (Bot API 8.0+)
+  safeAreaInset?: {
+    top: number;
+    bottom: number;
+    left: number;
+    right: number;
+  };
+  contentSafeAreaInset?: {
+    top: number;
+    bottom: number;
+    left: number;
+    right: number;
+  };
+
+  // Vertical swipes control (Bot API 7.7+)
+  disableVerticalSwipes?: () => void;
+  enableVerticalSwipes?: () => void;
+
+  // Post events for orientation lock and other features
+  postEvent?: (eventType: string, params?: Record<string, unknown>) => void;
 }
 
 export function useTelegram() {
@@ -137,6 +165,50 @@ export function useTelegram() {
     hideProgress: () => webApp?.MainButton.hideProgress(),
   };
 
+  // Fullscreen API (Bot API 8.0+) - memoized to prevent useEffect re-runs
+  const fullscreen = useMemo(() => ({
+    isSupported: !!webApp?.requestFullscreen,
+    isActive: webApp?.isFullscreen || false,
+
+    request: () => {
+      if (webApp?.requestFullscreen) {
+        // Prevent collapse while watching video
+        webApp.disableVerticalSwipes?.();
+        webApp.requestFullscreen();
+      }
+    },
+
+    exit: () => {
+      if (webApp?.exitFullscreen) {
+        webApp.exitFullscreen();
+        webApp.enableVerticalSwipes?.();
+      }
+    },
+
+    // Subscribe to fullscreen state changes
+    onChanged: (callback: (isFullscreen: boolean) => void) => {
+      if (webApp?.onEvent) {
+        const handler = () => callback(webApp?.isFullscreen || false);
+        webApp.onEvent('fullscreenChanged', handler);
+        return () => webApp.offEvent?.('fullscreenChanged', handler);
+      }
+      return () => {};
+    },
+
+    // Subscribe to fullscreen errors
+    onFailed: (callback: (error: string) => void) => {
+      if (webApp?.onEvent) {
+        const handler = (params: unknown) => {
+          const error = (params as { error?: string })?.error || 'UNKNOWN';
+          callback(error);
+        };
+        webApp.onEvent('fullscreenFailed', handler);
+        return () => webApp.offEvent?.('fullscreenFailed', handler);
+      }
+      return () => {};
+    },
+  }), [webApp]);
+
   return {
     webApp,
     isReady,
@@ -146,5 +218,7 @@ export function useTelegram() {
     hapticFeedback,
     getInitData,
     mainButton,
+    fullscreen,
+    safeAreaInset: webApp?.safeAreaInset,
   };
 }
