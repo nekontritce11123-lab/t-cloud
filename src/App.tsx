@@ -541,6 +541,25 @@ function App() {
     }
   }, [selectedFiles, refresh, hapticFeedback]);
 
+  // Добавить в избранное выбранные файлы (batch)
+  const handleBatchFavorite = useCallback(async () => {
+    const fileIds = Array.from(selectedFiles);
+    if (fileIds.length === 0) return;
+
+    try {
+      await apiClient.setFavoriteMany(fileIds, true);
+      hapticFeedback.success();
+      refresh();
+      // Выход из selection mode после добавления
+      setIsSelectionMode(false);
+      setSelectedFiles(new Set());
+      mainButton.hide();
+    } catch (error) {
+      console.error('Failed to batch add to favorites:', error);
+      hapticFeedback.error();
+    }
+  }, [selectedFiles, refresh, hapticFeedback, mainButton]);
+
   // Отправить файл из FileViewer
   const handleSendFromViewer = useCallback(async (file: FileRecord) => {
     if (isOnCooldown(file.id)) {
@@ -719,6 +738,14 @@ function App() {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
                   <path d="m15 5 4 4" />
+                </svg>
+              </button>
+            )}
+            {/* Кнопка добавления в избранное - только для файлов */}
+            {selectionType === 'files' && selectedFiles.size > 0 && (
+              <button onClick={handleBatchFavorite} className={styles.favoriteBtn}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                 </svg>
               </button>
             )}

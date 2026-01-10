@@ -80,6 +80,8 @@ export function FileViewer({
   // Favorite state
   const [isFavorite, setIsFavorite] = useState(file.isFavorite ?? false);
   const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
+  const [showFavoriteFlash, setShowFavoriteFlash] = useState(false);
+  const lastTapRef = useRef<number>(0);
 
   // Caption editing state
   const [isEditingCaption, setIsEditingCaption] = useState(false);
@@ -255,6 +257,25 @@ export function FileViewer({
       setIsTogglingFavorite(false);
     }
   }, [file.id, onToggleFavorite, isTogglingFavorite]);
+
+  // Handle double-tap on preview to toggle favorite
+  const handlePreviewDoubleTap = useCallback(() => {
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 300;
+    
+    if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
+      // Double tap detected - toggle favorite
+      if (onToggleFavorite && !isTogglingFavorite) {
+        handleToggleFavorite();
+        // Show flash animation
+        setShowFavoriteFlash(true);
+        setTimeout(() => setShowFavoriteFlash(false), 800);
+      }
+      lastTapRef.current = 0;
+    } else {
+      lastTapRef.current = now;
+    }
+  }, [onToggleFavorite, isTogglingFavorite, handleToggleFavorite]);
 
   const handleAnimatedClose = useCallback(() => {
     setIsClosing(true);
@@ -530,24 +551,6 @@ export function FileViewer({
             )}
           </div>
 
-          {/* Favorite button */}
-          {onToggleFavorite && (
-            <button
-              className={`${styles.favoriteButton} ${isFavorite ? styles.favoriteActive : ''}`}
-              onClick={handleToggleFavorite}
-              disabled={isTogglingFavorite}
-              title={isFavorite ? 'Убрать из избранного' : 'В избранное'}
-            >
-              {isTogglingFavorite ? (
-                <span className={styles.smallSpinner} />
-              ) : (
-                <svg viewBox="0 0 24 24" fill={isFavorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                </svg>
-              )}
-            </button>
-          )}
-
           <button
             className={`${styles.headerSendButton} ${isOnCooldown ? styles.disabled : ''}`}
             onClick={handleSend}
@@ -583,10 +586,14 @@ export function FileViewer({
             slideDirection === 'next' ? styles.exitLeft :
             slideDirection === 'prev' ? styles.exitRight : ''
           }`}>
-            <div className={styles.previewWrapper}>
+            <div className={styles.previewWrapper} onClick={handlePreviewDoubleTap}>
               <div className={styles.previewContainer}>
                 {renderPreview(file, true)}
               </div>
+              {/* Favorite flash overlay - appears on double-tap */}
+              {showFavoriteFlash && (
+                <div className={`${styles.favoriteFlash} ${isFavorite ? styles.favoriteFlashActive : styles.favoriteFlashInactive}`} />
+              )}
             </div>
             <div className={styles.info}>
               {renderInfo(file, true)}

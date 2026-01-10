@@ -1027,3 +1027,52 @@
 .overlay.videoFullscreen .viewer {
   background: transparent;
 }
+
+/* ============================================ */
+/* FAVORITE FLASH - double-tap animation       */
+/* ============================================ */
+
+.favoriteFlash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  border-radius: var(--radius-md);
+}
+
+/* Adding to favorites - golden border flash */
+.favoriteFlashActive {
+  animation: favoriteAddFlash 800ms ease-out forwards;
+}
+
+/* Removing from favorites - fade out */
+.favoriteFlashInactive {
+  animation: favoriteRemoveFlash 800ms ease-out forwards;
+}
+
+@keyframes favoriteAddFlash {
+  0% {
+    box-shadow: inset 0 0 0 0 var(--color-favorite);
+    opacity: 1;
+  }
+  30% {
+    box-shadow: inset 0 0 0 6px var(--color-favorite);
+    opacity: 1;
+  }
+  100% {
+    box-shadow: inset 0 0 0 3px var(--color-favorite);
+    opacity: 0;
+  }
+}
+
+@keyframes favoriteRemoveFlash {
+  0% {
+    box-shadow: inset 0 0 0 3px var(--app-hint-color);
+    opacity: 1;
+  }
+  100% {
+    box-shadow: inset 0 0 0 0 var(--app-hint-color);
+    opacity: 0;
+  }
+}
+

@@ -566,6 +566,70 @@ function renderSharePage(params: {
       color: #ff6b6b;
       font-size: 14px;
     }
+    .content {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Tablet (768-1200px) */
+    @media (min-width: 768px) {
+      .container {
+        max-width: 700px;
+      }
+      .preview {
+        min-height: 350px;
+      }
+      .file-name {
+        font-size: 22px;
+      }
+      .info {
+        padding: 24px;
+      }
+    }
+
+    /* Desktop (1200px+) */
+    @media (min-width: 1200px) {
+      .container {
+        max-width: 1000px;
+      }
+      .content {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+      }
+      .preview {
+        min-height: 500px;
+        aspect-ratio: auto;
+        height: 100%;
+        border-radius: 0;
+      }
+      .info {
+        padding: 32px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      .file-name {
+        font-size: 24px;
+        margin-bottom: 8px;
+      }
+      .file-meta {
+        font-size: 15px;
+      }
+      .caption {
+        margin-top: 16px;
+        padding: 16px;
+        font-size: 15px;
+      }
+      .download-btn {
+        margin-top: 24px;
+        padding: 18px;
+        font-size: 17px;
+      }
+      .cta {
+        margin-top: 32px;
+        padding: 24px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -579,6 +643,7 @@ function renderSharePage(params: {
       </div>
     </div>
 
+    <div class="content">
     <div class="preview">
       ${isImage || isVideo
         ? `<img src="${params.previewUrl}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">`
@@ -616,16 +681,18 @@ function renderSharePage(params: {
         : ''
       }
 
-      <div class="cta">
-        <div class="cta-title">Хотите своё облако?</div>
-        <div class="cta-text">Храните и делитесь файлами через FC-Cloud</div>
-        <a href="${params.telegramUrl}" class="telegram-btn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M11.944 0A12 12 0 1 0 24 12 12.01 12.01 0 0 0 11.944 0zm5.768 7.93l-1.975 9.413c-.15.664-.55.82-1.115.51l-3.056-2.254-1.474 1.42c-.163.163-.3.3-.614.3l.22-3.106 5.643-5.1c.246-.22-.054-.342-.382-.124l-6.978 4.392-3.006-.938c-.653-.205-.667-.653.137-.967l11.744-4.527c.545-.198 1.022.132.856.963z"/>
-          </svg>
-          Открыть в Telegram
-        </a>
-      </div>
+    </div>
+    </div>
+
+    <div class="cta">
+      <div class="cta-title">Хотите своё облако?</div>
+      <div class="cta-text">Храните и делитесь файлами через FC-Cloud</div>
+      <a href="${params.telegramUrl}" class="telegram-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M11.944 0A12 12 0 1 0 24 12 12.01 12.01 0 0 0 11.944 0zm5.768 7.93l-1.975 9.413c-.15.664-.55.82-1.115.51l-3.056-2.254-1.474 1.42c-.163.163-.3.3-.614.3l.22-3.106 5.643-5.1c.246-.22-.054-.342-.382-.124l-6.978 4.392-3.006-.938c-.653-.205-.667-.653.137-.967l11.744-4.527c.545-.198 1.022.132.856.963z"/>
+        </svg>
+        Открыть в Telegram
+      </a>
     </div>
   </div>
 </body>

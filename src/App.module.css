@@ -211,6 +211,31 @@
   height: 20px;
 }
 
+.favoriteBtn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--color-favorite);
+  cursor: pointer;
+  transition: all var(--animation-fast) ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.favoriteBtn:active {
+  background: rgba(255, 215, 0, 0.1);
+  transform: scale(0.95);
+}
+
+.favoriteBtn svg {
+  width: 20px;
+  height: 20px;
+}
+
 /* Empty state for search - минималистичный стиль */
 .empty {
   display: flex;
