@@ -29,6 +29,7 @@ function App() {
     stats,
     trashCount,
     sharedCount,
+    linksCount,
     isLoading,
     error,
     selectedType,
@@ -80,6 +81,14 @@ function App() {
   const positionLabel = viewingFileIndex !== null && files.length > 1
     ? `${viewingFileIndex + 1} из ${files.length}`
     : '';
+
+  // Соседние файлы для carousel-анимации
+  const prevFile = viewingFileIndex !== null && viewingFileIndex > 0
+    ? files[viewingFileIndex - 1]
+    : undefined;
+  const nextFile = viewingFileIndex !== null && viewingFileIndex < files.length - 1
+    ? files[viewingFileIndex + 1]
+    : undefined;
 
   // Загрузка cooldown из localStorage
   useEffect(() => {
@@ -631,6 +640,7 @@ function App() {
         }}
         trashCount={trashCount}
         sharedCount={sharedCount}
+        linksCount={linksCount}
         disabledTypes={isSelectionMode ? (selectedType === 'trash' ? 'not-trash' : 'trash') : undefined}
       />
 
@@ -794,6 +804,8 @@ function App() {
       {viewingFile && (
         <FileViewer
           file={viewingFile}
+          prevFile={prevFile}
+          nextFile={nextFile}
           hasPrev={hasPrev}
           hasNext={hasNext}
           positionLabel={positionLabel}

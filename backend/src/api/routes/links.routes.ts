@@ -56,6 +56,22 @@ router.get('/trash', async (req, res: Response) => {
 });
 
 /**
+ * GET /api/links/count
+ * Get total count of non-deleted links
+ */
+router.get('/count', async (req, res: Response) => {
+  const { telegramUser } = req as AuthenticatedRequest;
+
+  try {
+    const count = await linksRepo.getCount(telegramUser.id);
+    res.json({ count });
+  } catch (error) {
+    console.error('[API] Error fetching links count:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * GET /api/links/trash/count
  * Get count of links in trash
  */

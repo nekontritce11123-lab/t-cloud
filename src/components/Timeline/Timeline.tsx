@@ -126,7 +126,7 @@ export function Timeline({
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     const fileId = getFileIdAtPoint(e.clientX, e.clientY);
-    if (fileId === null || isOnCooldown?.(fileId)) return;
+    if (fileId === null) return;
 
     // Сохраняем координаты для threshold проверки
     dragStartCoordinate.current = { x: e.clientX, y: e.clientY };
@@ -173,7 +173,7 @@ export function Timeline({
         }
       }, LONG_PRESS_MS);
     }
-  }, [isSelectionMode, isOnCooldown, getFileIdAtPoint, files, onFileLongPress]);
+  }, [isSelectionMode, getFileIdAtPoint, files, onFileLongPress]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     const start = dragStartCoordinate.current;
@@ -310,7 +310,6 @@ export function Timeline({
                 dateFiles={dateFiles}
                 selectedFiles={selectedFiles}
                 isSelectionMode={isSelectionMode}
-                isOnCooldown={isOnCooldown}
                 onSelectDay={onSelectDay}
               />
             </div>

@@ -5,8 +5,6 @@ interface DayCheckboxProps {
   dateFiles: FileRecord[];
   selectedFiles?: Set<number>;
   isSelectionMode?: boolean;
-  /** Optional filter for files on cooldown (Timeline uses this) */
-  isOnCooldown?: (fileId: number) => boolean;
   onSelectDay?: (files: FileRecord[], action: 'add' | 'remove') => void;
 }
 
@@ -14,15 +12,12 @@ export function DayCheckbox({
   dateFiles,
   selectedFiles,
   isSelectionMode,
-  isOnCooldown,
   onSelectDay,
 }: DayCheckboxProps) {
   if (!isSelectionMode || !onSelectDay) return null;
 
-  // Filter files that can be selected (not on cooldown)
-  const selectableFiles = isOnCooldown
-    ? dateFiles.filter(f => !isOnCooldown(f.id))
-    : dateFiles;
+  // All files are selectable - cooldown only affects sending
+  const selectableFiles = dateFiles;
 
   if (selectableFiles.length === 0) return null;
 

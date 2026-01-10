@@ -91,13 +91,13 @@ export function FileCard({
       {/* Custom badge (cooldown or days remaining) */}
       {badge}
 
-      {/* Cooldown badge (when isOnCooldown is true and no custom badge) */}
-      {isOnCooldown && !badge && (
+      {/* Cooldown badge (when isOnCooldown is true and no custom badge, hide in selection mode) */}
+      {isOnCooldown && !badge && !isSelectionMode && (
         <div className={cardStyles.cooldownBadge}>✓</div>
       )}
 
-      {/* Selection checkbox */}
-      {isSelectionMode && !isOnCooldown && (
+      {/* Selection checkbox - shows for ALL files including cooldown */}
+      {isSelectionMode && (
         <div className={cardStyles.checkbox}>
           {isSelected ? '✓' : ''}
         </div>

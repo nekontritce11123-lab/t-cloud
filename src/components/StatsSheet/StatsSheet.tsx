@@ -44,9 +44,11 @@ export function StatsSheet({
   }, [onClose]);
 
   // Compute total files and size
+  // Fallback на files.length если stats пуст (баг: API иногда возвращает 0)
   const totalFiles = useMemo(() => {
-    return stats.reduce((sum, s) => sum + s.count, 0);
-  }, [stats]);
+    const fromStats = stats.reduce((sum, s) => sum + s.count, 0);
+    return fromStats > 0 ? fromStats : files.length;
+  }, [stats, files]);
 
   const totalSize = useMemo(() => {
     return files.reduce((sum, f) => sum + (f.fileSize || 0), 0);
@@ -98,13 +100,15 @@ export function StatsSheet({
       .slice(0, 5); // Top 5 sources
   }, [files]);
 
-  // Get count for a category from stats
+  // Get count for a category from stats (с fallback на files если stats пуст)
   const getCategoryCount = useCallback(
     (category: MediaType): number => {
       const stat = stats.find((s) => s.mediaType === category);
-      return stat?.count || 0;
+      if (stat?.count) return stat.count;
+      // Fallback: подсчитать из files
+      return files.filter(f => f.mediaType === category).length;
     },
-    [stats]
+    [stats, files]
   );
 
   // Handle backdrop click

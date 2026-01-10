@@ -26,6 +26,24 @@ interface TouchState {
   startY: number;
   startTime: number;
   lockedAxis: SwipeAxis;
+  isInScrollableArea: boolean; // Touch started in scrollable area
+}
+
+/**
+ * Find the nearest scrollable parent element
+ * Returns element if it has overflow-y: auto/scroll AND content exceeds height
+ */
+function findScrollableParent(element: HTMLElement | null): HTMLElement | null {
+  while (element) {
+    const style = window.getComputedStyle(element);
+    const overflowY = style.overflowY;
+    if ((overflowY === 'auto' || overflowY === 'scroll') &&
+        element.scrollHeight > element.clientHeight) {
+      return element;
+    }
+    element = element.parentElement;
+  }
+  return null;
 }
 
 interface SwipeHandlers {
@@ -58,11 +76,18 @@ export function useSwipeNavigation(handlers: SwipeHandlers) {
     }
 
     const touch = e.touches[0];
+
+    // Check if touch started in a scrollable area
+    const target = e.target as HTMLElement;
+    const scrollableParent = findScrollableParent(target);
+    const isInScrollableArea = scrollableParent !== null;
+
     touchState.current = {
       startX: touch.clientX,
       startY: touch.clientY,
       startTime: Date.now(),
       lockedAxis: null,
+      isInScrollableArea,
     };
   }, []);
 
@@ -152,8 +177,9 @@ export function useSwipeNavigation(handlers: SwipeHandlers) {
       }
     }
 
-    // Handle vertical swipes
-    if (state.lockedAxis === 'vertical') {
+    // Handle vertical swipes - ONLY if NOT in scrollable area
+    // This prevents swipe-down-to-close from conflicting with scrolling
+    if (state.lockedAxis === 'vertical' && !state.isInScrollableArea) {
       const thresholdMet = Math.abs(deltaY) >= SWIPE_VERTICAL_THRESHOLD;
       const velocityMet = velocityY >= SWIPE_VELOCITY_THRESHOLD;
 

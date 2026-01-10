@@ -100,6 +100,18 @@ export class LinksRepository {
   }
 
   /**
+   * Get count of non-deleted links for a user
+   */
+  async getCount(userId: number): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(links)
+      .where(and(eq(links.userId, userId), isNull(links.deletedAt)));
+
+    return result[0]?.count || 0;
+  }
+
+  /**
    * Get trash count for a user
    */
   async getTrashCount(userId: number): Promise<number> {

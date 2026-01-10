@@ -11,6 +11,7 @@ interface CategoryChipsProps {
   onSelect: (type: CategoryType) => void;
   trashCount?: number;
   sharedCount?: number;
+  linksCount?: number;
   disabledTypes?: 'trash' | 'not-trash';
 }
 
@@ -111,7 +112,7 @@ const CATEGORIES: Category[] = [
   { type: 'trash', label: 'Корзина', icon: 'trash', color: 'var(--app-destructive-text-color, #ff3b30)' },
 ];
 
-export function CategoryChips({ stats, selectedType, onSelect, trashCount = 0, sharedCount = 0, disabledTypes }: CategoryChipsProps) {
+export function CategoryChips({ stats, selectedType, onSelect, trashCount = 0, sharedCount = 0, linksCount = 0, disabledTypes }: CategoryChipsProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
 
@@ -126,13 +127,16 @@ export function CategoryChips({ stats, selectedType, onSelect, trashCount = 0, s
 
   const getCount = (type: CategoryType): number => {
     if (type === null) {
-      return stats.reduce((sum, s) => sum + s.count, 0);
+      return stats.reduce((sum, s) => sum + s.count, 0) + linksCount;
     }
     if (type === 'trash') {
       return trashCount;
     }
     if (type === 'shared') {
       return sharedCount;
+    }
+    if (type === 'link') {
+      return linksCount;
     }
     return stats.find(s => s.mediaType === type)?.count || 0;
   };

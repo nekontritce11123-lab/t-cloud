@@ -464,6 +464,18 @@ class ApiClient {
     return response.json();
   }
 
+  async getLinksCount(): Promise<{ count: number }> {
+    const response = await fetch(`${API_URL}/api/links/count`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch links count');
+    }
+
+    return response.json();
+  }
+
   async getTrashLinksCount(): Promise<{ count: number }> {
     const response = await fetch(`${API_URL}/api/links/trash/count`, {
       headers: this.getHeaders(),

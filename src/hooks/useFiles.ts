@@ -17,6 +17,7 @@ export function useFiles(apiReady = true) {
   const [stats, setStats] = useState<CategoryStats[]>([]);
   const [trashCount, setTrashCount] = useState(0);
   const [sharedCount, setSharedCount] = useState(0);
+  const [linksCount, setLinksCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<CategoryType>(null);
@@ -124,16 +125,18 @@ export function useFiles(apiReady = true) {
   const loadStats = useCallback(async () => {
     if (!apiReady) return;
     try {
-      const [statsResult, trashFilesCount, trashLinksCount, sharedFilesCount] = await Promise.all([
+      const [statsResult, trashFilesCount, trashLinksCount, sharedFilesCount, linksCountResult] = await Promise.all([
         apiClient.getFileStats(),
         apiClient.getTrashFilesCount(),
         apiClient.getTrashLinksCount(),
         apiClient.getSharedFilesCount(),
+        apiClient.getLinksCount(),
       ]);
-      console.log('[useFiles] Stats:', statsResult);
+      console.log('[useFiles] Stats:', statsResult, 'Links count:', linksCountResult.count);
       setStats(statsResult || []);
       setTrashCount(trashFilesCount.count + trashLinksCount.count);
       setSharedCount(sharedFilesCount.count);
+      setLinksCount(linksCountResult.count);
     } catch (err) {
       console.error('[useFiles] Stats error:', err);
     }
@@ -240,6 +243,7 @@ export function useFiles(apiReady = true) {
     stats,
     trashCount,
     sharedCount,
+    linksCount,
     isLoading,
     error,
     selectedType,

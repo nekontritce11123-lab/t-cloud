@@ -204,10 +204,14 @@
   -webkit-backface-visibility: hidden;
 }
 
-/* Текущий слой - занимает место в потоке */
+/* Текущий слой - занимает место в потоке И скроллируется */
 .slideLayer.current {
   position: relative;
   flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 /* Текущий слой при выходе - НЕ меняем position, только анимируем transform */
@@ -265,6 +269,7 @@
 .previewWrapper {
   position: relative;
   flex: 1;
+  min-height: 60vh; /* Превью всегда минимум 60% экрана */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -389,13 +394,9 @@
   }
 }
 
-/* Info */
+/* Info - теперь скролл на .slideLayer.current, а не здесь */
 .info {
   flex-shrink: 0;
-  max-height: 50vh; /* Максимум половина экрана */
-  overflow-y: auto; /* Скролл при длинном тексте */
-  overscroll-behavior: contain; /* Изолировать скролл - не прокидывать на родителя */
-  -webkit-overflow-scrolling: touch; /* Плавный скролл на iOS */
   padding: var(--spacing-lg);
   background: var(--app-bg-color);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
